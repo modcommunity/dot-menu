@@ -12,7 +12,7 @@ extends Node
 ## aborts THAT TEST, not the run; the section counter is satisfied because the section had
 ## already announced itself, and the total is what notices the checks that never ran.
 const SECTIONS := 14
-const CHECKS := 176
+const CHECKS := 177
 
 var _passed := 0
 var _failed := 0
@@ -730,8 +730,10 @@ func _test_help_and_picker() -> void:
 		items.append({"id": "map_%d" % i, "name": "Map %d" % i, "tags": ["tier %d" % (i % 3)], "current": i == 8})
 	var chosen: Array = []
 	menu.picked.connect(func(id: StringName) -> void: chosen.append(id))
+	menu.picker.instructions = "1–7, 8 and 9, 0 or M."
 	menu.open_picker(items, "Change map")
 	_check(menu.picker.page == 1, "the picker opens on the page with what is on now")
+	_check(_texts(menu.picker).has("1–7, 8 and 9, 0 or M."), "in the game's own words, set after it was built")
 	var _k := menu.handle_event(_key(KEY_8))
 	_check(menu.picker.page == 0, "8 is the page before")
 	var _k2 := menu.handle_event(_key(KEY_3))

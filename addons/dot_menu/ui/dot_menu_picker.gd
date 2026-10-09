@@ -49,6 +49,7 @@ var noun: String = "items"
 var _window: PanelContainer = null
 var _rows: VBoxContainer = null
 var _title: Label = null
+var _instructions: Label = null
 var _footer: Label = null
 var _built := false
 
@@ -103,7 +104,9 @@ func _build() -> void:
 
 	_title = kit.label(title_text, kit.size_title, p.text, true)
 	col.add_child(_title)
-	col.add_child(kit.paragraph(instructions))
+	# Kept, and set again on every draw: a game sets its own words after the picker is built.
+	_instructions = kit.paragraph(instructions)
+	col.add_child(_instructions)
 
 	_rows = VBoxContainer.new()
 	_rows.name = "Rows"
@@ -192,6 +195,7 @@ func _rebuild() -> void:
 	DotMenuKit.clear(_rows)
 
 	_title.text = title_text
+	_instructions.text = instructions
 	if items.is_empty():
 		_rows.add_child(kit.paragraph(empty_text))
 
