@@ -34,6 +34,7 @@ func _build_menu() -> void:
 	keys.add(&"demo_maps", &"bind_maps", "Change map", "M", "Interface")
 	keys.add(&"demo_help", &"bind_help", "Help", "H", "Interface")
 	keys.add(&"demo_theme", &"bind_theme_next", "Next theme", "P", "Interface")
+	keys.add(&"demo_scores", &"bind_scores", "Scoreboard (hold)", "Tab", "Interface")
 
 	# 2. The settings: the stock ones, the game's own, and the developer's config over both.
 	var config := DotMenuConfig.new()
@@ -71,6 +72,7 @@ func _build_menu() -> void:
 	menu.config = config
 	menu.help_action = &"demo_help"
 	menu.theme_action = &"demo_theme"
+	menu.scoreboard_action = &"demo_scores"
 	# A demo with no game to capture the pointer for.
 	menu.manage_pointer = false
 	add_child(menu)
@@ -101,12 +103,37 @@ func _build_menu() -> void:
 			get_tree().quit())
 	hud.recolour(menu.palette())
 
+	# Offline there is no server roster, so the board draws this game's own; online it would be
+	# `menu.scoreboard.feed_from(link)`. Kills and deaths are this game's columns.
+	menu.scoreboard.add_column({"key": &"kills", "title": "K", "kind": DotMenuScoreboard.KIND_NUMBER}, &"score")
+	menu.scoreboard.add_column({"key": &"deaths", "title": "D", "kind": DotMenuScoreboard.KIND_NUMBER}, &"score")
+	menu.scoreboard.source = roster
+
 
 func _unhandled_input(event: InputEvent) -> void:
 	if menu.any_open():
 		return
 	if event.is_action_pressed(&"demo_maps"):
 		menu.open_picker(maps(), "Change map — offline")
+
+
+## A made-up server, two teams and a spectator. What a held Tab draws in the demo.
+static func roster() -> Dictionary:
+	var names := ["Ada", "Bea", "Cy", "Dot", "Eli", "Fin", "Gus", "Hal", "Ivy"]
+	var players: Array = []
+	for i in names.size():
+		players.append({
+			"id": i + 1, "name": names[i], "score": 40 - i * 4 + (i % 3) * 7, "kills": 12 - i, "deaths": 3 + i % 4,
+			"ping": [18, 42, 75, 130, 260, 33, -1, 55, 90][i], "seconds": 60 * (5 + i * 7) + i * 13,
+			"team": 0 if i == 8 else 1 + i % 2, "bot": i == 6,
+		})
+	return {
+		"server": {"name": "TMC Demo #1  |  Deathmatch", "game": "Arena", "map": "dm_yard", "players": 9, "max": 16},
+		"you": 3,
+		"header": {"Time left": "7:42", "Round": "3 of 5"},
+		"teams": [{"id": 1, "name": "Red", "color": "#e5534b", "score": 4}, {"id": 2, "name": "Blue", "color": "#4c8fe6", "score": 6}],
+		"players": players,
+	}
 
 
 static func maps() -> Array:

@@ -73,6 +73,10 @@ var kit: DotMenuKit = null
 var help_action: StringName = &""
 var theme_action: StringName = &""
 
+## The action held to show the scoreboard (Tab). Empty is no scoreboard key; the board is
+## still built and can be opened in code.
+var scoreboard_action: StringName = &""
+
 ## The action that opens the picker in this game (a map list's M), which also closes it.
 ## The menu does not open the picker on it — what the list holds is the game's to fetch.
 var picker_action: StringName = &""
@@ -93,6 +97,9 @@ var screen: DotMenuScreen = null
 var help: DotMenuHelp = null
 var picker: DotMenuPicker = null
 var layout_editor: DotMenuLayoutEditor = null
+
+## The held scoreboard. Not one of the overlays: see [DotMenuScoreboard].
+var scoreboard: DotMenuScoreboard = null
 
 var _fps_label: Label = null
 ## Other overlays a game registered: Controls with is_open() and close().
@@ -153,6 +160,12 @@ func _build() -> void:
 	_fps_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_fps_label.visible = false
 	add_child(_fps_label)
+
+	# Under everything else on this layer: the menu opened over a held board is on top.
+	scoreboard = DotMenuScoreboard.new()
+	scoreboard.name = "Scoreboard"
+	scoreboard.kit = kit
+	add_child(scoreboard)
 
 	screen = DotMenuScreen.new()
 	screen.name = "Screen"
@@ -288,6 +301,8 @@ func open(page_id: StringName = &"") -> void:
 	for o in [help, picker, layout_editor]:
 		if o != null and o.is_open():
 			o.visible = false
+	if scoreboard != null:
+		scoreboard.close()
 	screen.open(page_id)
 	_on_opened()
 
@@ -422,6 +437,13 @@ func _unhandled_input(event: InputEvent) -> void:
 ## R behind a menu is a restart nobody asked for — so every key is the menu's while one is
 ## open.
 func handle_event(event: InputEvent) -> bool:
+	# The scoreboard is HELD: it goes away on the release, whatever else is going on — a
+	# board left up because the release arrived while the chat line had the keyboard is a
+	# board the player cannot get rid of.
+	if scoreboard != null and scoreboard.is_open() and _is_scoreboard_key(event) and not event.is_pressed():
+		scoreboard.close()
+		return true
+
 	if not (event is InputEventKey) or not event.is_pressed() or event.is_echo():
 		return any_open() and event is InputEventKey
 	var key := event as InputEventKey
@@ -430,7 +452,13 @@ func handle_event(event: InputEvent) -> bool:
 	if not any_open():
 		if busy.is_valid() and bool(busy.call()):
 			return false
+		if _is_scoreboard_key(event):
+			if scoreboard != null:
+				scoreboard.open()
+			return true
 		if escape:
+			if scoreboard != null:
+				scoreboard.close()
 			open()
 			return true
 		if help_action != &"" and InputMap.has_action(help_action) and event.is_action_pressed(help_action):
@@ -472,6 +500,11 @@ func handle_event(event: InputEvent) -> bool:
 	if screen.is_open() and escape:
 		screen.close()
 	return true
+
+
+func _is_scoreboard_key(event: InputEvent) -> bool:
+	return scoreboard_action != &"" and InputMap.has_action(scoreboard_action) \
+		and event.is_action(scoreboard_action)
 
 
 func _process(_delta: float) -> void:
@@ -537,6 +570,8 @@ func use_theme(id: StringName) -> bool:
 	for o in _overlays():
 		if o != null and o.has_method(&"restyle"):
 			o.call(&"restyle", kit)
+	if scoreboard != null:
+		scoreboard.restyle(kit)
 	if _fps_label != null:
 		_fps_label.add_theme_color_override(&"font_color", p.muted)
 	theme_changed.emit(p)

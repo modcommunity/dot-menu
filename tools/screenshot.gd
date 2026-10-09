@@ -71,6 +71,21 @@ func _run() -> void:
 	await _shot("picker")
 	menu.picker.close()
 
+	menu.scoreboard.open()
+	await _shot("scoreboard_teams")
+	menu.scoreboard.close()
+	menu.scoreboard.source = func() -> Dictionary:
+		var r: Dictionary = _demo.call("roster")
+		r.erase("teams")
+		r["server"]["name"] = "Surf Timer  |  Tier 1-3"
+		r["header"] = {"Next map": "surf_intro"}
+		return r
+	var _p := settings.set_value(&"ui_theme", &"paper")
+	menu.scoreboard.open()
+	await _shot("scoreboard_paper")
+	menu.scoreboard.close()
+	var _m2 := settings.set_value(&"ui_theme", &"midnight")
+
 	var hud: Control = _demo.get("hud")
 	menu.open_layout_editor(hud, {&"clock": "Clock", &"speed": "Speed"})
 	menu.layout_editor.drag(&"clock", hud.call("element_rect", &"clock").get_center(), Vector2(260, 140))

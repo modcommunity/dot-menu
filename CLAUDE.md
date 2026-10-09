@@ -54,6 +54,14 @@ Each `mg-*` game carried a ~250-line `<Prefix>Settings` that was the same node r
 
 `DotMenuStock.declare(..., except)` is how such a game leaves out stock keys it has nothing to apply to (no UI bus, no fx): a declared setting nothing applies is a switch that does nothing.
 
+## The scoreboard: the server's numbers, held
+
+`DotMenuScoreboard` draws one dictionary — dot-server's `scoreboard_snapshot` shape (`server`, `you`, `players`, `teams`, `header`) — whoever produced it: the server's roster through `feed_from(link)`, or a game's own through `source`. **The server half exists because ping and time connected are numbers only the server has for everybody**; a client knows its own ping and when it joined, nobody else's, so a board built client-side had to replicate both per game and most did not. dot-server sends the roster only while a client holds its board (`scoreboard.want`), unreliably, twice a second; `scoreboard_fields` and `scoreboard_extra` are the game's columns and teams. dot-menu names nothing in dot-server: the feed is duck-typed (`want_scoreboard(open)`, `scoreboard_received`, `scoreboard`).
+
+**Held, not opened**: it is not one of `DotMenu`'s overlays. It never frees the pointer, never counts toward `any_open()` (so no sampler is suspended), takes no input, and closes on the key's RELEASE wherever that arrives — a board left up because the release came while the chat line had the keyboard is one the player cannot get rid of. Escape while it is held opens the menu and drops the board.
+
+Customising runs from data to code: `columns` (kinds text/number/ping/duration/avatar/custom), `decorate(row)`, `group_by`/`sort_by`/`sort_with`, then `build_header`/`build_team_header`/`build_row` replace the pieces outright. The first render had a highlighted row's ping touching its outline; `ROW_PAD` pads rows and their column titles alike so they stay aligned.
+
 ## Delivered games and the client shell
 
 A game delivered as a pack cannot use its OWN `class_name`s (see the `godot-pack-class-name-limit` memory), but it can use an addon's, because the addon is compiled into the client shell. So a pack that uses `DotMenu*` needs **a shell built with dot-menu in it**: dot-server-deploy must link `addons/dot_menu` and the shell must be rebuilt and published before a game pack that depends on it. A pack running in an older shell fails to parse every script that names `DotMenu`. That is the same "untagged addon" trap as every other addon — tag dot-menu, rebuild the shell, then publish games.
@@ -62,7 +70,7 @@ A game delivered as a pack cannot use its OWN `class_name`s (see the `godot-pack
 
 ```bash
 godot --headless --path . --import
-godot --headless --path . res://examples/menu_selftest.tscn   # 13 sections, 155 checks
+godot --headless --path . res://examples/menu_selftest.tscn   # 14 sections, 175 checks
 tools/screenshot.sh                                            # every page, theme and screen
 ```
 

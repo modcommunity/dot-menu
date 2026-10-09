@@ -24,6 +24,7 @@ It started as game-g2gfast's menus and was pulled out so every game gets the sam
 - **A HUD layout editor.** Drag your HUD's pieces anywhere and right-click to put one back. Positions are saved as fractions of the screen, so a layout made on a laptop fits a 4K monitor.
 - **Themes.** Six ship (Midnight, Ember, Violet, Classic, Paper, High contrast). A theme is a palette of colours for both the menus and the HUD, and can be written as JSON. P (or whatever you bind) cycles them.
 - **Server rules.** While connected, a server can hide rows and pages, narrow the themes, reword Leave, and cap settings like field of view through dot-settings' clamps. It can never change or read a player's stored value. Leaving puts everything back.
+- **A scoreboard.** Hold Tab: the server's name, game, map and slots, the teams side by side in their colours, and a row per player with name, score, time connected and ping (coloured by how bad it is), plus any columns your game adds. Your own row is picked out and players on no team are listed as spectating. It never takes the mouse or stops you moving.
 - **The browser.** When a browser takes the mouse away on Escape, the menu opens anyway, and an Escape that arrives right after is ignored so the menu does not flash shut.
 
 ## Getting started
@@ -100,6 +101,25 @@ menu.apply_server_rules({"clamps": {"field_of_view": 100}, "rows_hidden": ["rend
     "themes": ["midnight", "contrast"], "leave_text": "Disconnect"})
 menu.release_server_rules()
 ```
+
+The scoreboard is held on whatever action you name:
+
+```gdscript
+menu.scoreboard_action = &"mygame_scores"                 # bind it to Tab in your keys table
+menu.scoreboard.feed_from(link)                           # online: the server's roster
+menu.scoreboard.add_column({"key": &"kills", "title": "K", "kind": DotMenuScoreboard.KIND_NUMBER}, &"score")
+menu.scoreboard.decorate = func(row): row["avatar"] = faces.get(row["id"])
+```
+
+Online, [dot-server](https://github.com/modcommunity/dot-server) sends the roster only while a player holds the board: name, score, ping and time connected for everyone, which a client has no other way to know. Your server adds its own columns and teams:
+
+```gdscript
+server.scoreboard_fields = func(session): return {"team": team_of(session), "kills": kills_of(session)}
+server.scoreboard_extra = func(): return {"teams": [{"id": 1, "name": "Red", "color": "#e5534b", "score": 4}],
+    "header": {"Time left": "7:42"}}
+```
+
+Offline, or for a board that is entirely your own numbers, set `menu.scoreboard.source` to a function returning the same dictionary. Columns are data (`key`, `title`, `kind` of text, number, ping, duration, avatar or custom, `width`, `format`, `build`), `group_by` and `sort_by` choose teams and order, and `build_header`, `build_team_header` and `build_row` replace those pieces with your own.
 
 The other screens: `menu.open_help(commands, online)`, `menu.open_picker(items, title)` with the choice on `picked`, and `menu.open_layout_editor(hud, {&"timer": "Timer"})` with the layout on `menu.layout_editor.saved`. A screen of your own joins the same Escape handling with `menu.add_overlay(control)`. `theme_changed` gives you the new palette for your HUD.
 
@@ -192,7 +212,7 @@ godot --headless --path . res://examples/menu_selftest.tscn
 tools/screenshot.sh
 ```
 
-The self-test covers themes and theme files, the config and what it does to a schema, that every stock setting is applied by something and has a row, the key table and its swaps, the applier, the screens driven through their own controls, Escape and help and the theme key, what a server may do and how leaving undoes it, the help screen, the picker and the layout editor. `tools/screenshot.sh` renders every page, every theme and every screen to `screenshots/` so you can look at them.
+The self-test covers themes and theme files, the config and what it does to a schema, that every stock setting is applied by something and has a row, the key table and its swaps, the applier, the screens driven through their own controls, Escape and help and the theme key, what a server may do and how leaving undoes it, the help screen, the picker, the layout editor and the scoreboard. `tools/screenshot.sh` renders every page, every theme and every screen to `screenshots/` so you can look at them.
 
 ## License
 MIT. See [LICENSE](LICENSE).
