@@ -121,6 +121,8 @@ server.scoreboard_extra = func(): return {"teams": [{"id": 1, "name": "Red", "co
 
 Offline, or for a board that is entirely your own numbers, set `menu.scoreboard.source` to a function returning the same dictionary. Columns are data (`key`, `title`, `kind` of text, number, ping, duration, avatar or custom, `width`, `format`, `build`), `group_by` and `sort_by` choose teams and order, and `build_header`, `build_team_header` and `build_row` replace those pieces with your own.
 
+A game whose Escape is its own (a garage, a lobby) sets `menu.open_on_escape = false` and opens the menu some other way; Escape still closes it.
+
 The other screens: `menu.open_help(commands, online)`, `menu.open_picker(items, title)` with the choice on `picked`, and `menu.open_layout_editor(hud, {&"timer": "Timer"})` with the layout on `menu.layout_editor.saved`. A screen of your own joins the same Escape handling with `menu.add_overlay(control)`. `theme_changed` gives you the new palette for your HUD.
 
 ## Settings

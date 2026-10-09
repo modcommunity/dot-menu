@@ -62,6 +62,15 @@ Each `mg-*` game carried a ~250-line `<Prefix>Settings` that was the same node r
 
 Customising runs from data to code: `columns` (kinds text/number/ping/duration/avatar/custom), `decorate(row)`, `prepare(snapshot)` (on a copy: client-side teams and header over the server's roster), `group_by`/`sort_by`/`sort_with`, then `build_header`/`build_team_header`/`build_row` replace the pieces outright. The first render had a highlighted row's ping touching its outline; `ROW_PAD` pads rows and their column titles alike so they stay aligned.
 
+## Who uses it, and the two switches the games needed (2026-10-09)
+
+Every game but game-arena is on it: game-g2gfast (the menu it came from, its pages in `g2g_menu_pages.gd`), the six `mg-*` games (`DotMenuSettings` subclasses), game-playground (the Escape menu; its spawn menu and server browser stay on its own screen stack), game-hungario (the Tab board only: its settings are a `DotConfig`, which a view of dot-settings cannot show without changing how it stores them) and dot-game-template. Two switches came out of fitting them:
+
+- **`DotMenu.open_on_escape`**: off for a game whose Escape is its own (mg-dangerous-delivery's garage) or which keeps a two-step Escape (game-playground: release the pointer, then open). Escape still closes the menu.
+- **`DotMenuScoreboard.prepare(snapshot)`**: a game whose clients already replicate their own numbers (wipeout's points, deathrun's sides) merges them into the server's roster on the client, on a copy, instead of sending them again. Where only the server knows a number (g2gfast's best times, delivery's bank, look-at-me's levels kept per account), the game's module adds it through dot-server's `scoreboard_fields`, which dot-game wraps as `_game_board_fields(session)`.
+
+A game that keeps its own Tab handling (most `mg-*`, playground) opens and closes `menu.scoreboard` itself; one with a key table sets `scoreboard_action` and the menu holds it.
+
 ## Delivered games and the client shell
 
 A game delivered as a pack cannot use its OWN `class_name`s (see the `godot-pack-class-name-limit` memory), but it can use an addon's, because the addon is compiled into the client shell. So a pack that uses `DotMenu*` needs **a shell built with dot-menu in it**: dot-server-deploy must link `addons/dot_menu` and the shell must be rebuilt and published before a game pack that depends on it. A pack running in an older shell fails to parse every script that names `DotMenu`. That is the same "untagged addon" trap as every other addon — tag dot-menu, rebuild the shell, then publish games.
