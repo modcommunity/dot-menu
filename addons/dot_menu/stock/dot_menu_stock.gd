@@ -63,10 +63,26 @@ const KEYS := {
 
 
 ## Declares the stock settings in [param groups] (by default [constant DEFAULT_GROUPS]) that [param schema] does not have yet.
-## [param themes] supplies the `ui_theme` options; null is the stock six.
+## [param themes] supplies the `ui_theme` options; null is the stock six. [param except] is
+## stock keys this game has nothing to apply to — a game with no interface sounds leaves out
+## `ui_volume`, one with no effects `shake_scale` — because a declared setting nothing
+## applies is a switch that does nothing.
 static func declare(
-	schema: DotSettingsSchema, groups: Array[StringName] = DEFAULT_GROUPS, themes: DotMenuThemes = null
+	schema: DotSettingsSchema, groups: Array[StringName] = DEFAULT_GROUPS, themes: DotMenuThemes = null,
+	except: Array[StringName] = []
 ) -> DotSettingsSchema:
+	var before := schema.keys()
+	_declare(schema, groups, themes)
+	if not except.is_empty():
+		var kept: Array[DotSettingsDef] = []
+		for def in schema.defs:
+			if before.has(def.key) or not except.has(def.key):
+				kept.append(def)
+		schema.defs = kept
+	return schema
+
+
+static func _declare(schema: DotSettingsSchema, groups: Array[StringName], themes: DotMenuThemes) -> DotSettingsSchema:
 	var account := DotSettingsDef.Scope.ACCOUNT
 
 	if groups.has(GROUP_AUDIO):

@@ -11,8 +11,8 @@ extends Node
 ## [b]CHECKS is the guard the section counter cannot be.[/b] A script error inside a test
 ## aborts THAT TEST, not the run; the section counter is satisfied because the section had
 ## already announced itself, and the total is what notices the checks that never ran.
-const SECTIONS := 12
-const CHECKS := 148
+const SECTIONS := 13
+const CHECKS := 155
 
 var _passed := 0
 var _failed := 0
@@ -41,6 +41,7 @@ func _run() -> void:
 	await _test_server_rules()
 	await _test_help_and_picker()
 	_test_layout()
+	await _test_settings_node()
 
 	_line("")
 	_line("%d sections, %d passed, %d failed" % [_section_count, _passed, _failed])
@@ -769,6 +770,50 @@ func _test_layout() -> void:
 	_check(hud.positions.is_empty() and saved[-1] == "", "reset puts everything back")
 	editor.queue_free()
 	hud.queue_free()
+
+
+# --- 13 ---------------------------------------------------------------------------
+
+func _test_settings_node() -> void:
+	_section("One node for a game that has no presentation layer")
+
+	var trimmed := DotMenuStock.declare(DotSettingsSchema.new(), DotMenuStock.DEFAULT_GROUPS, null,
+		[&"ui_volume", &"shake_scale", &"allow_flashes", &"chat_window"] as Array[StringName])
+	_check(not trimmed.has(&"ui_volume") and not trimmed.has(&"chat_window") and trimmed.has(&"sfx_volume"),
+		"a game leaves out the stock keys it has nothing to apply to")
+	var own := DotSettingsSchema.new()
+	own.add(DotSettingsDef.number(&"shake_scale", 0.5, 0.0, 2.0, &"accessibility"))
+	var _o := DotMenuStock.declare(own, DotMenuStock.DEFAULT_GROUPS, null, [&"shake_scale"] as Array[StringName])
+	_check(own.has(&"shake_scale"), "but never one it declared itself")
+
+	var node := DotMenuSettings.new()
+	node.app_namespace = &"menu_settings_test"
+	var schema := DotSettingsSchema.new()
+	schema.add(DotSettingsDef.integer(&"field_of_view", 92, 70, 120, &"video").with_scope(DotSettingsDef.Scope.SERVER_CLAMPED))
+	node.schema = DotMenuStock.declare(schema)
+	add_child(node)
+	var res := node.setup(DotSettingsStoreMemory.new())
+	_check(res.ok and node.settings != null and node.applier != null and node.menu != null, "it builds the three")
+
+	var look := FakeLook.new()
+	var cam := FakeCamera.new()
+	var mixer := FakeMixer.new()
+	node.bind_look(look)
+	node.bind_camera(cam)
+	node.bind_audio(mixer)
+	_check(cam.fov == 92.0 and is_equal_approx(look.mouse_sensitivity, 2.5 * DotMenuApplier.DEGREES_PER_COUNT)
+		and is_equal_approx(mixer.master, 0.8), "anything bound is applied as it is bound, a game's own default included")
+	var d := node.describe()
+	_check(int(d["look_bound"]) == 1 and bool(d["camera_bound"]) and bool(d["audio_bound"]), "and says what is bound")
+
+	var states: Array = []
+	node.menu_state_changed.connect(func(open: bool) -> void: states.append(open))
+	node.open(&"video")
+	_check(node.is_open() and states == [true], "it opens the full menu")
+	node.close()
+	_check(not node.is_open() and states == [true, false], "and closes it")
+	node.queue_free()
+	await get_tree().process_frame
 
 
 # --- Harness ----------------------------------------------------------------------

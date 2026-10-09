@@ -48,6 +48,12 @@ The browser half is g2gfast's, unchanged: a browser exits pointer lock on Escape
 
 `manage_pointer = false` for a host that owns the mouse (a 2D game, the demo, the suite).
 
+## `DotMenuSettings`: the node six minigames had written by hand
+
+Each `mg-*` game carried a ~250-line `<Prefix>Settings` that was the same node renamed: a manager, a `match` pushing four keys at a sampler, a camera and a mixer, and a bare `DotSettingsScreen` on a stack. `DotMenuSettings` is that node (manager + `DotMenuApplier` + `DotMenu`) with the API those clients already call — `setup(store, with_menu)`, `bind_look/camera/audio/fx`, `open/close/is_open`, `describe()` with `look_bound`/`camera_bound`, and `menu_state_changed` — so a game subclasses it for its schema and keeps its call sites. `manage_pointer` is off there because those clients own the pointer and capture on `menu_state_changed`.
+
+`DotMenuStock.declare(..., except)` is how such a game leaves out stock keys it has nothing to apply to (no UI bus, no fx): a declared setting nothing applies is a switch that does nothing.
+
 ## Delivered games and the client shell
 
 A game delivered as a pack cannot use its OWN `class_name`s (see the `godot-pack-class-name-limit` memory), but it can use an addon's, because the addon is compiled into the client shell. So a pack that uses `DotMenu*` needs **a shell built with dot-menu in it**: dot-server-deploy must link `addons/dot_menu` and the shell must be rebuilt and published before a game pack that depends on it. A pack running in an older shell fails to parse every script that names `DotMenu`. That is the same "untagged addon" trap as every other addon — tag dot-menu, rebuild the shell, then publish games.
@@ -56,7 +62,7 @@ A game delivered as a pack cannot use its OWN `class_name`s (see the `godot-pack
 
 ```bash
 godot --headless --path . --import
-godot --headless --path . res://examples/menu_selftest.tscn   # 12 sections, 148 checks
+godot --headless --path . res://examples/menu_selftest.tscn   # 13 sections, 155 checks
 tools/screenshot.sh                                            # every page, theme and screen
 ```
 
