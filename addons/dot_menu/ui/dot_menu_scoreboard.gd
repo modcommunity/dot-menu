@@ -72,6 +72,11 @@ var source: Callable = Callable()
 ## `func(row: Dictionary) -> void`: edits each row before it is drawn.
 var decorate: Callable = Callable()
 
+## `func(snapshot: Dictionary) -> void`: edits the snapshot itself before it is drawn — teams
+## and a header the client knows and the server did not send, rows for players that are not
+## sessions. Given a copy, so the feed's own is never changed.
+var prepare: Callable = Callable()
+
 ## The row field rows are grouped into teams by. Empty draws one list.
 var group_by: StringName = &"team"
 
@@ -267,13 +272,23 @@ func _pull() -> void:
 			snapshot = snap
 
 
+## The snapshot as it is drawn: after [member prepare].
+func drawn_snapshot() -> Dictionary:
+	if not prepare.is_valid():
+		return snapshot
+	var copy := snapshot.duplicate(true)
+	prepare.call(copy)
+	return copy
+
+
 # --- Drawing ----------------------------------------------------------------------
 
 ## The rows, decorated and sorted, as they will be drawn. Public so a suite can read them.
-func rows() -> Array:
+func rows(snap: Variant = null) -> Array:
+	var from: Dictionary = snap if snap is Dictionary else drawn_snapshot()
 	var out: Array = []
-	var you: Variant = snapshot.get("you", null)
-	for raw in (snapshot.get("players", []) as Array):
+	var you: Variant = from.get("you", null)
+	for raw in (from.get("players", []) as Array):
 		if not (raw is Dictionary):
 			continue
 		var row := (raw as Dictionary).duplicate()
@@ -296,9 +311,10 @@ func _before(a: Dictionary, b: Dictionary) -> bool:
 	return str(a.get("name", "")).naturalnocasecmp_to(str(b.get("name", ""))) < 0
 
 
-func teams() -> Array:
+func teams(snap: Variant = null) -> Array:
+	var from: Dictionary = snap if snap is Dictionary else drawn_snapshot()
 	var out: Array = []
-	for t in (snapshot.get("teams", []) as Array):
+	for t in (from.get("teams", []) as Array):
 		if t is Dictionary:
 			out.append(t)
 	return out
@@ -308,13 +324,14 @@ func redraw() -> void:
 	if not _built:
 		return
 	DotMenuKit.clear(_body)
+	var snap := drawn_snapshot()
 
-	var header: Control = build_header.call(kit, snapshot) if build_header.is_valid() else _header()
+	var header: Control = build_header.call(kit, snap) if build_header.is_valid() else _header(snap)
 	if header != null:
 		_body.add_child(header)
 
-	var all := rows()
-	var team_list := teams()
+	var all := rows(snap)
+	var team_list := teams(snap)
 	if team_list.is_empty() or group_by == &"":
 		_body.add_child(_team_block({}, all))
 		return
@@ -355,9 +372,9 @@ func redraw() -> void:
 		_body.add_child(line)
 
 
-func _header() -> Control:
+func _header(snap: Dictionary) -> Control:
 	var p := kit.palette
-	var server: Dictionary = snapshot.get("server", {})
+	var server: Dictionary = snap.get("server", {})
 	var col := VBoxContainer.new()
 	col.name = "Header"
 	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -382,7 +399,7 @@ func _header() -> Control:
 	for key in ["game", "map"]:
 		if str(server.get(key, "")) != "":
 			facts.append(str(server[key]))
-	var extra: Variant = snapshot.get("header", {})
+	var extra: Variant = snap.get("header", {})
 	if extra is Dictionary:
 		for k in (extra as Dictionary):
 			facts.append("%s %s" % [str(k), str((extra as Dictionary)[k])])

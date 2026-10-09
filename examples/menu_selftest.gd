@@ -12,7 +12,7 @@ extends Node
 ## aborts THAT TEST, not the run; the section counter is satisfied because the section had
 ## already announced itself, and the total is what notices the checks that never ran.
 const SECTIONS := 14
-const CHECKS := 175
+const CHECKS := 176
 
 var _passed := 0
 var _failed := 0
@@ -912,6 +912,17 @@ func _test_scoreboard() -> void:
 	texts = _texts(board)
 	_check(texts.has("#9") and texts.has("5"), "drawn from its own decoration and its own builder")
 	board.close()
+	board.prepare = func(snap: Dictionary) -> void:
+		snap["teams"] = []
+		snap["header"] = {"Course": "Ice Works"}
+	board.open()
+	await get_tree().process_frame
+	texts = _texts(board)
+	_check(board.find_child("Team_1", true, false) == null and texts.any(func(t: String) -> bool: return t.contains("Course Ice Works"))
+		and (board.snapshot.get("teams", []) as Array).size() == 2,
+		"the client can rewrite what is drawn without touching what the server sent")
+	board.close()
+	board.prepare = Callable()
 
 	board.source = func() -> Dictionary:
 		return {"players": [{"id": "me", "name": "Solo", "score": 3, "seconds": 30, "ping": -1}], "you": "me"}

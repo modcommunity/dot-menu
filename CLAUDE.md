@@ -60,7 +60,7 @@ Each `mg-*` game carried a ~250-line `<Prefix>Settings` that was the same node r
 
 **Held, not opened**: it is not one of `DotMenu`'s overlays. It never frees the pointer, never counts toward `any_open()` (so no sampler is suspended), takes no input, and closes on the key's RELEASE wherever that arrives — a board left up because the release came while the chat line had the keyboard is one the player cannot get rid of. Escape while it is held opens the menu and drops the board.
 
-Customising runs from data to code: `columns` (kinds text/number/ping/duration/avatar/custom), `decorate(row)`, `group_by`/`sort_by`/`sort_with`, then `build_header`/`build_team_header`/`build_row` replace the pieces outright. The first render had a highlighted row's ping touching its outline; `ROW_PAD` pads rows and their column titles alike so they stay aligned.
+Customising runs from data to code: `columns` (kinds text/number/ping/duration/avatar/custom), `decorate(row)`, `prepare(snapshot)` (on a copy: client-side teams and header over the server's roster), `group_by`/`sort_by`/`sort_with`, then `build_header`/`build_team_header`/`build_row` replace the pieces outright. The first render had a highlighted row's ping touching its outline; `ROW_PAD` pads rows and their column titles alike so they stay aligned.
 
 ## Delivered games and the client shell
 
@@ -70,7 +70,7 @@ A game delivered as a pack cannot use its OWN `class_name`s (see the `godot-pack
 
 ```bash
 godot --headless --path . --import
-godot --headless --path . res://examples/menu_selftest.tscn   # 14 sections, 175 checks
+godot --headless --path . res://examples/menu_selftest.tscn   # 14 sections, 176 checks
 tools/screenshot.sh                                            # every page, theme and screen
 ```
 
