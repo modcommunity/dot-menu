@@ -402,7 +402,9 @@ func _header(snap: Dictionary) -> Control:
 	var extra: Variant = snap.get("header", {})
 	if extra is Dictionary:
 		for k in (extra as Dictionary):
-			facts.append("%s %s" % [str(k), str((extra as Dictionary)[k])])
+			# An empty key is a fact with no label: "Round 3: the buses got everybody".
+			var v := str((extra as Dictionary)[k])
+			facts.append(v if str(k) == "" else "%s %s" % [str(k), v])
 	if not facts.is_empty():
 		var sub := kit.label("  ·  ".join(facts), kit.size_small, p.accent)
 		sub.name = "Facts"
