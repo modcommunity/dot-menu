@@ -392,7 +392,7 @@ func _header(snap: Dictionary) -> Control:
 	if server.has("players"):
 		var count := "%d / %d" % [int(server.get("players", 0)), int(server.get("max", 0))] if int(server.get("max", 0)) > 0 \
 			else str(int(server.get("players", 0)))
-		line.add_child(kit.label(count + " players", kit.size_small, p.muted))
+		line.add_child(kit.label(count + (" player" if count == "1" else " players"), kit.size_small, p.muted))
 	col.add_child(line)
 
 	var facts := PackedStringArray()
@@ -454,7 +454,7 @@ func _team_header(team: Dictionary, members: Array) -> Control:
 	var name := kit.label(str(team.get("name", "Team")), kit.size_heading, tint, true)
 	name.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	line.add_child(name)
-	line.add_child(kit.label("%d players" % members.size(), kit.size_small, p.muted))
+	line.add_child(kit.label("1 player" if members.size() == 1 else "%d players" % members.size(), kit.size_small, p.muted))
 	if team.has("score"):
 		line.add_child(kit.label(str(team["score"]), kit.size_title - 4, p.text, true))
 	return line
