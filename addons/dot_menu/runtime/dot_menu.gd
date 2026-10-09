@@ -85,6 +85,11 @@ var picker_action: StringName = &""
 ## that routes input itself through [method handle_event].
 var handle_keys: bool = true
 
+## Whether Escape, with nothing open, opens the menu. Off for a game whose Escape is its own
+## (a garage, a lobby) and that opens the menu some other way; Escape still closes the menu
+## and everything over it.
+var open_on_escape: bool = true
+
 ## Free the pointer while anything is open and capture it when the last thing closes.
 var manage_pointer: bool = true
 
@@ -456,7 +461,7 @@ func handle_event(event: InputEvent) -> bool:
 			if scoreboard != null:
 				scoreboard.open()
 			return true
-		if escape:
+		if escape and open_on_escape:
 			if scoreboard != null:
 				scoreboard.close()
 			open()

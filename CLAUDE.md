@@ -70,7 +70,7 @@ A game delivered as a pack cannot use its OWN `class_name`s (see the `godot-pack
 
 ```bash
 godot --headless --path . --import
-godot --headless --path . res://examples/menu_selftest.tscn   # 14 sections, 177 checks
+godot --headless --path . res://examples/menu_selftest.tscn   # 14 sections, 179 checks
 tools/screenshot.sh                                            # every page, theme and screen
 ```
 

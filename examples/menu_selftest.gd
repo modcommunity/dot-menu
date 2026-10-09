@@ -12,7 +12,7 @@ extends Node
 ## aborts THAT TEST, not the run; the section counter is satisfied because the section had
 ## already announced itself, and the total is what notices the checks that never ran.
 const SECTIONS := 14
-const CHECKS := 177
+const CHECKS := 179
 
 var _passed := 0
 var _failed := 0
@@ -628,6 +628,14 @@ func _test_facade() -> void:
 	_check(menu.handle_event(_key(KEY_ESCAPE)) and menu.is_open(), "an Escape right after opening is swallowed, not a flash")
 	menu.config.escape_grace_ms = 0
 	menu.close()
+
+	menu.open_on_escape = false
+	_check(not menu.handle_event(_key(KEY_ESCAPE)) and not menu.is_open(),
+		"a game whose Escape is its own keeps it, with nothing open")
+	menu.open()
+	var _shut := menu.handle_event(_key(KEY_ESCAPE))
+	_check(not menu.is_open(), "and Escape still closes the menu it opened some other way")
+	menu.open_on_escape = true
 
 	var busy := [true]
 	menu.busy = func() -> bool: return busy[0]
