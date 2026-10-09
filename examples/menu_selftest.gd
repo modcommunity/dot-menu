@@ -12,7 +12,7 @@ extends Node
 ## aborts THAT TEST, not the run; the section counter is satisfied because the section had
 ## already announced itself, and the total is what notices the checks that never ran.
 const SECTIONS := 12
-const CHECKS := 147
+const CHECKS := 148
 
 var _passed := 0
 var _failed := 0
@@ -734,6 +734,10 @@ func _test_help_and_picker() -> void:
 	_check(menu.picker.page == 0, "8 is the page before")
 	var _k2 := menu.handle_event(_key(KEY_3))
 	_check(chosen == [&"map_2"] and not menu.picker.is_open(), "a number picks its row and closes")
+	menu.picker_action = &"test_flashlight"
+	menu.open_picker(items, "Change map")
+	var _k3 := menu.handle_event(_key(KEY_L))
+	_check(not menu.picker.is_open() and chosen.size() == 1, "and the key that opened it closes it, choosing nothing")
 	_free_menu(menu)
 	await get_tree().process_frame
 

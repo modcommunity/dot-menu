@@ -73,6 +73,10 @@ var kit: DotMenuKit = null
 var help_action: StringName = &""
 var theme_action: StringName = &""
 
+## The action that opens the picker in this game (a map list's M), which also closes it.
+## The menu does not open the picker on it — what the list holds is the game's to fetch.
+var picker_action: StringName = &""
+
 ## Handle Escape and the actions above from [method Node._unhandled_input]. Off for a host
 ## that routes input itself through [method handle_event].
 var handle_keys: bool = true
@@ -448,7 +452,7 @@ func handle_event(event: InputEvent) -> bool:
 		return true
 
 	if picker.is_open():
-		if escape:
+		if escape or (picker_action != &"" and InputMap.has_action(picker_action) and event.is_action_pressed(picker_action)):
 			picker.close()
 		else:
 			var _mine := picker.key(key.keycode)
