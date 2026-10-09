@@ -1,0 +1,226 @@
+extends Node3D
+
+## dot-menu with a world behind it: the stock pages, a game's own page, a picker, and a HUD a
+## player can arrange. Escape opens the menu, H help, P the next theme, M the picker.
+##
+## [codeblock]
+## godot --path . res://examples/menu_demo.tscn
+## [/codeblock]
+##
+## Everything a game writes to use the addon is in [method _build_menu], and it is short on
+## purpose: that length is the claim this addon makes.
+
+var settings: DotSettingsManager = null
+var keys: DotMenuBindings = null
+var menu: DotMenu = null
+var applier: DotMenuApplier = null
+var hud: DemoHud = null
+var camera: Camera3D = null
+
+var flashlight_on := false
+var server_allows_flashlight := true
+
+
+func _ready() -> void:
+	_build_world()
+	_build_menu()
+
+
+func _build_menu() -> void:
+	# 1. The keys this game reads.
+	keys = DotMenuBindings.new()
+	keys.add_movement()
+	keys.add(&"demo_flashlight", &"bind_flashlight", "Flashlight", "F", "View")
+	keys.add(&"demo_maps", &"bind_maps", "Change map", "M", "Interface")
+	keys.add(&"demo_help", &"bind_help", "Help", "H", "Interface")
+	keys.add(&"demo_theme", &"bind_theme_next", "Next theme", "P", "Interface")
+
+	# 2. The settings: the stock ones, the game's own, and the developer's config over both.
+	var config := DotMenuConfig.new()
+	config.brand_mark = "dot"
+	config.brand_name = "menu"
+	# The environment and the command line over those: DOT_MENU_THEME=paper, --menu-browser-tips=on.
+	var _layered := config.load_layered()
+	var schema := DotSettingsSchema.new()
+	DotMenuStock.declare(schema)
+	schema.add(DotSettingsDef.boolean(&"show_speed", true, &"hud").with_description("Your speed under the clock."))
+	schema.add(DotSettingsDef.text(&"hud_positions", "", &"hud"))
+	keys.add_to_schema(schema)
+	var _problems := config.apply_to_schema(schema)
+
+	settings = DotMenuStock.manager(schema, "user://dot_menu_demo", &"dot_menu_demo", &"")
+	add_child(settings)
+	var _loaded := settings.setup()
+
+	# 3. What applies them.
+	applier = DotMenuApplier.new()
+	applier.settings = settings
+	applier.bindings = keys
+	add_child(applier)
+	applier.bind_camera(camera)
+	var _shown := applier.on(&"show_speed", func(on: Variant, _why: StringName) -> void: hud.speed.visible = bool(on))
+	var _placed := applier.on(&"hud_positions", func(text: Variant, _why: StringName) -> void:
+		hud.positions = DotMenuLayoutEditor.decode(str(text), hud.pieces())
+		hud.place())
+	var _applied := applier.setup()
+
+	# 4. The menu, and the game's own page on it.
+	menu = DotMenu.new()
+	menu.settings = settings
+	menu.bindings = keys
+	menu.config = config
+	menu.help_action = &"demo_help"
+	menu.theme_action = &"demo_theme"
+	# A demo with no game to capture the pointer for.
+	menu.manage_pointer = false
+	add_child(menu)
+	var _set := menu.setup()
+
+	var gameplay := DotMenuPage.make(&"gameplay", "Gameplay", "What is on the screen, and your light.")
+	gameplay.section("HUD") \
+		.add(DotMenuRow.toggle(&"show_speed", "Speed", "Your speed under the clock.")) \
+		.add(DotMenuRow.button("Arrange", "Drag the clock and the speed wherever you want them.", "Move HUD elements",
+			func() -> void: menu.open_layout_editor(hud, {&"clock": "Clock", &"speed": "Speed"})))
+	gameplay.section("View").add(
+		DotMenuRow.live_toggle("Flashlight", "", func() -> bool: return flashlight_on,
+			func(on: bool) -> void: flashlight_on = on)
+			.enabled_when(func() -> bool: return server_allows_flashlight)
+			.described_by(func() -> String:
+				if not server_allows_flashlight:
+					return "This server has turned flashlights off."
+				return "Only you see it. %s toggles it." % keys.key_for(&"demo_flashlight")))
+	menu.add_page(gameplay, &"video")
+
+	menu.screen.subtitle = "Offline · demo"
+	menu.help.add_section("This demo", [["M", "A picker of made-up maps"], ["P", "The next theme"]], &"keys")
+	menu.layout_editor.saved.connect(func(text: String) -> void: var _s := settings.set_value(&"hud_positions", text))
+	menu.picked.connect(func(id: StringName) -> void: hud.speed.text = "Picked %s" % id)
+	menu.theme_changed.connect(func(p: DotMenuPalette) -> void: hud.recolour(p))
+	menu.action_requested.connect(func(id: StringName) -> void:
+		if id == &"leave":
+			get_tree().quit())
+	hud.recolour(menu.palette())
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if menu.any_open():
+		return
+	if event.is_action_pressed(&"demo_maps"):
+		menu.open_picker(maps(), "Change map — offline")
+
+
+static func maps() -> Array:
+	var out: Array = []
+	var names := ["Intro", "Stages", "Quarry", "Slide Hill", "Build Plots", "Foundry", "Ice Works", "Long Fall", "Canyon", "Harbour"]
+	for i in names.size():
+		var tags: Array = ["tier %d" % (i % 4 + 1)]
+		if i == 6:
+			tags.append("not in rotation")
+		out.append({"id": names[i].to_snake_case(), "name": names[i], "tags": tags, "current": i == 2, "warn": i == 6})
+	return out
+
+
+func _build_world() -> void:
+	var env := WorldEnvironment.new()
+	var e := Environment.new()
+	e.background_mode = Environment.BG_SKY
+	var sky := Sky.new()
+	sky.sky_material = ProceduralSkyMaterial.new()
+	e.sky = sky
+	e.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
+	env.environment = e
+	add_child(env)
+
+	var sun := DirectionalLight3D.new()
+	sun.rotation_degrees = Vector3(-50, 30, 0)
+	sun.shadow_enabled = true
+	add_child(sun)
+
+	var ground := MeshInstance3D.new()
+	var plane := PlaneMesh.new()
+	plane.size = Vector2(80, 80)
+	ground.mesh = plane
+	var gm := StandardMaterial3D.new()
+	gm.albedo_color = Color(0.32, 0.36, 0.3)
+	ground.material_override = gm
+	add_child(ground)
+
+	var colours := [Color(0.85, 0.4, 0.3), Color(0.3, 0.6, 0.85), Color(0.9, 0.8, 0.3), Color(0.4, 0.8, 0.5)]
+	for i in 12:
+		var box := MeshInstance3D.new()
+		var m := BoxMesh.new()
+		m.size = Vector3(2, 1 + (i % 4), 2)
+		box.mesh = m
+		var mat := StandardMaterial3D.new()
+		mat.albedo_color = colours[i % colours.size()]
+		box.material_override = mat
+		box.position = Vector3((i % 6) * 4.0 - 10.0, m.size.y * 0.5, -6.0 - (i / 6) * 6.0)
+		add_child(box)
+
+	camera = Camera3D.new()
+	camera.position = Vector3(0, 4, 8)
+	camera.rotation_degrees = Vector3(-18, 0, 0)
+	add_child(camera)
+
+	var layer := CanvasLayer.new()
+	add_child(layer)
+	hud = DemoHud.new()
+	layer.add_child(hud)
+
+
+## A HUD of two pieces the layout editor can move: the duck-typed four it needs.
+class DemoHud extends Control:
+	var clock: Label = null
+	var speed: Label = null
+	var positions := {}
+
+	func _ready() -> void:
+		set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		clock = _label("0:42.180", 34)
+		speed = _label("312 u/s", 18)
+		resized.connect(place)
+		place()
+
+	func _label(text: String, size_px: int) -> Label:
+		var l := Label.new()
+		l.text = text
+		l.add_theme_font_size_override(&"font_size", size_px)
+		l.add_theme_constant_override(&"outline_size", 6)
+		l.add_theme_color_override(&"font_outline_color", Color(0, 0, 0, 0.7))
+		add_child(l)
+		return l
+
+	func pieces() -> Array:
+		return [&"clock", &"speed"]
+
+	func recolour(p: DotMenuPalette) -> void:
+		clock.add_theme_color_override(&"font_color", p.hud_text)
+		speed.add_theme_color_override(&"font_color", p.hud_detail)
+
+	func _default(id: StringName) -> Vector2:
+		return Vector2(0.5, 0.82) if id == &"clock" else Vector2(0.5, 0.89)
+
+	func _node(id: StringName) -> Label:
+		return clock if id == &"clock" else speed
+
+	func place() -> void:
+		if clock == null:
+			return
+		for id in pieces():
+			var l := _node(id)
+			var at: Vector2 = positions.get(id, _default(id))
+			l.size = l.get_combined_minimum_size()
+			l.position = at * size - l.size * 0.5
+
+	func element_rect(id: StringName) -> Rect2:
+		var l := _node(id)
+		return Rect2(l.position, l.size) if l != null else Rect2()
+
+	func move_element(id: StringName, centre: Vector2) -> void:
+		positions[id] = Vector2(clampf(centre.x / size.x, 0.0, 1.0), clampf(centre.y / size.y, 0.0, 1.0))
+		place()
+
+	func reset_element(id: StringName) -> void:
+		positions.erase(id)
+		place()

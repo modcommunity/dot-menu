@@ -1,0 +1,787 @@
+extends Node
+
+## Exercises dot-menu with no game: the data model, the stock settings and what applies them,
+## the bindings table, the screens driven by their own controls, the facade's keys, and what a
+## server may and may not do.
+##
+## [codeblock]
+## godot --headless --path . res://examples/menu_selftest.tscn
+## [/codeblock]
+##
+## [b]CHECKS is the guard the section counter cannot be.[/b] A script error inside a test
+## aborts THAT TEST, not the run; the section counter is satisfied because the section had
+## already announced itself, and the total is what notices the checks that never ran.
+const SECTIONS := 12
+const CHECKS := 147
+
+var _passed := 0
+var _failed := 0
+var _section_count := 0
+
+
+func _ready() -> void:
+	DotLog.set_level(DotLog.Level.ERROR)
+	# Every section runs inside the tree: the screens need a viewport to be built in.
+	_run.call_deferred()
+
+
+func _run() -> void:
+	_line("dot-menu self-test")
+	_line("")
+
+	_test_palette()
+	_test_themes()
+	_test_config()
+	_test_stock()
+	_test_bindings()
+	_test_applier()
+	await _test_screen()
+	await _test_rows()
+	await _test_facade()
+	await _test_server_rules()
+	await _test_help_and_picker()
+	_test_layout()
+
+	_line("")
+	_line("%d sections, %d passed, %d failed" % [_section_count, _passed, _failed])
+
+	if _section_count != SECTIONS:
+		_line("ERROR: %d of %d sections ran." % [_section_count, SECTIONS])
+		get_tree().quit(1)
+		return
+
+	if CHECKS > 0 and _passed + _failed != CHECKS:
+		_line("ERROR: %d checks ran, %d expected. A section aborted part-way." % [_passed + _failed, CHECKS])
+		get_tree().quit(1)
+		return
+
+	get_tree().quit(1 if _failed > 0 else 0)
+
+
+# --- Fixtures -------------------------------------------------------------------
+
+func _schema(groups: Array[StringName] = DotMenuStock.DEFAULT_GROUPS) -> DotSettingsSchema:
+	var s := DotSettingsSchema.new()
+	DotMenuStock.declare(s, groups)
+	return s
+
+
+func _keys() -> DotMenuBindings:
+	var k := DotMenuBindings.new()
+	k.add_movement()
+	k.add(&"test_flashlight", &"bind_flashlight", "Flashlight", "F", "View")
+	k.add(&"test_help", &"bind_help", "Help", "H", "Interface")
+	k.add(&"test_theme", &"bind_theme", "Next theme", "P", "Interface")
+	return k
+
+
+func _manager(schema: DotSettingsSchema) -> DotSettingsManager:
+	var m := DotMenuStock.manager(schema, "", &"menu_test", &"", DotSettingsStoreMemory.new())
+	m.persist = false
+	add_child(m)
+	var res := m.setup()
+	if not res.ok:
+		_line("  (settings did not set up: %s)" % res.error.message)
+	return m
+
+
+func _menu(groups: Array[StringName] = DotMenuStock.DEFAULT_GROUPS, cfg: DotMenuConfig = null) -> DotMenu:
+	var keys := _keys()
+	var schema := _schema(groups)
+	keys.add_to_schema(schema)
+	var st := _manager(schema)
+	keys.apply_all(st)
+	var menu := DotMenu.new()
+	menu.settings = st
+	menu.bindings = keys
+	menu.config = cfg if cfg != null else DotMenuConfig.new()
+	menu.config.escape_grace_ms = 0
+	menu.manage_pointer = false
+	menu.help_action = &"test_help"
+	menu.theme_action = &"test_theme"
+	add_child(menu)
+	var res := menu.setup()
+	if not res.ok:
+		_line("  (menu did not set up: %s)" % res.error.message)
+	return menu
+
+
+func _free_menu(menu: DotMenu) -> void:
+	var st := menu.settings
+	menu.queue_free()
+	if st != null:
+		st.queue_free()
+
+
+func _key(code: Key) -> InputEventKey:
+	var e := InputEventKey.new()
+	e.physical_keycode = code
+	e.keycode = code
+	e.pressed = true
+	return e
+
+
+## Every descendant of [param root] of [param type] whose name starts with [param prefix].
+func _find_all(root: Node, type: String, prefix: String = "") -> Array[Node]:
+	var out: Array[Node] = []
+	for n in root.find_children("*", type, true, false):
+		if prefix == "" or String(n.name).begins_with(prefix):
+			out.append(n)
+	return out
+
+
+func _row_control(menu: DotMenu, row_id: String) -> Node:
+	return menu.screen.find_child("Row_%s" % row_id, true, false)
+
+
+class FakeMixer extends RefCounted:
+	var master := 1.0
+	var sfx := 1.0
+	var ui := 1.0
+	var music := 1.0
+	var voice := 1.0
+	var applied := 0
+
+	func apply_to_buses() -> PackedStringArray:
+		applied += 1
+		return PackedStringArray()
+
+
+class FakeFx extends RefCounted:
+	var shake_scale := 1.0
+	var allow_flashes := true
+	var quality := 3
+
+
+class FakeLook extends RefCounted:
+	var mouse_sensitivity := 0.0
+	var invert_look_y := false
+
+
+class FakeCamera extends RefCounted:
+	var fov := 0.0
+	var fov_desired := 0.0
+
+
+## A HUD with two pieces the editor can move. Duck-typed, as the editor expects.
+class FakeHud extends Control:
+	var positions := {}
+	var defaults := {&"timer": Vector2(400, 700), &"keys": Vector2(400, 760)}
+
+	func element_rect(id: StringName) -> Rect2:
+		var centre: Vector2 = defaults[id]
+		if positions.has(id):
+			centre = (positions[id] as Vector2) * size
+		return Rect2(centre - Vector2(60, 20), Vector2(120, 40))
+
+	func move_element(id: StringName, centre: Vector2) -> void:
+		positions[id] = Vector2(clampf(centre.x / size.x, 0.0, 1.0), clampf(centre.y / size.y, 0.0, 1.0))
+
+	func reset_element(id: StringName) -> void:
+		positions.erase(id)
+
+
+# --- 1 ----------------------------------------------------------------------------
+
+func _test_palette() -> void:
+	_section("A theme is data")
+
+	var res := DotMenuPalette.from_dictionary({
+		"id": "sea", "name": "Sea", "accent": "#3080ff", "surface": [0.1, 0.2, 0.3],
+		"danger": "red", "extra": {"team_red": "#ff0000"},
+	})
+	_check(res.ok, "a theme reads hex, arrays and named colours")
+	var p: DotMenuPalette = res.value
+	_check(p.accent.is_equal_approx(Color.html("#3080ff")), "a hex accent is the accent")
+	_check(p.surface.is_equal_approx(Color(0.1, 0.2, 0.3)), "an array is a colour, alpha one")
+	_check(p.danger.is_equal_approx(Color.RED), "and a colour's name is the colour")
+	_check(p.color(&"team_red").is_equal_approx(Color.RED), "a game's own colour is read back by name")
+	_check(p.color(&"nobody", Color.BLUE) == Color.BLUE, "and one the theme does not name falls back")
+	_check(p.text.is_equal_approx(DotMenuPalette.new().text), "a key left out keeps the base's value")
+
+	var bad := DotMenuPalette.from_dictionary({"id": "x", "accent": "not a colour"})
+	_check(not bad.ok and bad.error.message.contains("accent"), "a colour nobody can read fails, naming the key")
+	_check(not DotMenuPalette.from_dictionary({"accent": "#fff"}).ok, "and a theme without an id is refused")
+
+	var again := DotMenuPalette.from_dictionary(p.to_dictionary())
+	_check(again.ok and again.value.accent.is_equal_approx(p.accent) and again.value.color(&"team_red").is_equal_approx(Color.RED),
+		"a theme survives a round trip through its own data")
+	_check(DotMenuPalette.ink_on(Color(1, 0.9, 0)) == Color(0.04, 0.04, 0.05), "black ink on a bright accent")
+	_check(DotMenuPalette.ink_on(Color(0.1, 0.2, 0.4)).r > 0.9, "and white ink on a dark one")
+	_check(Color(p.accent, 0.13).is_equal_approx(p.accent_wash()), "the wash follows the accent rather than being stored")
+
+
+# --- 2 ----------------------------------------------------------------------------
+
+func _test_themes() -> void:
+	_section("The catalogue")
+
+	var t := DotMenuThemes.stock()
+	_check(t.size() == 6, "six stock themes")
+	_check(t.default_id() == &"midnight", "Midnight first, so it is the default")
+	_check(t.named(&"paper").is_light(), "Paper is a light theme")
+	_check(t.named(&"no such theme").id == &"midnight", "an unknown id draws the default, not nothing")
+	_check(t.next(&"contrast") == &"midnight", "the theme key wraps round the end")
+
+	var ember := t.named(&"ember").derive(&"ember", "Ember, but blue")
+	ember.accent = Color.BLUE
+	t.add(ember)
+	_check(t.ids()[1] == &"ember" and t.named(&"ember").accent == Color.BLUE,
+		"a theme with a stock theme's id replaces it in place")
+
+	var made := t.add_dictionary({"id": "mint", "base": "midnight", "accent": "#7fffd4"})
+	_check(made.ok and t.named(&"mint").surface == t.named(&"midnight").surface,
+		"a theme can start from another and change only the accent")
+	_check(not t.add_dictionary({"id": "oops", "base": "nope"}).ok, "but not from a theme that is not there")
+
+	_check(t.keep_only(PackedStringArray(["paper", "contrast"])) == 2, "an operator can narrow the list")
+	_check(t.keep_only(PackedStringArray(["typo"])) == 2, "and a list naming nothing there keeps what there was")
+	_check(t.make_default(&"contrast") and t.default_id() == &"contrast", "and choose the default")
+
+	var dir := "user://dot_menu_test"
+	DirAccess.make_dir_recursive_absolute(dir)
+	var path := dir + "/themes.json"
+	var f := FileAccess.open(path, FileAccess.WRITE)
+	f.store_string(JSON.stringify({"themes": [{"id": "dusk", "name": "Dusk", "accent": "#ff8040"}]}))
+	f.close()
+	var t2 := DotMenuThemes.stock()
+	var loaded := t2.load_json(path)
+	_check(loaded.ok and t2.find(&"dusk") != null and t2.size() == 7, "a file of themes adds them")
+	_check(t2.load_json(dir + "/missing.json").ok, "and a missing file is the first launch, not an error")
+	f = FileAccess.open(path, FileAccess.WRITE)
+	f.store_string("{ not json")
+	f.close()
+	_check(not t2.load_json(path).ok, "while a file that does not parse is one")
+
+
+# --- 3 ----------------------------------------------------------------------------
+
+func _test_config() -> void:
+	_section("A developer changes values without code")
+
+	var cfg := DotMenuConfig.new()
+	var applied := cfg.apply_dictionary({
+		"brand_mark": "g2g", "theme": "ember", "rows_hidden": ["render_scale"],
+		"settings": {
+			"field_of_view": {"default": 100, "min": 75, "max": 110},
+			"shake_scale": {"default": 0.0},
+			"window_mode": {"options": ["windowed", "fullscreen"]},
+			"nonsense_key": {"default": 1},
+			"vsync": {"colour": "blue"},
+		},
+		"fps_choices": [0, 60, 144],
+	})
+	_check(applied.size() == 5, "every known key of the file is applied")
+	_check(cfg.validate().ok, "and the result is a valid config")
+	_check(cfg.rows_hidden.has("render_scale"), "a list arrives as a list")
+
+	var s := _schema()
+	var problems := cfg.apply_to_schema(s)
+	_check(int(s.find(&"field_of_view").default_value) == 100, "a default is changed")
+	_check(s.find(&"field_of_view").max_value == 110.0, "and a range narrowed")
+	_check(float(s.find(&"shake_scale").default_value) == 0.0, "a genre that wants no shake says so in data")
+	_check(s.find(&"window_mode").options.size() == 2 and s.find(&"window_mode").default_value == &"windowed",
+		"options narrowed, with the default still one of them")
+	_check(problems.size() == 2, "a key no setting has and a field no setting has are both reported")
+	_check(s.validate().ok, "and the schema is still one a document can be loaded against")
+
+	var narrow := DotMenuConfig.new()
+	narrow.settings = {"field_of_view": {"max": 80}}
+	var s2 := _schema()
+	var _p := narrow.apply_to_schema(s2)
+	_check(int(s2.find(&"field_of_view").default_value) == 80, "a default outside a narrowed range is pulled inside it")
+
+	_check(cfg.fps_list(90) == [0, 60, 90, 144], "a cap the list does not offer is kept in it, in order")
+	cfg.rows = {"fx_quality": {"title": "Particles"}}
+	_check(cfg.row_title(&"fx_quality", "Effects") == "Particles" and cfg.row_description(&"fx_quality", "x") == "x",
+		"a row is reworded by id, and what is not reworded stays")
+
+	var themed := DotMenuConfig.new()
+	themed.theme = &"paper"
+	themed.themes_allowed = PackedStringArray(["paper", "midnight", "mint"])
+	var catalogue := DotMenuThemes.stock()
+	var _mint := catalogue.add_dictionary({"id": "mint", "base": "midnight", "accent": "#7fffd4"})
+	var s3 := _schema()
+	var _q := themed.apply_to_schema(s3, themed.make_themes(catalogue))
+	var theme_def := s3.find(&"ui_theme")
+	_check(theme_def.default_value == &"paper", "the configured theme is a new player's theme")
+	_check(Array(theme_def.options) == [&"paper", &"midnight", &"mint"],
+		"and the setting can hold exactly the themes offered, a game's own among them")
+	_check(theme_def.coerce(&"mint").ok and not theme_def.coerce(&"ember").ok,
+		"so a game's theme is stored, and one no longer offered is refused at load")
+
+	var broken := DotMenuConfig.new()
+	broken.browser_tips = &"sometimes"
+	_check(not broken.validate().ok, "and a value nobody can act on is refused")
+
+
+# --- 4 ----------------------------------------------------------------------------
+
+func _test_stock() -> void:
+	_section("The stock settings, and what applies each")
+
+	var s := _schema()
+	var declared := 0
+	for group in DotMenuStock.DEFAULT_GROUPS:
+		for key in DotMenuStock.KEYS[group]:
+			if s.has(key):
+				declared += 1
+	var expected := 0
+	for group in DotMenuStock.DEFAULT_GROUPS:
+		expected += (DotMenuStock.KEYS[group] as Array).size()
+	_check(declared == expected and s.keys().size() == expected, "the default groups declare exactly their keys")
+	_check(not s.has(&"music_volume"), "music is asked for, not given: a slider for a silent bus does nothing")
+	_check(s.find(&"sensitivity").scope == DotSettingsDef.Scope.ACCOUNT, "sensitivity is the player's, everywhere")
+	_check(s.find(&"field_of_view").scope == DotSettingsDef.Scope.SERVER_CLAMPED, "the view may be capped by a server")
+	_check(s.find(&"master_volume").scope == DotSettingsDef.Scope.DEVICE, "and a volume is this machine's")
+	_check(s.validate().ok, "the stock schema validates")
+
+	var own := DotSettingsSchema.new()
+	own.add(DotSettingsDef.integer(&"field_of_view", 92, 70, 120, &"video"))
+	DotMenuStock.declare(own)
+	_check(int(own.find(&"field_of_view").default_value) == 92, "a game's own version of a stock key wins")
+
+	# The family's most repeated bug, as a check: every stock key is applied by something.
+	var orphans := PackedStringArray()
+	for group in DotMenuStock.ALL_GROUPS:
+		for key in DotMenuStock.KEYS[group]:
+			if not (DotMenuApplier.APPLIES.has(key) or DotMenuApplier.APPLIED_BY_MENU.has(key)
+					or DotMenuApplier.LEFT_TO_THE_GAME.has(key)):
+				orphans.append(String(key))
+	_check(orphans.is_empty(), "every stock key is applied by something (%s)" % ", ".join(orphans))
+
+	var all := _schema(DotMenuStock.ALL_GROUPS)
+	var rowless := PackedStringArray()
+	var unknown := PackedStringArray()
+	var seen := {}
+	for p in DotMenuStock.pages():
+		for sec in p.sections:
+			for r in sec.rows:
+				if r.is_setting():
+					seen[r.key] = true
+					if not all.has(r.key):
+						unknown.append(String(r.key))
+	for key in all.keys():
+		if not seen.has(key):
+			rowless.append(String(key))
+	_check(unknown.is_empty(), "every stock row names a stock setting (%s)" % ", ".join(unknown))
+	_check(rowless.is_empty(), "and every stock setting has a row (%s)" % ", ".join(rowless))
+	_check(DotMenuStock.pages().map(func(p: DotMenuPage) -> StringName: return p.id) == [&"general", &"video", &"audio", &"controls"],
+		"General, Video, Audio, Controls")
+
+
+# --- 5 ----------------------------------------------------------------------------
+
+func _test_bindings() -> void:
+	_section("Keys")
+
+	var k := _keys()
+	_check(k.rows.size() == 9 and k.groups() == PackedStringArray(["Movement", "View", "Interface"]), "rows in order, groups once each")
+	k.add(&"dot_fps_crouch", &"bind_duck", "Crouch", "Shift", "Movement")
+	_check(k.rows.size() == 9 and k.rows[5]["label"] == "Crouch", "a row for an action already there replaces it in place")
+
+	var s := DotSettingsSchema.new()
+	s.add(DotSettingsDef.binding(&"bind_help", "F1", &"controls").with_scope(DotSettingsDef.Scope.ACCOUNT))
+	k.add(&"test_chat", &"bind_chat", "Chat", "Y", "Interface", DotSettingsDef.Scope.ACCOUNT)
+	k.add_to_schema(s)
+	_check(s.find(&"bind_forward").scope == DotSettingsDef.Scope.DEVICE, "a key is this keyboard's by default")
+	_check(s.find(&"bind_chat").scope == DotSettingsDef.Scope.ACCOUNT, "unless its row says otherwise")
+	_check(str(s.find(&"bind_help").default_value) == "F1", "and a binding the game declared itself is left alone")
+
+	var st := _manager(s)
+	k.apply_all(st)
+	_check(DotMenuBindings.shown(k.row_for_action(&"dot_fps_forward")) == "W", "every row lands on the InputMap")
+	_check(k.key_for(&"test_help") == "F1", "from the stored value, not the table's default")
+
+	var _cleared := st.set_value(&"bind_flashlight", "")
+	_check(k.apply_row(k.row_for_action(&"test_flashlight"), "") == "F", "a cleared binding falls back to the default rather than to nothing")
+	_check(k.row_using("F", &"bind_jump", st) == k.row_for_action(&"test_flashlight"),
+		"and is found on its default by the conflict check, or binding F elsewhere leaves F on two actions")
+
+	var res := k.rebind(k.row_for_action(&"dot_fps_jump"), "F", st)
+	_check(res.ok and str(res.value).contains("moved"), "binding a key that is taken says what moved")
+	_check(st.get_string(&"bind_jump") == "F" and st.get_string(&"bind_flashlight") == "Space",
+		"and swaps the two, so nothing is left unbound")
+	_check(k.key_for(&"dot_fps_jump") == "F" and k.key_for(&"test_flashlight") == "Space", "both are on the InputMap at once")
+
+	k.reset_all(st)
+	_check(st.get_string(&"bind_jump") == "Space" and k.key_for(&"dot_fps_jump") == "Space", "a reset puts every key back")
+	st.queue_free()
+
+
+# --- 6 ----------------------------------------------------------------------------
+
+func _test_applier() -> void:
+	_section("Every value reaches what it controls")
+
+	var s := _schema(DotMenuStock.ALL_GROUPS)
+	var st := _manager(s)
+	var _a := st.set_value(&"master_volume", 0.5)
+	var _b := st.set_value(&"sensitivity", 2.0)
+	var _c := st.set_value(&"shake_scale", 0.0)
+
+	var applier := DotMenuApplier.new()
+	applier.settings = st
+	add_child(applier)
+
+	var mixer := FakeMixer.new()
+	var fx := FakeFx.new()
+	var look := FakeLook.new()
+	var cam := FakeCamera.new()
+	var heard: Array = []
+	applier.bind_audio(mixer)
+	applier.bind_fx(fx)
+	applier.bind_look(look)
+	applier.bind_camera(cam)
+	var _o := applier.on(&"chat_window", func(v: Variant, why: StringName) -> void: heard.append([v, why]))
+	var _set := applier.setup()
+
+	_check(is_equal_approx(mixer.master, 0.5) and mixer.applied > 0, "a stored volume is applied at boot, without being touched")
+	_check(is_equal_approx(look.mouse_sensitivity, 2.0 * DotMenuApplier.DEGREES_PER_COUNT), "the sensitivity is the family's degrees per count")
+	_check(fx.shake_scale == 0.0, "the shake reaches the effects")
+	_check(cam.fov == 90.0, "and the field of view the camera")
+	_check(heard.size() == 1 and heard[0][1] == &"applied", "a game's handler hears the boot value once")
+
+	var _d := st.set_value(&"sfx_volume", 0.25)
+	var _e := st.set_value(&"invert_mouse", true)
+	var _f := st.set_value(&"chat_window", &"off")
+	_check(is_equal_approx(mixer.sfx, 0.25) and look.invert_look_y, "a change is applied when it is made")
+	_check(heard.size() == 2 and heard[1][0] == &"off", "and the handler hears it")
+
+	applier.fov_transform = func(v: float) -> float: return v + 10.0
+	var cam2 := FakeCamera.new()
+	applier.bind_camera(cam2, &"fov_desired")
+	_check(cam2.fov_desired == 100.0, "a camera with its own property, through the game's own measure")
+
+	var _g := st.set_value(&"fps_max", 144)
+	_check(Engine.max_fps == 144, "the frame-rate cap is the engine's")
+	var _h := st.set_value(&"fps_max", 0)
+
+	var bare := DotMenuApplier.new()
+	bare.settings = st
+	add_child(bare)
+	var _s2 := bare.setup()
+	_check(is_equal_approx(db_to_linear(AudioServer.get_bus_volume_db(0)), 0.5),
+		"with no mixer, the volume goes straight onto the bus of its name")
+	AudioServer.set_bus_volume_db(0, 0.0)
+	applier.queue_free()
+	bare.queue_free()
+	st.queue_free()
+
+
+# --- 7 ----------------------------------------------------------------------------
+
+func _test_screen() -> void:
+	_section("The menu is a view of the settings")
+
+	var menu := _menu()
+	menu.open()
+	await get_tree().process_frame
+
+	_check(menu.is_open() and menu.screen.current_page() == &"general", "it opens on the first page")
+	var tabs := _find_all(menu.screen, "Button", "Page_")
+	_check(tabs.size() == 4, "a tab per page")
+	var actions := _find_all(menu.screen, "Button", "Action_")
+	_check(actions.size() == 2, "and Help and Leave under them")
+
+	var fps_switch := _row_control(menu, "show_fps") as DotMenuSwitch
+	_check(fps_switch != null and not fps_switch.button_pressed, "a switch shows the stored value")
+	fps_switch.button_pressed = true
+	_check(menu.settings.get_bool(&"show_fps"), "and flipping it writes the setting, with nothing to apply")
+	_check(menu._fps_label.visible, "which the counter follows at once")
+
+	menu.screen.show_page(&"video")
+	await get_tree().process_frame
+	var fov := _row_control(menu, "field_of_view")
+	var slider := fov.find_child("Slider", true, false) as HSlider if fov != null else null
+	_check(slider != null and slider.min_value == 70.0 and slider.max_value == 120.0, "a slider's range is the setting's own")
+	slider.value = 101.0
+	_check(menu.settings.get_int(&"field_of_view") == 101, "dragging it writes an integer setting as an integer")
+	var readout := fov.find_child("Readout", true, false) as Label
+	_check(readout.text == "101°", "and the readout says it in the row's format")
+
+	var fps := _row_control(menu, "fps_max") as OptionButton
+	_check(fps != null and fps.get_item_text(fps.selected) == "Unlimited", "the frame-rate list shows what is stored")
+	fps.select(3)
+	fps.item_selected.emit(3)
+	_check(menu.settings.get_int(&"fps_max") == 75, "and picking from it stores the number")
+
+	var _console := menu.settings.set_value(&"fps_max", 97)
+	menu.screen.show_page(&"video")
+	await get_tree().process_frame
+	fps = _row_control(menu, "fps_max") as OptionButton
+	_check(fps.get_item_text(fps.selected) == "97", "a cap set at the console is shown, not replaced by the first item")
+	var _back := menu.settings.set_value(&"fps_max", 0)
+	Engine.max_fps = 0
+
+	_check(_row_control(menu, "window_mode_web") == null and _row_control(menu, "window_mode") != null,
+		"the desktop's window row, not the browser's")
+
+	menu.screen.show_page(&"controls")
+	await get_tree().process_frame
+	var keys := menu.screen.find_children("Row_bind_*", "DotMenuKeyButton", true, false)
+	_check(keys.size() == 9, "a key button for every binding row")
+	_check(menu.screen.find_child("ResetKeys", true, false) != null, "and a way to put them all back")
+	_free_menu(menu)
+
+	var narrow := _menu([DotMenuStock.GROUP_AUDIO, DotMenuStock.GROUP_INTERFACE] as Array[StringName])
+	narrow.open(&"video")
+	await get_tree().process_frame
+	_check(_row_control(narrow, "render_scale") == null and narrow.screen.find_child("Body", true, false).get_child_count() == 0,
+		"a page whose settings were not declared draws nothing, not dead switches")
+	narrow.open(&"audio")
+	await get_tree().process_frame
+	_check(_row_control(narrow, "master_volume") != null and _row_control(narrow, "music_volume") == null,
+		"and a row for an undeclared setting is left out")
+	_free_menu(narrow)
+
+
+# --- 8 ----------------------------------------------------------------------------
+
+func _test_rows() -> void:
+	_section("A game extends a page")
+
+	var cfg := DotMenuConfig.new()
+	cfg.rows_hidden = PackedStringArray(["vsync"])
+	cfg.pages_hidden = PackedStringArray(["audio"])
+	cfg.page_order = PackedStringArray(["controls"])
+	cfg.rows = {"show_fps": {"title": "FPS"}}
+	var menu := _menu(DotMenuStock.DEFAULT_GROUPS, cfg)
+
+	var lit := [false]
+	var pressed := [0]
+	var allowed := [true]
+	var gameplay := DotMenuPage.make(&"gameplay", "Gameplay", "Your view.")
+	gameplay.section("View") \
+		.add(DotMenuRow.live_toggle("Flashlight", "", func() -> bool: return lit[0], func(on: bool) -> void: lit[0] = on)
+			.named(&"flashlight").enabled_when(func() -> bool: return allowed[0])
+			.described_by(func() -> String: return "Allowed." if allowed[0] else "This server turned flashlights off.")) \
+		.add(DotMenuRow.button("Arrange", "Drag the HUD.", "Move HUD elements", func() -> void: pressed[0] += 1).named(&"arrange")) \
+		.add(DotMenuRow.custom("Name", "", func(kit: DotMenuKit) -> Control:
+			var e := LineEdit.new()
+			e.text = "custom"
+			return e).named(&"name")) \
+		.add(DotMenuRow.note("Only you see it."))
+	menu.add_page(gameplay, &"video")
+	var _moved := menu.page(&"general").take_row(&"show_fps")
+	gameplay.section("View").add(_moved)
+
+	menu.open(&"gameplay")
+	await get_tree().process_frame
+	var order: Array = menu.screen.visible_pages().map(func(p: DotMenuPage) -> StringName: return p.id)
+	_check(order == [&"controls", &"general", &"gameplay", &"video"], "pages in the config's order, the hidden one gone")
+
+	var light := _row_control(menu, "flashlight") as DotMenuSwitch
+	_check(light != null and not light.disabled, "a live row draws its owner's state")
+	light.button_pressed = true
+	_check(lit[0], "and writes through its setter, storing nothing")
+	(_row_control(menu, "arrange") as Button).pressed.emit()
+	_check(pressed[0] == 1, "a button row calls the game")
+	_check((_row_control(menu, "name") as LineEdit).text == "custom", "a custom row is whatever the game builds")
+	_check(_row_control(menu, "show_fps") != null and menu.screen.find_child("Body", true, false).find_children("*", "Label", true, false).any(func(l: Node) -> bool: return (l as Label).text == "FPS"),
+		"a stock row moved to the game's page, under the config's words")
+
+	allowed[0] = false
+	menu.screen.refresh()
+	await get_tree().process_frame
+	light = _row_control(menu, "flashlight") as DotMenuSwitch
+	var says_off := menu.screen.find_child("Body", true, false).find_children("*", "Label", true, false).any(
+		func(l: Node) -> bool: return (l as Label).text.contains("turned flashlights off"))
+	_check(light.disabled and says_off, "drawn again, it is disabled and says why")
+
+	menu.screen.show_page(&"video")
+	await get_tree().process_frame
+	_check(_row_control(menu, "vsync") == null and _row_control(menu, "fps_max") != null, "a hidden row is gone and its neighbours are not")
+	_free_menu(menu)
+
+
+# --- 9 ----------------------------------------------------------------------------
+
+func _test_facade() -> void:
+	_section("Escape, help and the theme key")
+
+	var menu := _menu()
+	var changes: Array = []
+	var themes_seen: Array = []
+	menu.overlays_changed.connect(func(open: bool) -> void: changes.append(open))
+	menu.theme_changed.connect(func(p: DotMenuPalette) -> void: themes_seen.append(p.id))
+
+	_check(menu.handle_event(_key(KEY_ESCAPE)) and menu.is_open(), "Escape opens the menu")
+	_check(changes == [true], "and says something is open, once")
+	_check(menu.handle_event(_key(KEY_R)), "every key is the menu's while it is open: R behind it is no restart")
+	_check(menu.handle_event(_key(KEY_ESCAPE)) and not menu.is_open(), "Escape closes it")
+	_check(changes == [true, false], "and says nothing is")
+
+	_check(menu.handle_event(_key(KEY_H)) and menu.help.is_open(), "the help key opens help")
+	menu.open()
+	_check(not menu.help.is_open(), "the menu opened over help closes help")
+	menu.open_help()
+	_check(menu.help.is_open() and menu.is_open(), "help opened from the menu sits over it")
+	var _e := menu.handle_event(_key(KEY_ESCAPE))
+	_check(not menu.help.is_open() and menu.is_open(), "Escape closes help and leaves the menu")
+	var _e2 := menu.handle_event(_key(KEY_ESCAPE))
+
+	menu.config.escape_grace_ms = 60000
+	var _o := menu.handle_event(_key(KEY_ESCAPE))
+	_check(menu.handle_event(_key(KEY_ESCAPE)) and menu.is_open(), "an Escape right after opening is swallowed, not a flash")
+	menu.config.escape_grace_ms = 0
+	menu.close()
+
+	var busy := [true]
+	menu.busy = func() -> bool: return busy[0]
+	_check(not menu.handle_event(_key(KEY_ESCAPE)) and not menu.is_open(), "while the game has the keyboard, Escape is the game's")
+	busy[0] = false
+
+	var surface_before := menu.screen.theme.get_stylebox(&"normal", &"Button") as StyleBoxFlat
+	_check(menu.handle_event(_key(KEY_P)), "the theme key is the menu's")
+	_check(menu.settings.get_string(&"ui_theme") == "ember", "and stores the next theme")
+	_check(themes_seen == [&"ember"], "which every screen hears about once")
+	var surface_after := menu.screen.theme.get_stylebox(&"normal", &"Button") as StyleBoxFlat
+	_check(surface_before != surface_after and menu.kit.palette.id == &"ember", "and is rebuilt in")
+	_check(menu.help.kit == menu.kit and menu.picker.kit == menu.kit, "the help and the picker too")
+
+	var _same := menu.settings.set_value(&"show_fps", true)
+	_check(themes_seen.size() == 1, "a change to anything else does not rebuild the screens")
+
+	var mine := DotMenuPicker.new()
+	add_child(mine)
+	menu.add_overlay(mine)
+	mine.open([{"id": "a", "name": "A"}])
+	menu.overlay_opened()
+	_check(menu.any_open(), "a game's own overlay counts as open")
+	var _x := menu.handle_event(_key(KEY_ESCAPE))
+	_check(not mine.is_open() and not menu.any_open(), "and Escape closes it")
+	mine.queue_free()
+	_free_menu(menu)
+	await get_tree().process_frame
+
+
+# --- 10 ---------------------------------------------------------------------------
+
+func _test_server_rules() -> void:
+	_section("What a server may do")
+
+	var menu := _menu()
+	var _p := menu.settings.set_value(&"field_of_view", 110)
+	var _t := menu.settings.set_value(&"ui_theme", &"violet")
+	menu.open(&"video")
+	await get_tree().process_frame
+
+	var clamped := menu.apply_server_rules({
+		"clamps": {"field_of_view": 95, "sensitivity": 1.0},
+		"rows_hidden": ["render_scale"], "pages_hidden": ["audio"],
+		"themes": ["midnight", "contrast"], "leave_text": "Disconnect",
+	})
+	await get_tree().process_frame
+	_check(clamped == PackedStringArray(["field_of_view"]), "it clamps what the policy allows, and only that")
+	_check(menu.settings.get_int(&"field_of_view") == 95, "the game sees the bound")
+	var fov := _row_control(menu, "field_of_view")
+	var slider := fov.find_child("Slider", true, false) as HSlider
+	_check(slider.value == 110.0, "the menu shows what the player chose, not the clamp")
+	var notes := menu.screen.find_child("Body", true, false).find_children("*", "Label", true, false).filter(
+		func(l: Node) -> bool: return (l as Label).text.contains("caps it at 95"))
+	_check(notes.size() == 1, "and says the server caps it")
+	_check(_row_control(menu, "render_scale") == null, "a row it hides is gone")
+	_check(not menu.screen.visible_pages().any(func(p: DotMenuPage) -> bool: return p.id == &"audio"), "and a page")
+	_check(menu.kit.palette.id == &"midnight", "a theme it does not offer is moved off, for this connection")
+	_check(menu.settings.get_string(&"ui_theme") == "violet", "while the stored choice is untouched")
+	var leave := menu.screen.find_child("Action_leave", true, false) as Button
+	_check(leave.text == "Disconnect", "it may reword Leave")
+
+	menu.release_server_rules()
+	await get_tree().process_frame
+	_check(menu.settings.get_int(&"field_of_view") == 110, "leaving gives the player's own value back")
+	_check(menu.kit.palette.id == &"violet", "and their own theme")
+	# Found again: the theme change rebuilt the screen, and the old button with it.
+	leave = menu.screen.find_child("Action_leave", true, false) as Button
+	_check(_row_control(menu, "render_scale") != null and leave.text == "Leave", "and everything it hid or reworded")
+	_free_menu(menu)
+
+
+# --- 11 ---------------------------------------------------------------------------
+
+func _test_help_and_picker() -> void:
+	_section("Help and the picker")
+
+	var menu := _menu()
+	menu.help.add_section("Running", [["!r", "Restart"]], &"plain")
+	menu.help.show_browser_tips = true
+	menu.open_help([["rtv", "Vote to change the map"]], true)
+	await get_tree().process_frame
+	var texts: Array = menu.help.find_children("*", "Label", true, false).map(func(l: Node) -> String: return (l as Label).text)
+	_check(texts.has("Flashlight") and texts.has("Menu and settings"), "every key, and Escape, which no row has")
+	_check(texts.has("!rtv") and texts.has("RUNNING"), "the server's commands and the game's own card")
+	_check(texts.has("Ctrl + W") and texts.any(func(t: String) -> bool: return t.contains("Duck is on Ctrl")),
+		"and the browser card warns about the one shortcut a ducking player will press")
+
+	var _r := menu.bindings.rebind(menu.bindings.row_for_action(&"test_flashlight"), "L", menu.settings)
+	menu.help.close()
+	menu.open_help(null, false)
+	await get_tree().process_frame
+	var caps: Array = menu.help.find_children("*", "Label", true, false).map(func(l: Node) -> String: return (l as Label).text)
+	_check(caps.has("L"), "a key rebound a moment ago is shown where it is now")
+	_check(caps.any(func(t: String) -> bool: return t.begins_with("You are playing offline")), "and offline it says why there are no commands")
+	menu.help.close()
+
+	var items: Array = []
+	for i in 10:
+		items.append({"id": "map_%d" % i, "name": "Map %d" % i, "tags": ["tier %d" % (i % 3)], "current": i == 8})
+	var chosen: Array = []
+	menu.picked.connect(func(id: StringName) -> void: chosen.append(id))
+	menu.open_picker(items, "Change map")
+	_check(menu.picker.page == 1, "the picker opens on the page with what is on now")
+	var _k := menu.handle_event(_key(KEY_8))
+	_check(menu.picker.page == 0, "8 is the page before")
+	var _k2 := menu.handle_event(_key(KEY_3))
+	_check(chosen == [&"map_2"] and not menu.picker.is_open(), "a number picks its row and closes")
+	_free_menu(menu)
+	await get_tree().process_frame
+
+
+# --- 12 ---------------------------------------------------------------------------
+
+func _test_layout() -> void:
+	_section("Moving the HUD")
+
+	var hud := FakeHud.new()
+	add_child(hud)
+	hud.size = Vector2(800, 800)
+	var editor := DotMenuLayoutEditor.new()
+	editor.target = hud
+	editor.pieces = {&"timer": "Timer", &"keys": "Keys"}
+	add_child(editor)
+	var saved: Array = []
+	editor.saved.connect(func(t: String) -> void: saved.append(t))
+
+	_check(editor.piece_at(Vector2(400, 700)) == &"timer", "a piece is found under the pointer")
+	editor.drag(&"timer", Vector2(400, 700), Vector2(200, 100))
+	_check(hud.positions[&"timer"].is_equal_approx(Vector2(0.25, 0.125)), "a drag moves its centre, as a fraction of the screen")
+	var decoded := DotMenuLayoutEditor.decode(saved[-1], [&"timer", &"keys"])
+	_check(decoded[&"timer"].is_equal_approx(Vector2(0.25, 0.125)), "and is saved as text that reads back the same")
+	_check(DotMenuLayoutEditor.decode('{"timer": [3, -1], "nope": [0.5, 0.5]}', [&"timer"]) == {&"timer": Vector2(1, 0)},
+		"a hand-edited layout is held on screen, and a piece nobody has is dropped")
+	_check(DotMenuLayoutEditor.decode("{ broken").is_empty(), "and one that does not parse is the default layout")
+	editor.reset_all()
+	_check(hud.positions.is_empty() and saved[-1] == "", "reset puts everything back")
+	editor.queue_free()
+	hud.queue_free()
+
+
+# --- Harness ----------------------------------------------------------------------
+
+func _section(title: String) -> void:
+	_section_count += 1
+	_line("[%d] %s" % [_section_count, title])
+
+
+func _check(ok: bool, what: String) -> void:
+	if ok:
+		_passed += 1
+		_line("    ok    %s" % what)
+	else:
+		_failed += 1
+		_line("    FAIL  %s" % what)
+
+
+func _line(text: String) -> void:
+	print(text)

@@ -1,0 +1,22 @@
+# Godot 4
+.godot/
+/android/
+
+# The addons this one builds on are separate repositories. For local development,
+# dot-bootstrap symlinks them (it reads these lines to know which):
+#   ln -s ../../dot-core/addons/dot_core addons/dot_core
+# Consumers copy every addon into their own project.
+/addons/dot_core
+/addons/dot_ui
+/addons/dot_settings
+
+# Exports
+build/
+export_presets.cfg
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Rendered by tools/screenshot.sh, for looking at rather than for keeping.
+/screenshots/
