@@ -33,7 +33,7 @@ const GROUP_VIDEO := &"video"
 const GROUP_CONTROLS := &"controls"
 ## Camera shake and screen flashes.
 const GROUP_COMFORT := &"comfort"
-## The theme and the frame-rate counter.
+## The theme, the frame-rate counter and net_stat.
 const GROUP_INTERFACE := &"interface"
 ## Whether the chat box is drawn.
 const GROUP_CHAT := &"chat"
@@ -57,7 +57,7 @@ const KEYS := {
 	GROUP_VIDEO: [&"window_mode", &"vsync", &"fps_max", &"render_scale", &"field_of_view", &"fx_quality"],
 	GROUP_CONTROLS: [&"sensitivity", &"invert_mouse"],
 	GROUP_COMFORT: [&"shake_scale", &"allow_flashes"],
-	GROUP_INTERFACE: [&"ui_theme", &"show_fps"],
+	GROUP_INTERFACE: [&"ui_theme", &"show_fps", &"net_stat", &"net_stat_height", &"net_stat_position"],
 	GROUP_CHAT: [&"chat_window"],
 }
 
@@ -137,6 +137,7 @@ static func _declare(schema: DotSettingsSchema, groups: Array[StringName], theme
 			.with_scope(account)
 			.with_description("The colours of the menus and the HUD."))
 		_add(schema, DotSettingsDef.boolean(&"show_fps", false, &"video"))
+		var _ns := declare_net_stat(schema)
 
 	if groups.has(GROUP_CHAT):
 		_add(schema, DotSettingsDef.choice(
@@ -145,6 +146,25 @@ static func _declare(schema: DotSettingsSchema, groups: Array[StringName], theme
 			"auto hides the box on a server already carrying chat somewhere the player can see it."
 		))
 
+	return schema
+
+
+## `net_stat`, `net_stat_height` and `net_stat_position` alone, for a game with its own
+## settings and no [DotMenu] (it draws them with [method DotMenuNetStat.follow]).
+## [method declare] adds them with the interface group.
+##
+## net_stat is the console command too: every console here binds the schema's keys, so
+## `net_stat 2` and the Advanced page are one value. An integer for that reason — the
+## level a person types. DEVICE: it is a diagnosis of this machine's connection.
+## [param corner] is the default corner, for a game whose HUD already holds the top right.
+static func declare_net_stat(schema: DotSettingsSchema, corner: StringName = &"") -> DotSettingsSchema:
+	var default_corner: StringName = corner if DotMenuNetStat.POSITIONS.has(corner) else DotMenuNetStat.POSITIONS[0]
+	_add(schema, DotSettingsDef.integer(&"net_stat", 0, 0, 3, &"network")
+		.with_description("The connection overlay: 0 off, 1 numbers, 2 and a graph, 3 everything."))
+	_add(schema, DotSettingsDef.integer(&"net_stat_height", 96, DotMenuNetStat.MIN_HEIGHT, DotMenuNetStat.MAX_HEIGHT, &"network")
+		.with_description("The height of net_stat's graph, in pixels."))
+	_add(schema, DotSettingsDef.choice(&"net_stat_position", default_corner, DotMenuNetStat.POSITIONS, &"network")
+		.with_description("The corner net_stat is drawn in."))
 	return schema
 
 
@@ -175,11 +195,26 @@ static func manager(
 
 # --- Pages ------------------------------------------------------------------------
 
-## General, Video, Audio and Controls, with a row for every stock setting. [param config]
-## supplies the frame-rate list; null is the stock one.
+## General, Video, Audio, Controls and Advanced, with a row for every stock setting.
+## [param config] supplies the frame-rate list; null is the stock one.
 static func pages(config: DotMenuConfig = null) -> Array[DotMenuPage]:
-	var out: Array[DotMenuPage] = [general_page(), video_page(config), audio_page(), controls_page()]
+	var out: Array[DotMenuPage] = [general_page(), video_page(config), audio_page(), controls_page(), advanced_page()]
 	return out
+
+
+## What a player opens to find out why it feels slow, and does not need otherwise.
+static func advanced_page() -> DotMenuPage:
+	var p := DotMenuPage.make(&"advanced", "Advanced", "Diagnostics. Saved on this device.")
+	p.section("Network") \
+		.add(DotMenuRow.select(&"net_stat", "Connection overlay",
+			"What the connection is doing, over the game. The console's net_stat sets the same thing.",
+			[[0, "Off"], [1, "Numbers"], [2, "Numbers and graph"], [3, "Everything"]])) \
+		.add(DotMenuRow.slider(&"net_stat_height", "Graph height", "")
+			.with_range(DotMenuNetStat.MIN_HEIGHT, DotMenuNetStat.MAX_HEIGHT, 8)
+			.formatted(func(v: float) -> String: return "%d px" % roundi(v))) \
+		.add(DotMenuRow.select(&"net_stat_position", "Corner", "",
+			[[&"top_right", "Top right"], [&"bottom_right", "Bottom right"], [&"top_left", "Top left"], [&"bottom_left", "Bottom left"]]))
+	return p
 
 
 static func general_page() -> DotMenuPage:

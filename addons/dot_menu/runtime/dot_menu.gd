@@ -2,7 +2,8 @@ class_name DotMenu
 extends CanvasLayer
 
 ## A game's menus, in one node: the Escape menu, the help screen, a picker, the HUD layout
-## editor, a frame-rate counter, and the theme they are all drawn in.
+## editor, a frame-rate counter, the connection overlay ([DotMenuNetStat], `net_stat`), and
+## the theme they are all drawn in.
 ##
 ## [codeblock]
 ## var menu := DotMenu.new()
@@ -106,6 +107,9 @@ var layout_editor: DotMenuLayoutEditor = null
 ## The held scoreboard. Not one of the overlays: see [DotMenuScoreboard].
 var scoreboard: DotMenuScoreboard = null
 
+## The connection overlay, driven by the `net_stat*` settings. See [DotMenuNetStat].
+var net_stat: DotMenuNetStat = null
+
 var _fps_label: Label = null
 ## Other overlays a game registered: Controls with is_open() and close().
 var _extra: Array[Control] = []
@@ -143,7 +147,7 @@ func setup() -> DotResult:
 
 	if settings != null and not settings.changed.is_connected(_on_setting_changed):
 		settings.changed.connect(_on_setting_changed)
-	_apply_fps_counter()
+	_apply_net_stat()
 	_ready_done = true
 	return DotResult.success(self)
 
@@ -165,6 +169,10 @@ func _build() -> void:
 	_fps_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_fps_label.visible = false
 	add_child(_fps_label)
+
+	net_stat = DotMenuNetStat.new()
+	net_stat.kit = kit
+	add_child(net_stat)
 
 	# Under everything else on this layer: the menu opened over a held board is on top.
 	scoreboard = DotMenuScoreboard.new()
@@ -579,6 +587,8 @@ func use_theme(id: StringName) -> bool:
 		scoreboard.restyle(kit)
 	if _fps_label != null:
 		_fps_label.add_theme_color_override(&"font_color", p.muted)
+	if net_stat != null:
+		net_stat.restyle(kit)
 	theme_changed.emit(p)
 	return true
 
@@ -596,19 +606,27 @@ func _on_setting_changed(key: StringName, value: Variant, _why: StringName) -> v
 	match key:
 		&"ui_theme":
 			var _changed := use_theme(_stored_theme())
-		&"show_fps":
-			_apply_fps_counter()
+		&"show_fps", &"net_stat", &"net_stat_height", &"net_stat_position":
+			_apply_net_stat()
 		_:
 			if bindings != null:
 				var _bound := bindings.apply_setting(key, value)
 
 
-func _apply_fps_counter() -> void:
-	if _fps_label == null:
-		return
-	var on := settings != null and settings.schema != null and settings.schema.has(&"show_fps") \
-		and settings.get_bool(&"show_fps", false)
-	_fps_label.visible = config.fps_counter and on
+## The frame counter and net_stat together, because they share a corner and a number:
+## net_stat shows the frame rate itself, so the counter steps aside while it is up rather
+## than printing the same figure twice, one over the other in the top-right corner.
+func _apply_net_stat() -> void:
+	var level := 0
+	if net_stat != null and config.net_stat:
+		level = net_stat.read_settings(settings)
+	if _fps_label != null:
+		_fps_label.visible = config.fps_counter and level == 0 and _declared(&"show_fps") \
+			and settings.get_bool(&"show_fps", false)
+
+
+func _declared(key: StringName) -> bool:
+	return settings != null and settings.schema != null and settings.schema.has(key)
 
 
 # --- What a server may say ----------------------------------------------------

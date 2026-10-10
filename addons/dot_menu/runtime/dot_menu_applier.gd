@@ -31,7 +31,7 @@ extends Node
 ## fingerprint, so a client writing them can never disagree with its server).
 ##
 ## [b]Two stock settings need the game[/b] and are left to [method on]: `chat_window` (only
-## the game knows whether its server carries chat elsewhere) and `ui_theme`/`show_fps`, which
+## the game knows whether its server carries chat elsewhere) and `ui_theme`/`show_fps`/`net_stat*`, which
 ## [DotMenu] applies itself because it owns what they change.
 
 const CHANNEL := "menu.apply"
@@ -62,7 +62,9 @@ const APPLIES: Array[StringName] = [
 	&"shake_scale", &"allow_flashes", &"fx_quality",
 	&"sensitivity", &"invert_mouse", &"field_of_view",
 ]
-const APPLIED_BY_MENU: Array[StringName] = [&"ui_theme", &"show_fps"]
+const APPLIED_BY_MENU: Array[StringName] = [
+	&"ui_theme", &"show_fps", &"net_stat", &"net_stat_height", &"net_stat_position",
+]
 
 ## Stock keys only the game can apply, through [method on]. See the class note.
 const LEFT_TO_THE_GAME: Array[StringName] = [&"chat_window"]

@@ -30,7 +30,7 @@ func _run() -> void:
 
 	await _shot("hud")
 
-	for page in [&"general", &"gameplay", &"video", &"audio", &"controls"]:
+	for page in [&"general", &"gameplay", &"video", &"audio", &"controls", &"advanced"]:
 		menu.open(page)
 		await _shot("menu_%s" % page)
 
@@ -93,8 +93,83 @@ func _run() -> void:
 	menu.layout_editor.reset_all()
 	menu.layout_editor.close()
 
+	await _net_stat_shots(menu, settings)
+
 	settings.reset_all()
 	quit(0)
+
+
+## net_stat over three seconds of made-up traffic shaped like a real client's: a snapshot
+## on the state channel every other frame, the odd control and event packet, a content
+## burst, and a ping that wanders and spikes once. Real time, because the overlay buckets
+## by the clock.
+func _net_stat_shots(menu: DotMenu, settings: DotSettingsManager) -> void:
+	var meter := ShotMeter.new()
+	menu.net_stat.source = func() -> Object: return meter
+	var _two := settings.set_value(&"net_stat", 2)
+	await _traffic(meter, 3.2)
+	await _shot("net_stat_2")
+
+	var _three := settings.set_value(&"net_stat", 3)
+	await _traffic(meter, 1.0)
+	await _shot("net_stat_3")
+
+	var _h := settings.set_value(&"net_stat_height", 200)
+	var _c := settings.set_value(&"net_stat_position", &"bottom_left")
+	var _p := settings.set_value(&"ui_theme", &"paper")
+	meter.transport = "websocket"
+	await _traffic(meter, 1.0)
+	await _shot("net_stat_3_tall_paper_websocket")
+
+	var _one := settings.set_value(&"net_stat", 1)
+	var _tr := settings.set_value(&"net_stat_position", &"bottom_right")
+	var _m := settings.set_value(&"ui_theme", &"midnight")
+	await _shot("net_stat_1")
+	var _off := settings.set_value(&"net_stat", 0)
+
+
+func _traffic(meter: ShotMeter, seconds: float) -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 7
+	var until := Time.get_ticks_msec() + int(seconds * 1000.0)
+	var n := 0
+	while Time.get_ticks_msec() < until:
+		n += 1
+		var ch := 0 if meter.transport == "websocket" else 1
+		if n % 2 == 0:
+			meter.arrive(ch, rng.randi_range(380, 1100))
+		if n % 9 == 0:
+			meter.arrive(0, rng.randi_range(40, 160))
+		if n % 23 == 0:
+			meter.arrive(0 if meter.transport == "websocket" else 2, rng.randi_range(200, 900))
+		if n % 70 == 35:
+			for k in 6:
+				meter.arrive(0 if meter.transport == "websocket" else 3, 1200)
+		meter.leave(rng.randi_range(0, 1), rng.randi_range(60, 140))
+		meter.note_rtt(42.0 + 9.0 * sin(float(n) * 0.07) + (70.0 if n % 120 > 110 else 0.0))
+		await process_frame
+
+
+## A meter with a transport to name, for a picture: the real one asks the peer under it.
+class ShotMeter extends DotMeteredPeer:
+	var transport := "enet"
+
+	func transport_name() -> String:
+		return transport
+
+	func transport_stats() -> Dictionary:
+		return {"rtt_ms": rtt_ms, "rtt_var_ms": 4.0, "loss": 0.006, "throttle": 1.0} if transport == "enet" else {"queued": 0}
+
+	func arrive(ch: int, n: int) -> void:
+		bytes_in_by_channel[ch] += n
+		bytes_in += n
+		packets_in += 1
+		largest_in = maxi(largest_in, n)
+
+	func leave(ch: int, n: int) -> void:
+		bytes_out_by_channel[ch] += n
+		bytes_out += n
+		packets_out += 1
 
 
 func _shot(name: String) -> void:

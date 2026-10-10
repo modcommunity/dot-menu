@@ -14,7 +14,7 @@ Everything else follows from that:
 
 ## Where things live, and why not in dot-ui
 
-dot-ui ships no art and names nothing outside dot-core; its `DotSettingsPanel` generates a plain form from a `DotConfig`. This is the opposite end: a designed default with opinions (the g2gfast look the user asked to keep), built on dot-settings by name. Putting it in dot-ui would make dot-ui depend on dot-settings and impose a look on every consumer. So: dot-ui keeps the primitives it already had (`DotInputBinding`, `DotScreenStack`, `DotChatWindow`), and this depends on dot-ui, dot-settings and dot-core and nothing else.
+dot-ui ships no art and names nothing outside dot-core; its `DotSettingsPanel` generates a plain form from a `DotConfig`. This is the opposite end: a designed default with opinions (the g2gfast look the user asked to keep), built on dot-settings by name. Putting it in dot-ui would make dot-ui depend on dot-settings and impose a look on every consumer. So: dot-ui keeps the primitives it already had (`DotInputBinding`, `DotScreenStack`, `DotChatWindow`), and this depends on dot-ui, dot-settings and dot-core and nothing else (net_stat reads dot-core's `DotMeteredPeer`; dot-server is never named).
 
 **dot-audio, dot-fx and dot-player-controller are driven duck-typed** (`DotMenuApplier`): a mixer is anything with `master`/`sfx`/…, an fx target anything with `shake_scale`/`allow_flashes`/`quality`, a look target anything with `mouse_sensitivity`/`invert_look_y`. With no mixer bound the volumes go straight onto the `AudioServer` buses of those names. Naming those three addons would make a 2D game with no dot-audio install all of them to get a menu.
 
@@ -71,6 +71,14 @@ Every game but game-arena is on it: game-g2gfast (the menu it came from, its pag
 
 A game that keeps its own Tab handling (most `mg-*`, playground) opens and closes `menu.scoreboard` itself; one with a key table sets `scoreboard_action` and the menu holds it.
 
+## net_stat
+
+- `DotMenuNetStat` is the connection overlay; `DotMenu` drives it from the `net_stat`, `net_stat_height` and `net_stat_position` settings (an INTEGER level, because every console here binds settings by name). A game with no menu uses `DotMenuStock.declare_net_stat(schema, corner)` and `DotMenuNetStat.follow(host, settings)`.
+- It reads `DotMeteredPeer.of(multiplayer.multiplayer_peer)` and never names dot-server.
+- `follow` connects a method, never a lambda capturing the overlay: a freed overlay left a dangling capture that errors on the next change.
+- Over WebSocket all arrivals are channel 0, so they are drawn in one colour and the legend says so.
+- Read [docs/net-stat.md](docs/net-stat.md) before changing how it scales, where it sits or what it draws.
+
 ## Delivered games and the client shell
 
 A game delivered as a pack cannot use its OWN `class_name`s (see the `godot-pack-class-name-limit` memory), but it can use an addon's, because the addon is compiled into the client shell. So a pack that uses `DotMenu*` needs **a shell built with dot-menu in it**: dot-server-deploy must link `addons/dot_menu` and the shell must be rebuilt and published before a game pack that depends on it. A pack running in an older shell fails to parse every script that names `DotMenu`. That is the same "untagged addon" trap as every other addon — tag dot-menu, rebuild the shell, then publish games.
@@ -79,7 +87,7 @@ A game delivered as a pack cannot use its OWN `class_name`s (see the `godot-pack
 
 ```bash
 godot --headless --path . --import
-godot --headless --path . res://examples/menu_selftest.tscn   # 14 sections, 179 checks
+godot --headless --path . res://examples/menu_selftest.tscn   # 15 sections, 197 checks
 tools/screenshot.sh                                            # every page, theme and screen
 ```
 

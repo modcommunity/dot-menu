@@ -10,5 +10,8 @@ extends RefCounted
 #    DotMenuLayoutEditor, DotMenuScoreboard, DotMenuSettings, DotMenuApplier,
 #    DotMenuStock, DotMenuBindings, DotMenuConfig, DotMenuPage, DotMenuSection,
 #    DotMenuRow, DotMenuKit, DotMenuPalette, DotMenuThemes.
-const LEVEL := 1
+# 2: DotMenuNetStat (follow, read_settings) and DotMenu.net_stat; DotMenuStock advanced_page(),
+#    declare_net_stat() and the net_stat,
+#    net_stat_height and net_stat_position settings; DotMenuConfig.net_stat.
+const LEVEL := 2
 const OLDEST := 1

@@ -11,8 +11,8 @@ extends Node
 ## [b]CHECKS is the guard the section counter cannot be.[/b] A script error inside a test
 ## aborts THAT TEST, not the run; the section counter is satisfied because the section had
 ## already announced itself, and the total is what notices the checks that never ran.
-const SECTIONS := 14
-const CHECKS := 180
+const SECTIONS := 15
+const CHECKS := 197
 
 var _passed := 0
 var _failed := 0
@@ -43,6 +43,7 @@ func _run() -> void:
 	_test_layout()
 	await _test_settings_node()
 	await _test_scoreboard()
+	await _test_net_stat()
 
 	_line("")
 	_line("%d sections, %d passed, %d failed" % [_section_count, _passed, _failed])
@@ -368,8 +369,8 @@ func _test_stock() -> void:
 			rowless.append(String(key))
 	_check(unknown.is_empty(), "every stock row names a stock setting (%s)" % ", ".join(unknown))
 	_check(rowless.is_empty(), "and every stock setting has a row (%s)" % ", ".join(rowless))
-	_check(DotMenuStock.pages().map(func(p: DotMenuPage) -> StringName: return p.id) == [&"general", &"video", &"audio", &"controls"],
-		"General, Video, Audio, Controls")
+	_check(DotMenuStock.pages().map(func(p: DotMenuPage) -> StringName: return p.id) == [&"general", &"video", &"audio", &"controls", &"advanced"],
+		"General, Video, Audio, Controls, Advanced")
 
 
 # --- 5 ----------------------------------------------------------------------------
@@ -482,10 +483,10 @@ func _test_screen() -> void:
 
 	_check(menu.is_open() and menu.screen.current_page() == &"general", "it opens on the first page")
 	var tabs := _find_all(menu.screen, "Button", "Page_")
-	_check(tabs.size() == 4, "a tab per page")
+	_check(tabs.size() == 5, "a tab per page")
 	var _themed := menu.cycle_theme()
 	await get_tree().process_frame
-	_check(_find_all(menu.screen, "Button", "Page_").size() == 4,
+	_check(_find_all(menu.screen, "Button", "Page_").size() == 5,
 		"and still a tab per page after the theme changes under an open menu")
 	var actions := _find_all(menu.screen, "Button", "Action_")
 	_check(actions.size() == 2, "and Help and Leave under them")
@@ -575,7 +576,7 @@ func _test_rows() -> void:
 	menu.open(&"gameplay")
 	await get_tree().process_frame
 	var order: Array = menu.screen.visible_pages().map(func(p: DotMenuPage) -> StringName: return p.id)
-	_check(order == [&"controls", &"general", &"gameplay", &"video"], "pages in the config's order, the hidden one gone")
+	_check(order == [&"controls", &"general", &"gameplay", &"video", &"advanced"], "pages in the config's order, the hidden one gone")
 
 	var light := _row_control(menu, "flashlight") as DotMenuSwitch
 	_check(light != null and not light.disabled, "a live row draws its owner's state")
@@ -960,6 +961,97 @@ func _test_scoreboard() -> void:
 
 
 # --- Harness ----------------------------------------------------------------------
+
+# --- 15 ---------------------------------------------------------------------------
+
+## net_stat is three settings, one overlay and a meter. What is asserted is the wiring and
+## the arithmetic; how it LOOKS is tools/screenshot.sh's (shot net_stat_*).
+func _test_net_stat() -> void:
+	_section("net_stat: three settings, one overlay, a meter")
+
+	var menu := _menu()
+	var st := menu.settings
+	var ns := menu.net_stat
+	_check(st.schema.has(&"net_stat") and st.schema.has(&"net_stat_height") and st.schema.has(&"net_stat_position"),
+		"the interface group declares net_stat and its height and corner")
+	_check(ns != null and not ns.visible and st.get_int(&"net_stat") == 0, "and it starts off")
+
+	menu.open(&"advanced")
+	await get_tree().process_frame
+	_check(_row_control(menu, "net_stat") != null and _row_control(menu, "net_stat_height") != null,
+		"the Advanced page shows the level and the height")
+	menu.close()
+
+	var _fps := st.set_value(&"show_fps", true)
+	var _two := st.set_value(&"net_stat", 2)
+	_check(ns.visible and ns.level == DotMenuNetStat.Level.GRAPH, "net_stat 2 draws the graph")
+	_check(not menu._fps_label.visible, "and the frame counter steps aside: net_stat shows the frame rate itself")
+
+	# What a console sends: the line's argument, as text.
+	var three := st.set_value(&"net_stat", "3")
+	_check(three.ok and ns.level == DotMenuNetStat.Level.FULL, "\"3\" typed at a console is level 3")
+
+	var _h := st.set_value(&"net_stat_height", 160)
+	await get_tree().process_frame
+	_check(ns.graph_height == 160 and is_equal_approx(ns.size.y, ns.panel_height()) and ns.size.y > 160.0,
+		"the height setting is the graph's, and the panel grows around it (%.0f px)" % ns.size.y)
+	_check(ns.size.x > 200.0, "and it has a width: anchors alone draw nothing")
+
+	var _c := st.set_value(&"net_stat_position", &"top_left")
+	_check(is_zero_approx(ns.anchor_left) and is_zero_approx(ns.anchor_top) and ns.offset_left > 0.0,
+		"the corner setting moves it")
+	var bad := st.set_value(&"net_stat_position", &"middle")
+	_check(not bad.ok or ns.corner == &"top_left", "a corner that is not one is refused")
+
+	# A meter fed by hand: 4 KB on the state channel and 512 B of control a bucket, 40 ms ping.
+	var meter := DotMeteredPeer.new()
+	meter.note_rtt(40.0)
+	ns.source = func() -> Object: return meter
+	ns.reset()
+	for i in 25:
+		meter.bytes_in_by_channel[1] += 4096
+		meter.bytes_in_by_channel[0] += 512
+		meter.bytes_in += 4608
+		meter.packets_in += 2
+		meter.bytes_out_by_channel[0] += 100
+		meter.packets_out += 1
+		ns._push(meter)
+	var d := ns.describe()
+	_check(bool(d["connected"]) and is_equal_approx(float(d["rtt"]), 40.0), "it reads the meter it is given (%s)" % [d])
+	# Twenty-five bars, so the last second (twenty) is all traffic: the first only takes the
+	# baseline, because a meter's totals are not arrivals since a bar.
+	_check(is_equal_approx(float(d["in_rate"]), 4608.0 / ns.bucket_sec) and is_equal_approx(float(d["out_rate"]), 100.0 / ns.bucket_sec),
+		"in and out are bytes a second over the last second's bars (%.0f, %.0f)" % [d["in_rate"], d["out_rate"]])
+	var last: Dictionary = ns._buckets[ns._buckets.size() - 1]
+	_check((last["in"] as PackedInt64Array)[1] == 4096 and (last["in"] as PackedInt64Array)[0] == 512,
+		"and each bar keeps its channels apart")
+
+	ns.source = func() -> Object: return null
+	ns._push(null)
+	_check(not bool(ns.describe()["connected"]), "with no meter it says so, not a flat line")
+
+	var _off := st.set_value(&"net_stat", 0)
+	_check(not ns.visible and menu._fps_label.visible, "net_stat 0 hides it, and the counter comes back")
+
+	_free_menu(menu)
+
+	# A game with its own settings and no menu: declare the three, follow them.
+	var own := DotSettingsSchema.new()
+	own.add(DotSettingsDef.number(&"volume", 1.0, 0.0, 1.0, &"audio"))
+	var _declared := DotMenuStock.declare_net_stat(own)
+	var mine := _manager(own)
+	var host := Node.new()
+	add_child(host)
+	var followed := DotMenuNetStat.follow(host, mine)
+	var _lvl := mine.set_value(&"net_stat", 2)
+	var _hh := mine.set_value(&"net_stat_height", 64)
+	_check(followed.visible and followed.level == 2 and followed.graph_height == 64 and own.keys().size() == 4,
+		"a game with no menu declares the three and follows them")
+	host.queue_free()
+	await get_tree().process_frame
+	_check(mine.set_value(&"net_stat", 1).ok, "and a change after the overlay is gone is no error")
+	mine.queue_free()
+
 
 func _section(title: String) -> void:
 	_section_count += 1

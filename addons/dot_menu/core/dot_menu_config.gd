@@ -108,6 +108,10 @@ extends DotConfig
 ## Show a frame-rate counter when the `show_fps` setting is on.
 @export var fps_counter: bool = true
 
+## Draw the connection overlay when the `net_stat` setting asks for it. Off for a host that
+## draws its own; the setting is still declared and stored.
+@export var net_stat: bool = true
+
 
 func env_prefix() -> String:
 	return "DOT_MENU_"

@@ -12,7 +12,7 @@ This asset, along with all the others, was built initially with **Claude Code** 
 I intend on reviewing code, testing, and editing documentation regularly. If you're interested in helping out, please let me know!
 
 ## What it does
-Escape opens a menu with a sidebar of pages (General, Video, Audio, Controls, plus any your game adds), a Resume button, Help and Leave. Every switch, slider and drop-down on a page is a view of a [dot-settings](https://github.com/modcommunity/dot-settings) value: it shows what is stored and writes it back when changed. There is no Apply button. A value changed from the console shows up the next time the menu opens.
+Escape opens a menu with a sidebar of pages (General, Video, Audio, Controls, Advanced, plus any your game adds), a Resume button, Help and Leave. Every switch, slider and drop-down on a page is a view of a [dot-settings](https://github.com/modcommunity/dot-settings) value: it shows what is stored and writes it back when changed. There is no Apply button. A value changed from the console shows up the next time the menu opens.
 
 It started as game-g2gfast's menus and was pulled out so every game gets the same look, the same help screen and the same settings without copying them.
 
@@ -23,6 +23,7 @@ It started as game-g2gfast's menus and was pulled out so every game gets the sam
 - **A picker.** A numbered list, seven to a page: 1 to 7 picks, 8 and 9 turn the page, 0 closes. Maps, teams, classes.
 - **A HUD layout editor.** Drag your HUD's pieces anywhere and right-click to put one back. Positions are saved as fractions of the screen, so a layout made on a laptop fits a 4K monitor.
 - **Themes.** Six ship (Midnight, Ember, Violet, Classic, Paper, High contrast). A theme is a palette of colours for both the menus and the HUD, and can be written as JSON. P (or whatever you bind) cycles them.
+- **net_stat.** A connection overlay drawn over the game: frame rate, ping and jitter, bytes and packets each way, loss, and a graph of what arrives by channel with ping across it (level 2), plus what leaves, the frame time and the server's own frame (level 3). Three settings drive it (`net_stat`, `net_stat_height`, `net_stat_position`), so the Advanced page and a console's `net_stat 2` are the same value. A game with its own settings and no menu declares them with `DotMenuStock.declare_net_stat(schema)` and draws them with `DotMenuNetStat.follow(self, settings)`. It reads the meter the client link's connection runs through (dot-core's `DotMeteredPeer`, which dot-server's client link uses), so it works over WebSocket in a browser as well as over ENet.
 - **Server rules.** While connected, a server can hide rows and pages, narrow the themes, reword Leave, and cap settings like field of view through dot-settings' clamps. It can never change or read a player's stored value. Leaving puts everything back.
 - **A scoreboard.** Hold Tab: the server's name, game, map and slots, the teams side by side in their colours, and a row per player with name, score, time connected and ping (coloured by how bad it is), plus any columns your game adds. Your own row is picked out and players on no team are listed as spectating. It never takes the mouse or stops you moving.
 - **The browser.** When a browser takes the mouse away on Escape, the menu opens anyway, and an Escape that arrives right after is ignored so the menu does not flash shut.
@@ -174,6 +175,7 @@ DOT_MENU_THEME=paper godot --path . -- --menu-browser-tips=on
 | `open_on_pointer_release` | true | Open the menu when the mouse is taken away (a browser's Escape) |
 | `escape_grace_ms` | 250 | An Escape this soon after opening is ignored |
 | `fps_counter` | true | Show the counter when the `show_fps` setting is on |
+| `net_stat` | true | Draw the connection overlay when the `net_stat` setting asks for it |
 
 The stock settings and their defaults:
 
@@ -196,6 +198,9 @@ The stock settings and their defaults:
 | `allow_flashes` | on | | device |
 | `ui_theme` | midnight | the themes | account |
 | `show_fps` | off | | device |
+| `net_stat` | 0 (off) | 0 to 3 | device |
+| `net_stat_height` | 96 | 32 to 320 pixels | device |
+| `net_stat_position` | top_right | top_right, bottom_right, top_left, bottom_left | device |
 | `chat_window` | auto | auto, on, off | account |
 
 A theme file is a list of palettes. Any colour left out comes from `base`:
