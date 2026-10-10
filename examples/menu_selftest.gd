@@ -12,7 +12,7 @@ extends Node
 ## aborts THAT TEST, not the run; the section counter is satisfied because the section had
 ## already announced itself, and the total is what notices the checks that never ran.
 const SECTIONS := 14
-const CHECKS := 179
+const CHECKS := 180
 
 var _passed := 0
 var _failed := 0
@@ -483,6 +483,10 @@ func _test_screen() -> void:
 	_check(menu.is_open() and menu.screen.current_page() == &"general", "it opens on the first page")
 	var tabs := _find_all(menu.screen, "Button", "Page_")
 	_check(tabs.size() == 4, "a tab per page")
+	var _themed := menu.cycle_theme()
+	await get_tree().process_frame
+	_check(_find_all(menu.screen, "Button", "Page_").size() == 4,
+		"and still a tab per page after the theme changes under an open menu")
 	var actions := _find_all(menu.screen, "Button", "Action_")
 	_check(actions.size() == 2, "and Help and Leave under them")
 

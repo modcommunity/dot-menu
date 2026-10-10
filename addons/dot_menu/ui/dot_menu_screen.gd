@@ -107,6 +107,10 @@ func restyle(new_kit: DotMenuKit) -> void:
 	_action_buttons.clear()
 	_build()
 	_fit()
+	# The tabs are not part of _build — [method open] fills them, because pages change while
+	# the menu is shut. A rebuild that skipped this left an open menu with no tabs down the
+	# left until the player closed and reopened it, which is how a theme change looked.
+	_rebuild_sidebar()
 	if visible:
 		_show_page(_page)
 
