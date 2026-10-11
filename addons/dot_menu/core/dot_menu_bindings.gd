@@ -81,6 +81,19 @@ func add_voice(group: String = "Communication", key: String = "V") -> DotMenuBin
 	return add(&"dot_voice_talk", &"bind_voice_talk", "Push to talk", key, group)
 
 
+## The first of [param candidates] no row has as its default, or the last candidate. For a
+## row added to a game's table from outside it (the talk key), which must not land on a key
+## the game already uses: rebinding swaps, so a collision would silently move the game's own.
+func free_key(candidates: Array) -> String:
+	var taken := {}
+	for row in rows:
+		taken[str(row["default"]).to_upper()] = true
+	for c in candidates:
+		if not taken.has(str(c).to_upper()):
+			return str(c)
+	return str(candidates.back()) if not candidates.is_empty() else ""
+
+
 func remove(action: StringName) -> bool:
 	for i in range(rows.size()):
 		if rows[i]["action"] == action:

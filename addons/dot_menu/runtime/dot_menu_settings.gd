@@ -68,7 +68,7 @@ func setup(store: DotSettingsStore = null, with_menu: bool = true) -> DotResult:
 	# The talk key goes with the voice settings, so every game that has them has the key in
 	# its table, its Controls page and its help screen, on the same setting.
 	if bindings != null and schema.has(&"voice_mode") and bindings.row_for_action(&"dot_voice_talk").is_empty():
-		var _v := bindings.add_voice()
+		var _v := bindings.add_voice("Communication", bindings.free_key(["V", "K", "B", "X"]))
 	if bindings != null:
 		bindings.add_to_schema(schema)
 	var themes := config.make_themes()

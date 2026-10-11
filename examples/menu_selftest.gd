@@ -12,7 +12,7 @@ extends Node
 ## aborts THAT TEST, not the run; the section counter is satisfied because the section had
 ## already announced itself, and the total is what notices the checks that never ran.
 const SECTIONS := 16
-const CHECKS := 209
+const CHECKS := 210
 
 var _passed := 0
 var _failed := 0
@@ -1127,6 +1127,10 @@ func _test_voice() -> void:
 	node.menu.release_server_rules()
 	_check(node.menu.screen.extra_hidden_rows.has("voice_mode") and not node.menu.screen.extra_hidden_rows.has("field_of_view"),
 		"leaving a server's rules keeps the voice rows hidden for their own reason")
+
+	var taken := DotMenuBindings.new()
+	taken.add(&"test_checkpoint", &"bind_checkpoint", "Go to checkpoint", "V", "Running")
+	_check(taken.free_key(["V", "K", "B"]) == "K", "a game whose V is taken gets the talk key on the next free one")
 
 	DotRegistry.unregister_instance(DotMenuApplier.VOICE_SERVICE, voice)
 	voice.queue_free()
