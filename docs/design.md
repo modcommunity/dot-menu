@@ -30,7 +30,7 @@ A theme is a whole palette (`DotMenuPalette`), menus and HUD, never an accent sw
 
 `DotMenuBindings` is g2gfast's bindings table as an instance. Four things read it (the InputMap, the schema, the Controls page, the help screen) and must never disagree. **Rebinding a taken key SWAPS**: refusing makes a player unbind one thing to bind another, stealing leaves an action on nothing. `rebind` and `reset_all` apply to the InputMap themselves, so both halves of a swap land together.
 
-**`stored()` returns the effective binding, not the stored text.** A document cleared by hand stores `""` for a key really on its default; comparing the text let a default key be bound to a second action with no conflict found.
+**`stored()` returns the effective binding, not the stored text.** A document cleared by hand stores `""` for a key really on its default; comparing the text let a default key be bound to a second action with no conflict found. And it is in dot-ui's **current spelling**: a document from before dot-ui named the wheel stores `Mouse 4`, which the Controls page would draw as a thumb button; the round trip through `DotInputBinding` draws `Wheel up` (and changes nothing on an older dot-ui).
 
 ## A server may hide and clamp; it may never set or read
 

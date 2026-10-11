@@ -12,7 +12,7 @@ extends Node
 ## aborts THAT TEST, not the run; the section counter is satisfied because the section had
 ## already announced itself, and the total is what notices the checks that never ran.
 const SECTIONS := 15
-const CHECKS := 197
+const CHECKS := 198
 
 var _passed := 0
 var _failed := 0
@@ -409,6 +409,14 @@ func _test_bindings() -> void:
 
 	k.reset_all(st)
 	_check(st.get_string(&"bind_jump") == "Space" and k.key_for(&"dot_fps_jump") == "Space", "a reset puts every key back")
+
+	# A document from before dot-ui named the wheel stores "Mouse 4"; the Controls page
+	# draws stored(), so it must come out as the wheel's name, and still be the wheel.
+	var old_wheel := st.set_value(&"bind_flashlight", "Mouse 4")
+	var drawn := k.stored(k.row_for_action(&"test_flashlight"), st)
+	_check(old_wheel.ok and drawn == "Wheel up",
+		"an old \"Mouse 4\" is drawn as the wheel it always meant (%s)" % drawn)
+	k.reset_all(st)
 	st.queue_free()
 
 

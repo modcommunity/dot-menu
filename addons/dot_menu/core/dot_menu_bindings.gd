@@ -166,9 +166,17 @@ func apply_setting(key: StringName, value: Variant) -> bool:
 ## [b]The effective binding, not the stored text.[/b] A document cleared by hand stores ""
 ## for a key that is really on its default; comparing the text, binding that default key to
 ## something else found no conflict, swapped nothing, and left one key on two actions.
+##
+## [b]In dot-ui's current spelling, not the stored one.[/b] A document written before dot-ui
+## named the wheel says "Mouse 4" for it; the Controls page draws this text, and "Mouse 4"
+## sends a player to their thumb button. On a dot-ui that has no names the round trip
+## gives back the same text.
 func stored(row: Dictionary, settings: DotSettingsManager) -> String:
 	var text := settings.get_string(row["setting"], str(row["default"])) if settings != null else str(row["default"])
-	return text if DotInputBinding.is_bound(text) else str(row["default"])
+	var event := DotInputBinding.from_text(text)
+	if event == null:
+		event = DotInputBinding.from_text(str(row["default"]))
+	return DotInputBinding.to_text(event) if event != null else str(row["default"])
 
 
 ## The key a row is on right now, for a button or a help line. "—" for nothing.

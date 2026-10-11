@@ -42,7 +42,7 @@ tools/screenshot.sh
 - Every stock key is covered by `APPLIES`, `APPLIED_BY_MENU` or `LEFT_TO_THE_GAME`, and has a row; the suite enforces it. [design](docs/design.md#the-stock-keys-are-a-contract)
 - `DotMenuConfig.apply_to_schema` runs before `settings.setup()`, or an added theme is reset at every start. [design](docs/design.md#themes-go-into-the-schema-before-the-settings-load)
 - A theme change rebuilds the screen; never walk the tree to recolour. [design](docs/design.md#themes-go-into-the-schema-before-the-settings-load)
-- Rebinding a taken key swaps; compare effective bindings (`stored()`), never stored text. [design](docs/design.md#the-keys-table)
+- Rebinding a taken key swaps; compare effective bindings (`stored()`, in dot-ui's current spelling), never stored text. [design](docs/design.md#the-keys-table)
 - A server may hide and clamp, never set or read; a clamped row shows the player's own choice. [design](docs/design.md#a-server-may-hide-and-clamp-it-may-never-set-or-read)
 - `DotMenu` owns overlays, Escape and the pointer; while anything is open every key is the menu's. [design](docs/design.md#the-pointer-escape-and-overlays-one-list)
 - The scoreboard is held, not opened: it closes on release wherever that arrives and never takes the pointer. [design](docs/design.md#the-scoreboard-the-servers-numbers-held)
