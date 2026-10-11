@@ -52,7 +52,6 @@ tools/screenshot.sh
 
 ## Who uses it
 
-Every game uses dot-menu's Tab scoreboard. The Escape menu: game-g2gfast (where it came from), the `mg-*` games, game-zombie-zone, game-hide-n-seek and dot-game-template through `DotMenuSettings`; game-playground (Escape only; its spawn menu and server browser stay on its own stack). Exceptions:
+Every game uses dot-menu's Tab scoreboard. The Escape menu: game-g2gfast (where it came from), the `mg-*` games, game-zombie-zone, game-hide-n-seek and dot-game-template through `DotMenuSettings`; game-playground (Escape only; its spawn menu and server browser stay on its own stack); game-arena (with its server browser as a page). Exception:
 
 - **game-hungario: the Tab board and net_stat only, deliberately for now.** Its settings are a `DotConfig`, and dot-menu's menu is a view of dot-settings, so moving changes how settings are stored.
-- **game-arena: the Tab board and net_stat only; its pause menu is not converted yet** (still dot-ui's `DotPauseScreen`). No reason is recorded and hungario's does not apply. Queued as `arena-dot-menu-1`.
