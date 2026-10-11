@@ -119,6 +119,8 @@ var _lock_seen := false
 var _opened_msec := 0
 var _recapture_frames := 0
 var _server_rules: Dictionary = {}
+## reason -> rows hidden for it ([method hide_rows]).
+var _hidden_by: Dictionary = {}
 var _ready_done := false
 
 
@@ -651,7 +653,7 @@ func apply_server_rules(rules: Dictionary) -> PackedStringArray:
 	var applied := PackedStringArray()
 
 	if screen != null:
-		screen.extra_hidden_rows = _strings(rules.get("rows_hidden", []))
+		screen.extra_hidden_rows = _hidden_rows()
 		screen.extra_hidden_pages = _strings(rules.get("pages_hidden", []))
 		if rules.has("leave_text"):
 			screen.set_action_text(&"leave", str(rules["leave_text"]))
@@ -673,7 +675,7 @@ func apply_server_rules(rules: Dictionary) -> PackedStringArray:
 func release_server_rules() -> void:
 	_server_rules.clear()
 	if screen != null:
-		screen.extra_hidden_rows = PackedStringArray()
+		screen.extra_hidden_rows = _hidden_rows()
 		screen.extra_hidden_pages = PackedStringArray()
 		screen.set_action_text(&"leave", config.leave_text)
 	if settings != null and settings.policy != null:
@@ -681,6 +683,28 @@ func release_server_rules() -> void:
 	_offer_themes(PackedStringArray())
 	if screen != null:
 		screen.refresh()
+
+
+## Hides [param rows] for a reason of the game's own ([param reason]: `&"voice"` while the
+## server has voice off), on top of a server's `rows_hidden`. An empty list shows them again.
+## Kept apart from [method apply_server_rules] so neither undoes the other.
+func hide_rows(reason: StringName, rows: PackedStringArray) -> void:
+	if rows.is_empty():
+		_hidden_by.erase(reason)
+	else:
+		_hidden_by[reason] = rows
+	if screen != null:
+		screen.extra_hidden_rows = _hidden_rows()
+		screen.refresh()
+
+
+func _hidden_rows() -> PackedStringArray:
+	var out := _strings(_server_rules.get("rows_hidden", []))
+	for reason in _hidden_by:
+		for row in (_hidden_by[reason] as PackedStringArray):
+			if not out.has(row):
+				out.append(row)
+	return out
 
 
 ## Narrows the theme row to [param allowed] (empty is every theme) and moves off a theme the

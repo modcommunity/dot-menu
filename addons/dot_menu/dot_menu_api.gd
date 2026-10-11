@@ -13,5 +13,9 @@ extends RefCounted
 # 2: DotMenuNetStat (follow, read_settings) and DotMenu.net_stat; DotMenuStock advanced_page(),
 #    declare_net_stat() and the net_stat,
 #    net_stat_height and net_stat_position settings; DotMenuConfig.net_stat.
-const LEVEL := 2
+# 3: voice: DotMenuStock.GROUP_VOICE (in DEFAULT_GROUPS), VOICE_ROWS, input_device_row(), the
+#    voice_mode and voice_input_device settings; DotMenuBindings.add_voice() (bind_voice_talk on
+#    the dot_voice_talk action); DotMenuApplier.bind_voice(), VOICE_SERVICE and
+#    voice_available_changed; DotMenuSettings.bind_voice(); DotMenu.hide_rows().
+const LEVEL := 3
 const OLDEST := 1

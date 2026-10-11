@@ -74,6 +74,13 @@ func add_movement(group: String = "Movement", crouch_key: String = "Ctrl", crouc
 	return self
 
 
+## The push-to-talk key: dot-voice's `dot_voice_talk` action (`DotVoiceManager.TALK_ACTION`,
+## named here as text because dot-menu does not depend on dot-voice), stored as
+## `bind_voice_talk`, on V. [DotMenuSettings] adds it when the schema has the voice group.
+func add_voice(group: String = "Communication", key: String = "V") -> DotMenuBindings:
+	return add(&"dot_voice_talk", &"bind_voice_talk", "Push to talk", key, group)
+
+
 func remove(action: StringName) -> bool:
 	for i in range(rows.size()):
 		if rows[i]["action"] == action:

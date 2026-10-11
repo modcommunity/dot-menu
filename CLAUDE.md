@@ -46,6 +46,7 @@ tools/screenshot.sh
 - A server may hide and clamp, never set or read; a clamped row shows the player's own choice. [design](docs/design.md#a-server-may-hide-and-clamp-it-may-never-set-or-read)
 - `DotMenu` owns overlays, Escape and the pointer; while anything is open every key is the menu's. [design](docs/design.md#the-pointer-escape-and-overlays-one-list)
 - The scoreboard is held, not opened: it closes on release wherever that arrives and never takes the pointer. [design](docs/design.md#the-scoreboard-the-servers-numbers-held)
+- Voice is a stock group: `voice_mode`, `voice_input_device`, and the Push to talk key (`bind_voice_talk` on `dot_voice_talk`, V) that `DotMenuSettings` adds to a game's table. The applier binds whatever is published as `dot_voice_client`; a server with voice off hides `VOICE_ROWS` through `DotMenu.hide_rows`, never through the server's own rules. Never name dot-voice. [design](docs/design.md#voice)
 - Never name dot-server: the scoreboard feed and net_stat's meter are duck-typed or dot-core's. [design](docs/design.md#the-scoreboard-the-servers-numbers-held), [net_stat](docs/net-stat.md)
 - `DotMenuNetStat.follow` connects a method, never a lambda capturing the overlay. [net_stat](docs/net-stat.md)
 - **A delivered game that uses `DotMenu*` needs a client shell built with dot-menu in it**; in an older shell every script naming `DotMenu` fails to parse. Tag dot-menu, lock it in dot-server-deploy and rebuild the shell before publishing such a game ([dot-server-deploy releases](../dot-server-deploy/docs/releases.md)).

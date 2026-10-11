@@ -36,6 +36,12 @@ A theme is a whole palette (`DotMenuPalette`), menus and HUD, never an accent sw
 
 `DotMenu.apply_server_rules` takes `rows_hidden`, `pages_hidden`, `themes`, `leave_text` and `clamps`, and `release_server_rules` undoes all of it on leaving. Clamps go through dot-settings' policy (`apply_server_clamps`), a bound the player's own value stays under. The row shows `chosen_value` (what the player picked and gets back) with "This server caps it at 95" under it; showing the clamped value would quietly replace their choice. A theme the server does not offer is moved off for the connection; the stored choice is untouched.
 
+## Voice
+
+`GROUP_VOICE` is in `DEFAULT_GROUPS`, so every game declaring the defaults has `voice_mode` (push to talk or open microphone, ACCOUNT) and `voice_input_device` (DEVICE; the row is native only, because a browser picks the microphone in its own prompt). `DotMenuSettings.setup` adds `DotMenuBindings.add_voice()` (Push to talk, `bind_voice_talk`, the `dot_voice_talk` action dot-voice reads, V) to a game's key table when the schema has the voice group, so the key is in every game's Controls page and help screen under one setting. `voice_volume` stays with the volumes and sets the `Voice` bus.
+
+**The voice is found, not handed to the menu.** A game's chat client publishes its own player's `DotVoiceManager` as `dot_voice_client` (dot-game's `DotGameChatClient` does it for every game on that base); `DotMenuApplier` binds what is registered there at setup and anything registered later through `DotRegistryBus`, whichever is built first. It calls `set_open_mic`, `set_input_device` and `set_volume` duck-typed, so dot-menu names nothing in dot-voice. A bound voice's `server_enabled_changed` becomes `voice_available_changed`, and `DotMenuSettings` hides `DotMenuStock.VOICE_ROWS` with `DotMenu.hide_rows(&"voice", …)` while the server has `sv_voice_enable 0`. `hide_rows` keeps its own list beside a server's `rows_hidden`, so `release_server_rules` on leaving does not show rows hidden for another reason.
+
 ## The pointer, Escape and overlays: one list
 
 `DotMenu` owns which overlay is open (menu, help, picker, layout editor, any `add_overlay`), what Escape does, who has the pointer and the theme, for dot-ui's reason: easy alone, where the bugs are together. **While anything is open every key is the menu's** (`handle_event` returns true): R behind a menu is a restart nobody asked for. `busy` is the game's "the chat line has the keyboard".

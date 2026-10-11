@@ -37,18 +37,27 @@ const GROUP_COMFORT := &"comfort"
 const GROUP_INTERFACE := &"interface"
 ## Whether the chat box is drawn.
 const GROUP_CHAT := &"chat"
+## Voice chat: push to talk or an open microphone, and which input device. The talk key is
+## [DotMenuBindings.add_voice]'s row, which [DotMenuSettings] adds with this group. The
+## volume is `voice_volume`, in the audio group with the others.
+const GROUP_VOICE := &"voice"
 ## A music volume. Not in [constant DEFAULT_GROUPS]: a slider for a bus nothing plays on is
 ## a control that does nothing, and most games here have no music.
 const GROUP_MUSIC := &"music"
 
 ## What [method declare] adds when it is not told: everything except music.
 const DEFAULT_GROUPS: Array[StringName] = [
-	GROUP_AUDIO, GROUP_VIDEO, GROUP_CONTROLS, GROUP_COMFORT, GROUP_INTERFACE, GROUP_CHAT,
+	GROUP_AUDIO, GROUP_VIDEO, GROUP_CONTROLS, GROUP_COMFORT, GROUP_INTERFACE, GROUP_CHAT, GROUP_VOICE,
 ]
 
 const ALL_GROUPS: Array[StringName] = [
 	GROUP_AUDIO, GROUP_MUSIC, GROUP_VIDEO, GROUP_CONTROLS, GROUP_COMFORT, GROUP_INTERFACE, GROUP_CHAT,
+	GROUP_VOICE,
 ]
+
+## The voice rows a client hides while its server has voice off (`sv_voice_enable 0`): the
+## mode, the device, the volume and the talk key. See [method DotMenuSettings.bind_voice].
+const VOICE_ROWS: PackedStringArray = ["voice_mode", "voice_input_device", "voice_volume", "bind_voice_talk"]
 
 ## Every key [method declare] can add, by group. What a suite checks the applier against.
 const KEYS := {
@@ -59,6 +68,7 @@ const KEYS := {
 	GROUP_COMFORT: [&"shake_scale", &"allow_flashes"],
 	GROUP_INTERFACE: [&"ui_theme", &"show_fps", &"net_stat", &"net_stat_height", &"net_stat_position"],
 	GROUP_CHAT: [&"chat_window"],
+	GROUP_VOICE: [&"voice_mode", &"voice_input_device"],
 }
 
 
@@ -138,6 +148,17 @@ static func _declare(schema: DotSettingsSchema, groups: Array[StringName], theme
 			.with_description("The colours of the menus and the HUD."))
 		_add(schema, DotSettingsDef.boolean(&"show_fps", false, &"video"))
 		var _ns := declare_net_stat(schema)
+
+	if groups.has(GROUP_VOICE):
+		# ACCOUNT: how a person likes to talk is theirs on every server. The device is a fact
+		# about this machine, so DEVICE.
+		_add(schema, DotSettingsDef.choice(
+			&"voice_mode", &"push_to_talk", [&"push_to_talk", &"open_mic"] as Array[StringName], &"audio"
+		).with_scope(account).with_description(
+			"Push to talk sends while the key is held; an open microphone sends whenever you speak."
+		))
+		_add(schema, DotSettingsDef.text(&"voice_input_device", "Default", &"audio")
+			.with_description("The microphone, by the name the system gives it."))
 
 	if groups.has(GROUP_CHAT):
 		_add(schema, DotSettingsDef.choice(
@@ -279,7 +300,21 @@ static func audio_page() -> DotMenuPage:
 		.add(DotMenuRow.slider(&"ui_volume", "Interface", "Menus, and the round's own cues.").formatted(DotMenuRow.FORMAT_PERCENT)) \
 		.add(DotMenuRow.slider(&"music_volume", "Music").formatted(DotMenuRow.FORMAT_PERCENT)) \
 		.add(DotMenuRow.slider(&"voice_volume", "Voice chat").formatted(DotMenuRow.FORMAT_PERCENT))
+	p.section("Voice chat") \
+		.add(DotMenuRow.select(&"voice_mode", "Talk",
+			"The microphone opens the first time you press the Push to talk key (Controls), never before.",
+			[[&"push_to_talk", "Push to talk"], [&"open_mic", "Open microphone"]])) \
+		.add(input_device_row())
 	return p
+
+
+## The microphone select, listing the devices the engine reports now. A stored device that is
+## no longer plugged in stays in the list, as the frame-rate select keeps a typed cap.
+static func input_device_row() -> DotMenuRow:
+	var options: Array = []
+	for device in AudioServer.get_input_device_list():
+		options.append([device, "System default" if device == "Default" else device])
+	return DotMenuRow.select(&"voice_input_device", "Microphone", "", options).only_native()
 
 
 ## Mouse, then one card per [DotMenuBindings] group, then a reset. The binding cards are

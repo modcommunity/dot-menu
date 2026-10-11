@@ -58,6 +58,7 @@ const VOLUMES := {
 ## shipping as a switch that does nothing.
 const APPLIES: Array[StringName] = [
 	&"master_volume", &"sfx_volume", &"ui_volume", &"music_volume", &"voice_volume",
+	&"voice_mode", &"voice_input_device",
 	&"fps_max", &"vsync", &"window_mode", &"render_scale",
 	&"shake_scale", &"allow_flashes", &"fx_quality",
 	&"sensitivity", &"invert_mouse", &"field_of_view",
@@ -68,6 +69,14 @@ const APPLIED_BY_MENU: Array[StringName] = [
 
 ## Stock keys only the game can apply, through [method on]. See the class note.
 const LEFT_TO_THE_GAME: Array[StringName] = [&"chat_window"]
+
+## The registry name a client publishes its own player's voice under (dot-voice's
+## `DotVoiceManager.CLIENT_SERVICE`, as text: dot-menu does not depend on dot-voice).
+const VOICE_SERVICE := &"dot_voice_client"
+
+## A bound voice said whether its server allows voice (`sv_voice_enable`). [DotMenuSettings]
+## hides the voice rows on false.
+signal voice_available_changed(available: bool)
 
 ## Emitted after a key has been applied, with why (&"applied" at boot, else the reason
 ## [signal DotSettingsManager.changed] gave).
@@ -89,6 +98,7 @@ var sensitivity_to_degrees: Callable = Callable()
 var fov_transform: Callable = Callable()
 
 var _audio: Array[Object] = []
+var _voice: Array[Object] = []
 var _fx: Array[Object] = []
 var _look: Array[Object] = []
 ## `[camera, property]` pairs.
@@ -105,13 +115,29 @@ func setup() -> DotResult:
 	if not _connected:
 		settings.changed.connect(_on_changed)
 		_connected = true
+		# The voice is found, not handed over: a game's chat client publishes its manager
+		# and this binds it whichever of the two is built first. A game wires nothing.
+		var bus := DotRegistry.signals()
+		if not bus.service_registered.is_connected(_on_service_registered):
+			bus.service_registered.connect(_on_service_registered)
+	var found := DotRegistry.get_service(VOICE_SERVICE)
+	if found != null:
+		bind_voice(found)
 	apply_all()
 	return DotResult.success(self)
+
+
+func _on_service_registered(service: StringName, instance: Object) -> void:
+	if service == VOICE_SERVICE and instance != null:
+		bind_voice(instance)
 
 
 func _exit_tree() -> void:
 	if _connected and settings != null and settings.changed.is_connected(_on_changed):
 		settings.changed.disconnect(_on_changed)
+	var bus := DotRegistry.signals()
+	if bus.service_registered.is_connected(_on_service_registered):
+		bus.service_registered.disconnect(_on_service_registered)
 	_connected = false
 
 
@@ -170,7 +196,28 @@ func bind_camera(camera: Object, property: StringName = &"fov") -> void:
 	_apply_fov()
 
 
+## A player's own voice: anything with `set_open_mic(bool)`, `set_input_device(String)` and
+## `set_volume(float)` (dot-voice's `DotVoiceManager`), and optionally `server_enabled` and a
+## `server_enabled_changed(bool)` signal, which [signal voice_available_changed] passes on.
+## Bound automatically when one is published as `dot_voice_client`.
+func bind_voice(target: Object) -> void:
+	if target == null or _voice.has(target):
+		return
+	_prune(_voice)
+	_voice.append(target)
+	if target.has_signal(&"server_enabled_changed") and not target.is_connected(&"server_enabled_changed", _on_voice_available):
+		target.connect(&"server_enabled_changed", _on_voice_available)
+	_apply_voice()
+	if &"server_enabled" in target:
+		voice_available_changed.emit(bool(target.get(&"server_enabled")))
+
+
+func _on_voice_available(available: bool) -> void:
+	voice_available_changed.emit(available)
+
+
 func unbind(target: Object) -> void:
+	_voice.erase(target)
 	_audio.erase(target)
 	_fx.erase(target)
 	_look.erase(target)
@@ -193,6 +240,10 @@ func _on_changed(key: StringName, value: Variant, why: StringName) -> void:
 func _apply(key: StringName, value: Variant, why: StringName) -> void:
 	if VOLUMES.has(key):
 		_apply_volumes()
+		if key == &"voice_volume":
+			_apply_voice()
+	elif key == &"voice_mode" or key == &"voice_input_device":
+		_apply_voice()
 	else:
 		match key:
 			&"fps_max":
@@ -260,6 +311,27 @@ func _volumes_to_buses() -> void:
 			continue
 		var linear := clampf(settings.get_float(key, 1.0), 0.0, 1.0)
 		AudioServer.set_bus_volume_db(bus, linear_to_db(linear) if linear > 0.0 else -80.0)
+
+
+func _apply_voice() -> void:
+	if settings == null:
+		return
+	_prune(_voice)
+	var device := settings.get_string(&"voice_input_device", "Default") if _has(&"voice_input_device") else ""
+	if _voice.is_empty():
+		# Nothing to tell, but the device is the engine's, so it can still be set.
+		if device != "" and AudioServer.get_input_device_list().has(device):
+			AudioServer.input_device = device
+		return
+	for target in _voice:
+		if _has(&"voice_mode") and target.has_method(&"set_open_mic"):
+			target.call(&"set_open_mic", settings.get_string(&"voice_mode", "push_to_talk") == "open_mic")
+		if device != "" and target.has_method(&"set_input_device"):
+			var _known: Variant = target.call(&"set_input_device", device)
+		# The voice bus is already set by the volumes; a voice with no bus of its own takes
+		# the level here.
+		if _has(&"voice_volume") and target.has_method(&"set_volume") and AudioServer.get_bus_index(&"Voice") < 0:
+			target.call(&"set_volume", settings.get_float(&"voice_volume", 1.0))
 
 
 func _apply_fx() -> void:

@@ -11,8 +11,8 @@ extends Node
 ## [b]CHECKS is the guard the section counter cannot be.[/b] A script error inside a test
 ## aborts THAT TEST, not the run; the section counter is satisfied because the section had
 ## already announced itself, and the total is what notices the checks that never ran.
-const SECTIONS := 15
-const CHECKS := 198
+const SECTIONS := 16
+const CHECKS := 209
 
 var _passed := 0
 var _failed := 0
@@ -44,6 +44,7 @@ func _run() -> void:
 	await _test_settings_node()
 	await _test_scoreboard()
 	await _test_net_stat()
+	await _test_voice()
 
 	_line("")
 	_line("%d sections, %d passed, %d failed" % [_section_count, _passed, _failed])
@@ -1059,6 +1060,78 @@ func _test_net_stat() -> void:
 	await get_tree().process_frame
 	_check(mine.set_value(&"net_stat", 1).ok, "and a change after the overlay is gone is no error")
 	mine.queue_free()
+
+
+# --- 16 ---------------------------------------------------------------------------
+
+## Anything shaped like dot-voice's DotVoiceManager, as far as the applier and the menu care.
+class FakeVoice extends Node:
+	signal server_enabled_changed(enabled: bool)
+	var server_enabled := true
+	var open_mic_calls: Array = []
+	var devices: Array = []
+	func set_open_mic(on: bool) -> void:
+		open_mic_calls.append(on)
+	func set_input_device(device: String) -> bool:
+		devices.append(device)
+		return true
+	func set_volume(_v: float) -> void:
+		pass
+	func tell(on: bool) -> void:
+		server_enabled = on
+		server_enabled_changed.emit(on)
+
+
+func _test_voice() -> void:
+	_section("Voice: the settings, the talk key, and a server that has it off")
+
+	var schema := _schema()
+	_check(schema.has(&"voice_mode") and schema.has(&"voice_input_device"), "the default groups declare voice_mode and voice_input_device")
+	_check(DotMenuStock.audio_page().find_row(&"voice_mode") != null and DotMenuStock.audio_page().find_row(&"voice_input_device") != null,
+		"and the Audio page has a row for each")
+
+	var node := DotMenuSettings.new()
+	node.app_namespace = &"menu_voice_test"
+	node.schema = DotMenuStock.declare(DotSettingsSchema.new())
+	node.bindings = _keys()
+	add_child(node)
+	var res := node.setup(DotSettingsStoreMemory.new())
+	_check(res.ok and not node.bindings.row_for_action(&"dot_voice_talk").is_empty(),
+		"a game with the voice settings gets the Push to talk key in its table")
+	_check(node.settings.schema.has(&"bind_voice_talk") and InputMap.has_action(&"dot_voice_talk"),
+		"stored as bind_voice_talk, on the dot_voice_talk action")
+	var talk_keys := InputMap.action_get_events(&"dot_voice_talk") if InputMap.has_action(&"dot_voice_talk") else []
+	_check(talk_keys.size() == 1 and talk_keys[0] is InputEventKey and (talk_keys[0] as InputEventKey).physical_keycode == KEY_V,
+		"on V by default")
+
+	# Published after the menu: found by the registry, not handed over. Armed: nothing is
+	# called before it is published.
+	var voice := FakeVoice.new()
+	add_child(voice)
+	_check(voice.open_mic_calls.is_empty(), "an unpublished voice is told nothing")
+	DotRegistry.register(DotMenuApplier.VOICE_SERVICE, voice)
+	_check(voice.open_mic_calls == [false] and voice.devices == ["Default"],
+		"published as dot_voice_client, it is bound and told the stored mode and device (%s %s)" % [str(voice.open_mic_calls), str(voice.devices)])
+	var _set := node.settings.set_value(&"voice_mode", &"open_mic")
+	_check(voice.open_mic_calls.back() == true, "choosing an open microphone reaches it")
+
+	voice.tell(false)
+	var hidden: PackedStringArray = node.menu.screen.extra_hidden_rows
+	_check(hidden.has("voice_mode") and hidden.has("bind_voice_talk") and hidden.has("voice_volume"),
+		"the server turning voice off hides the voice rows and the talk key (%s)" % str(hidden))
+	voice.tell(true)
+	_check(node.menu.screen.extra_hidden_rows.is_empty(), "and on shows them again")
+
+	node.menu.apply_server_rules({"rows_hidden": ["field_of_view"]})
+	voice.tell(false)
+	node.menu.release_server_rules()
+	_check(node.menu.screen.extra_hidden_rows.has("voice_mode") and not node.menu.screen.extra_hidden_rows.has("field_of_view"),
+		"leaving a server's rules keeps the voice rows hidden for their own reason")
+
+	DotRegistry.unregister_instance(DotMenuApplier.VOICE_SERVICE, voice)
+	voice.queue_free()
+	node.queue_free()
+	await get_tree().process_frame
 
 
 func _section(title: String) -> void:

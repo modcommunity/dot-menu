@@ -65,6 +65,10 @@ func setup(store: DotSettingsStore = null, with_menu: bool = true) -> DotResult:
 		config = DotMenuConfig.new()
 	if schema == null:
 		schema = DotMenuStock.declare(DotSettingsSchema.new())
+	# The talk key goes with the voice settings, so every game that has them has the key in
+	# its table, its Controls page and its help screen, on the same setting.
+	if bindings != null and schema.has(&"voice_mode") and bindings.row_for_action(&"dot_voice_talk").is_empty():
+		var _v := bindings.add_voice()
 	if bindings != null:
 		bindings.add_to_schema(schema)
 	var themes := config.make_themes()
@@ -100,6 +104,7 @@ func setup(store: DotSettingsStore = null, with_menu: bool = true) -> DotResult:
 			menu = null
 		else:
 			menu.overlays_changed.connect(func(open: bool) -> void: menu_state_changed.emit(open))
+			applier.voice_available_changed.connect(_on_voice_available)
 
 	return DotResult.success(self)
 
@@ -119,6 +124,21 @@ func bind_camera(camera: Object, property: StringName = &"fov") -> void:
 func bind_audio(audio: Object) -> void:
 	if applier != null:
 		applier.bind_audio(audio)
+
+
+## A player's own voice (dot-voice's `DotVoiceManager`). Rarely needed: the applier binds
+## whatever is published as `dot_voice_client` by itself.
+func bind_voice(voice: Object) -> void:
+	if applier != null:
+		applier.bind_voice(voice)
+
+
+## The server's `sv_voice_enable`, through the bound voice: off hides the voice rows and the
+## talk key, because a key that does nothing on this server is a key a player presses and
+## then reports.
+func _on_voice_available(available: bool) -> void:
+	if menu != null:
+		menu.hide_rows(&"voice", PackedStringArray() if available else DotMenuStock.VOICE_ROWS)
 
 
 func bind_fx(fx: Object) -> void:
