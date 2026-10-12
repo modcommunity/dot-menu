@@ -154,7 +154,7 @@ func fps_list(keep: int = -1) -> Array[int]:
 	return out
 
 
-## The theme catalogue this config describes: the stock six, the file's, narrowed to
+## The theme catalogue this config describes: the stock seven, the file's, narrowed to
 ## [member themes_allowed], with [member theme] first. What [DotMenu] draws with when it is
 ## given no catalogue of its own, and what [method apply_to_schema] offers.
 func make_themes(base: DotMenuThemes = null) -> DotMenuThemes:

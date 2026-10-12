@@ -11,8 +11,8 @@ extends Node
 ## [b]CHECKS is the guard the section counter cannot be.[/b] A script error inside a test
 ## aborts THAT TEST, not the run; the section counter is satisfied because the section had
 ## already announced itself, and the total is what notices the checks that never ran.
-const SECTIONS := 19
-const CHECKS := 278
+const SECTIONS := 20
+const CHECKS := 300
 
 var _passed := 0
 var _failed := 0
@@ -48,6 +48,7 @@ func _run() -> void:
 	await _test_help_key_and_leave()
 	await _test_map_menu()
 	await _test_loadout_menu()
+	await _test_hud_follows()
 
 	_line("")
 	_line("%d sections, %d passed, %d failed" % [_section_count, _passed, _failed])
@@ -224,7 +225,7 @@ func _test_themes() -> void:
 	_section("The catalogue")
 
 	var t := DotMenuThemes.stock()
-	_check(t.size() == 6, "six stock themes")
+	_check(t.size() == 7, "seven stock themes")
 	_check(t.default_id() == &"midnight", "Midnight first, so it is the default")
 	_check(t.named(&"paper").is_light(), "Paper is a light theme")
 	_check(t.named(&"no such theme").id == &"midnight", "an unknown id draws the default, not nothing")
@@ -253,7 +254,7 @@ func _test_themes() -> void:
 	f.close()
 	var t2 := DotMenuThemes.stock()
 	var loaded := t2.load_json(path)
-	_check(loaded.ok and t2.find(&"dusk") != null and t2.size() == 7, "a file of themes adds them")
+	_check(loaded.ok and t2.find(&"dusk") != null and t2.size() == 8, "a file of themes adds them")
 	_check(t2.load_json(dir + "/missing.json").ok, "and a missing file is the first launch, not an error")
 	f = FileAccess.open(path, FileAccess.WRITE)
 	f.store_string("{ not json")
@@ -1417,6 +1418,91 @@ func _test_map_menu() -> void:
 	bare.queue_free()
 	link.queue_free()
 	node.queue_free()
+	await get_tree().process_frame
+
+
+# --- 20 ---------------------------------------------------------------------------
+
+## Contrast ratio of [param fg] over [param plate] laid on [param ground], in linear light.
+func _contrast(fg: Color, plate: Color, ground: Color) -> float:
+	var under := ground.lerp(Color(plate, 1.0), plate.a)
+	var a := fg.srgb_to_linear().get_luminance()
+	var b := under.srgb_to_linear().get_luminance()
+	return (maxf(a, b) + 0.05) / (minf(a, b) + 0.05)
+
+
+func _test_hud_follows() -> void:
+	_section("The HUD follows the theme")
+
+	var t := DotMenuThemes.stock()
+	var midnight := t.named(&"midnight")
+	_check(midnight.hud_plate.get_luminance() < 0.1 and midnight.hud_plate.a >= 0.7 and midnight.hud_keycap.get_luminance() < 0.3,
+		"the default theme's HUD is dark: deep plates and dark key caps")
+	_check(t.find(&"arcade") != null and t.named(&"arcade").hud_team_fill >= 0.99 and t.named(&"arcade").hud_keycap.get_luminance() > 0.8,
+		"and the first bright HUD is kept as a theme a player can pick")
+	var unreadable := PackedStringArray()
+	for id in t.ids():
+		var p := t.named(id)
+		for ground in [Color.WHITE, Color.BLACK, Color(0.75, 0.8, 0.9)]:
+			if _contrast(p.hud_text, p.hud_plate, ground) < 4.5:
+				unreadable.append("%s on %s" % [id, ground.to_html(false)])
+	_check(unreadable.is_empty(), "every stock theme's HUD words read on their plate over a white, a black and a pale-blue map (%s)" % ", ".join(unreadable))
+
+	var again := DotMenuPalette.from_dictionary(midnight.to_dictionary())
+	_check(again.ok and is_equal_approx(again.value.hud_team_fill, midnight.hud_team_fill) and again.value.hud_keycap_edge.to_html() == midnight.hud_keycap_edge.to_html(),
+		"the HUD's numbers and colours survive a round trip through the theme's data")
+	_check(not DotMenuPalette.from_dictionary({"id": "x", "hud_team_fill": "lots"}).ok, "and a number nobody can read is refused")
+
+	var menu := _menu()
+	var root := Control.new()
+	root.size = Vector2(1280.0, 720.0)
+	add_child(root)
+	var vitals := DotVitals.new()
+	root.add_child(vitals)
+	var words := Label.new()
+	root.add_child(words)
+	var accent := Theme.new()
+	accent.set_color(&"highlight", DotHudPiece.THEME_TYPE, Color.MAGENTA)
+	menu.follow_hud(root, accent)
+	var hud := DotHud.new()
+	add_child(hud)
+	menu.follow_hud(hud)
+	_check(menu.followed_huds().size() == 2, "a game hands the menu its HUD roots")
+	_check(vitals.colour(&"plate") == midnight.hud_plate and vitals.colour(&"keycap") == midnight.hud_keycap,
+		"a piece under a followed root draws in the theme's HUD colours")
+	_check(vitals.colour(&"highlight") == Color.MAGENTA, "and in the game's own accent")
+	_check(words.get_theme_color(&"font_color") == midnight.hud_text and words.get_theme_constant(&"outline_size") > 0,
+		"and a plain Label under it reads the theme's text, outlined")
+
+	var _set := menu.settings.set_value(&"ui_theme", &"paper")
+	var paper := t.named(&"paper")
+	_check(vitals.colour(&"plate") == paper.hud_plate and vitals.colour(&"text") == paper.hud_text,
+		"a theme picked in the menu reaches the piece at once")
+	_check(vitals.colour(&"highlight") == Color.MAGENTA, "and the game keeps its accent in every theme")
+	_check(words.get_theme_color(&"font_color") == paper.hud_text, "and the Label follows too")
+	var _key := menu.cycle_theme()
+	_check(vitals.colour(&"plate") == menu.palette().hud_plate, "the theme key reaches it as well")
+	var _arc := menu.settings.set_value(&"ui_theme", &"arcade")
+	_check(vitals.number(&"team_fill") == 100, "under Arcade the score plates are painted, as the first HUD's were")
+	_set = menu.settings.set_value(&"ui_theme", &"midnight")
+	_check(vitals.number(&"team_fill") < 50, "and under the default they are tinted")
+
+	_check(menu.settings.schema.has(&"hud_scale") and is_equal_approx(menu.hud_scale(), 1.0), "the HUD size is a stock setting, 1 by default")
+	_check(is_equal_approx(root.scale.x, 1.0), "and a HUD at size 1 is left as the game laid it out")
+	_set = menu.settings.set_value(&"hud_scale", 1.2)
+	_check(is_equal_approx(root.scale.x, 1.2) and is_equal_approx(hud.user_scale, 1.2), "a new size reaches a plain root and a DotHud")
+	var frame := root.get_viewport().get_visible_rect().size
+	_check(absf(root.size.x * root.scale.x - frame.x) < 1.0, "and the plain root still spans the frame")
+	_set = menu.settings.set_value(&"hud_scale", 1.0)
+	_check(is_equal_approx(root.scale.x, 1.0) and is_equal_approx(hud.user_scale, 1.0), "and back")
+
+	menu.unfollow_hud(root)
+	_set = menu.settings.set_value(&"ui_theme", &"contrast")
+	_check(vitals.colour(&"plate") != t.named(&"contrast").hud_plate, "a root no longer followed keeps what it had")
+	hud.free()
+	_check(menu.followed_huds().is_empty(), "and a freed one drops out")
+	root.queue_free()
+	_free_menu(menu)
 	await get_tree().process_frame
 
 

@@ -31,5 +31,9 @@ extends RefCounted
 #    open_loadout_screen(), loadout, loadout_screen, loadout_action; DotMenuBindings
 #    LOADOUT_ACTION/LOADOUT_SETTING/LOADOUT_KEY and add_loadout(); DotMenuSettings.loadout_menu and
 #    use_loadout().
-const LEVEL := 6
+# 7: the HUD follows the theme: DotMenu.follow_hud(), unfollow_hud(), followed_huds(),
+#    hud_scale(); DotMenuPalette.hud_theme(), NUMBERS and the hud_edge, hud_ink,
+#    hud_highlight, hud_keycap, hud_keycap_text, hud_keycap_edge and hud_team_fill fields;
+#    the hud_scale stock setting and its row; the Arcade stock theme. Needs dot-ui 6.
+const LEVEL := 7
 const OLDEST := 1

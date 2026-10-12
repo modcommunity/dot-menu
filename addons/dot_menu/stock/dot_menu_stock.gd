@@ -66,14 +66,14 @@ const KEYS := {
 	GROUP_VIDEO: [&"window_mode", &"vsync", &"fps_max", &"render_scale", &"field_of_view", &"fx_quality"],
 	GROUP_CONTROLS: [&"sensitivity", &"invert_mouse"],
 	GROUP_COMFORT: [&"shake_scale", &"allow_flashes"],
-	GROUP_INTERFACE: [&"ui_theme", &"show_fps", &"net_stat", &"net_stat_height", &"net_stat_position"],
+	GROUP_INTERFACE: [&"ui_theme", &"hud_scale", &"show_fps", &"net_stat", &"net_stat_height", &"net_stat_position"],
 	GROUP_CHAT: [&"chat_window"],
 	GROUP_VOICE: [&"voice_mode", &"voice_input_device"],
 }
 
 
 ## Declares the stock settings in [param groups] (by default [constant DEFAULT_GROUPS]) that [param schema] does not have yet.
-## [param themes] supplies the `ui_theme` options; null is the stock six. [param except] is
+## [param themes] supplies the `ui_theme` options; null is the stock seven. [param except] is
 ## stock keys this game has nothing to apply to — a game with no interface sounds leaves out
 ## `ui_volume`, one with no effects `shake_scale` — because a declared setting nothing
 ## applies is a switch that does nothing.
@@ -146,6 +146,11 @@ static func _declare(schema: DotSettingsSchema, groups: Array[StringName], theme
 		_add(schema, DotSettingsDef.choice(&"ui_theme", t.default_id(), t.ids(), &"hud")
 			.with_scope(account)
 			.with_description("The colours of the menus and the HUD."))
+		# ACCOUNT, for the theme's reason. 0.7 to 1.4: below that the words are dust, above it
+		# the pieces of a 1280x720 HUD run into each other.
+		_add(schema, DotSettingsDef.number(&"hud_scale", 1.0, 0.7, 1.4, &"hud", 0.05)
+			.with_scope(account)
+			.with_description("How large the HUD is drawn."))
 		_add(schema, DotSettingsDef.boolean(&"show_fps", false, &"video"))
 		var _ns := declare_net_stat(schema)
 
@@ -242,6 +247,8 @@ static func general_page() -> DotMenuPage:
 	var p := DotMenuPage.make(&"general", "General", "How the game looks and what is on the screen.")
 	p.section("Interface") \
 		.add(DotMenuRow.select(&"ui_theme", "Theme", "The menus and the HUD.")) \
+		.add(DotMenuRow.slider(&"hud_scale", "HUD size", "How large health, ammunition, the clock and the rest are drawn.")
+			.formatted(DotMenuRow.FORMAT_PERCENT)) \
 		.add(DotMenuRow.toggle(&"show_fps", "Frame rate counter", "In the top-right corner."))
 	p.section("Comfort") \
 		.add(DotMenuRow.slider(&"shake_scale", "Camera shake", "How hard the view shakes for a landing, a hit or an explosion.")

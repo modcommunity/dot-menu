@@ -9,7 +9,7 @@ extends Resource
 ## cannot read grey on grey — need the surfaces and the text to move with the accent, so
 ## every colour a screen uses is here and nothing a screen draws is a literal.
 ##
-## [b]The HUD's half is here too[/b] ([member hud_plate] and the four after it), because a
+## [b]The HUD's half is here too[/b] ([member hud_plate] and the eleven after it), because a
 ## player who picks a theme picks it for everything they look at. A light theme's HUD
 ## should still usually draw on a dark plate: the HUD is over the world, and a plate the
 ## colour of the sky is not a plate.
@@ -52,13 +52,29 @@ extends Resource
 @export var keycap_edge := Color(0.27, 0.3, 0.37)
 
 @export_group("HUD")
-## The plate behind a HUD block drawn over the world.
-@export var hud_plate := Color(0.0, 0.0, 0.0, 0.45)
-@export var hud_text := Color(0.92, 0.92, 0.92)
-@export var hud_detail := Color(0.72, 0.74, 0.78)
+## The plate behind a HUD block drawn over the world. Deep and dark by default: the first
+## play test (2026-10-11) found the bright plates read as a toy over a pale map.
+@export var hud_plate := Color(0.025, 0.03, 0.05, 0.74)
+@export var hud_text := Color(0.97, 0.98, 1.0)
+@export var hud_detail := Color(0.72, 0.76, 0.84)
 ## Ahead of a comparison: a split under the record, health going up.
-@export var hud_ahead := Color(0.35, 0.9, 0.4)
-@export var hud_behind := Color(0.95, 0.4, 0.35)
+@export var hud_ahead := Color(0.42, 0.9, 0.55)
+## Behind, and low: health or ammunition running out, a clock nearly done.
+@export var hud_behind := Color(1.0, 0.34, 0.3)
+## The thin line round a HUD plate.
+@export var hud_edge := Color(1.0, 1.0, 1.0, 0.12)
+## The outline round every HUD word, so it reads on any ground.
+@export var hud_ink := Color(0.0, 0.0, 0.0, 0.9)
+## "Yours" and "special" on the HUD: your own row, a headshot's number. A game's own accent
+## usually replaces it (see [method hud_theme]).
+@export var hud_highlight := Color(1.0, 0.8, 0.22)
+## A key drawn as a key on the HUD ("[E] Open door"): the cap, its letter and its edge.
+@export var hud_keycap := Color(0.13, 0.15, 0.2, 0.96)
+@export var hud_keycap_text := Color(0.95, 0.96, 0.99)
+@export var hud_keycap_edge := Color(1.0, 1.0, 1.0, 0.3)
+## How much of a side's own colour fills its score plate, 0 to 1: a dark theme tints its
+## plate and edges it in the colour; the bright one paints it.
+@export_range(0.0, 1.0, 0.01) var hud_team_fill: float = 0.38
 
 @export_group("")
 ## Colours a game names for itself — a team, a rarity, a medal — so they change with the
@@ -72,13 +88,37 @@ const FIELDS: Array[StringName] = [
 	&"text", &"muted", &"dim", &"accent", &"accent_deep", &"warn", &"danger",
 	&"keycap", &"keycap_edge",
 	&"hud_plate", &"hud_text", &"hud_detail", &"hud_ahead", &"hud_behind",
+	&"hud_edge", &"hud_ink", &"hud_highlight", &"hud_keycap", &"hud_keycap_text", &"hud_keycap_edge",
 ]
+
+## The non-colour numbers a theme holds, read and written beside [constant FIELDS].
+const NUMBERS: Array[StringName] = [&"hud_team_fill"]
 
 
 ## The accent as a faint wash: a selected page, a hovered item, a listening key.
 ## Derived rather than stored, so a theme that changes its accent cannot forget it.
 func accent_wash() -> Color:
 	return Color(accent, 0.13)
+
+
+## The [Theme] a HUD drawn in this palette sets on its root: dot-ui's glance pieces
+## ([DotHudPiece]) and every plain Label under the root take their colours from it.
+## [param accent] is the game's own: a [Theme] whose [DotHudPiece] colours (usually
+## `highlight` and `plate_edge`, a game's identity) are laid over the palette's, so each game
+## keeps its accent in every theme. An accent theme should leave the plate, the text and the
+## ink alone, or a light or high-contrast theme cannot change them.
+##
+## A fresh [Theme] every call, for [DotUiTheme]'s reason. [DotMenu.follow_hud] sets it,
+## and sets it again on every theme change.
+func hud_theme(accent: Theme = null) -> Theme:
+	var t := DotHudPiece.theme_from({
+		&"plate": hud_plate, &"plate_edge": hud_edge, &"text": hud_text, &"dim": hud_detail,
+		&"low": hud_behind, &"good": hud_ahead, &"highlight": hud_highlight, &"ink": hud_ink,
+		&"keycap": hud_keycap, &"keycap_text": hud_keycap_text, &"keycap_edge": hud_keycap_edge,
+	}, {&"team_fill": roundi(hud_team_fill * 100.0)})
+	if accent != null:
+		t.merge_with(accent)
+	return t
 
 
 ## Whether the surfaces are light. A few things drawn straight in white — a switch's knob
@@ -118,6 +158,8 @@ func to_dictionary() -> Dictionary:
 	var out := {"id": String(id), "name": display_name}
 	for field in FIELDS:
 		out[String(field)] = "#" + (get(field) as Color).to_html(true)
+	for field in NUMBERS:
+		out[String(field)] = float(get(field))
 	if not extra.is_empty():
 		var more := {}
 		for k in extra:
@@ -152,6 +194,18 @@ static func from_dictionary(data: Dictionary, base: DotMenuPalette = null) -> Do
 				"Theme '%s': '%s' is not a colour (%s)." % [raw_id, key, str(data[key])]
 			)
 		p.set(field, c)
+
+	for field in NUMBERS:
+		var key2 := String(field)
+		if not data.has(key2):
+			continue
+		var n: Variant = data[key2]
+		if not (n is float or n is int):
+			return DotResult.fail(
+				DotError.CODE_INVALID,
+				"Theme '%s': '%s' is not a number (%s)." % [raw_id, key2, str(n)]
+			)
+		p.set(field, clampf(float(n), 0.0, 1.0))
 
 	var more: Variant = data.get("extra", {})
 	if more is Dictionary:

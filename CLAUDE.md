@@ -42,6 +42,7 @@ tools/screenshot.sh
 - Every stock key is covered by `APPLIES`, `APPLIED_BY_MENU` or `LEFT_TO_THE_GAME`, and has a row; the suite enforces it. [design](docs/design.md#the-stock-keys-are-a-contract)
 - `DotMenuConfig.apply_to_schema` runs before `settings.setup()`, or an added theme is reset at every start. [design](docs/design.md#themes-go-into-the-schema-before-the-settings-load)
 - A theme change rebuilds the screen; never walk the tree to recolour. [design](docs/design.md#themes-go-into-the-schema-before-the-settings-load)
+- A game's HUD follows the theme and `hud_scale` through `follow_hud(root, accent)` (through `has_method` in a delivered game); Midnight's HUD is dark and stays the default, the bright one is Arcade; an accent theme never sets plate, text or ink. [design](docs/design.md#the-hud-follows-the-theme)
 - Rebinding a taken key swaps; compare effective bindings (`stored()`, in dot-ui's current spelling), never stored text. [design](docs/design.md#the-keys-table)
 - A server may hide and clamp, never set or read; a clamped row shows the player's own choice. [design](docs/design.md#a-server-may-hide-and-clamp-it-may-never-set-or-read)
 - Help is on H (`dot_menu_help`, `bind_help`) and Escape has Help & commands and Leave in every game by default; `DotMenuSettings` adds the help row and does the stock Leave. Nothing else in a game's table may default to H. [design](docs/design.md#help-on-h-and-leave-in-every-game)

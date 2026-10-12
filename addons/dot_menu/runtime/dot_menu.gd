@@ -61,7 +61,7 @@ var settings: DotSettingsManager = null
 var bindings: DotMenuBindings = null
 var config: DotMenuConfig = null
 
-## The theme catalogue. Null at setup is the stock six, plus the config's file.
+## The theme catalogue. Null at setup is the stock seven, plus the config's file.
 var themes: DotMenuThemes = null
 
 ## The pages, in sidebar order. Null at setup is [method DotMenuStock.pages].
@@ -172,6 +172,9 @@ var _server_rules: Dictionary = {}
 ## reason -> rows hidden for it ([method hide_rows]).
 var _hidden_by: Dictionary = {}
 var _ready_done := false
+## The HUDs [method follow_hud] keeps in the theme and at the player's size:
+## `{"root": WeakRef, "accent": Theme, "scaled": bool, "fitted": bool}`.
+var _huds: Array[Dictionary] = []
 
 
 func _init() -> void:
@@ -201,6 +204,9 @@ func setup() -> DotResult:
 	if settings != null and not settings.changed.is_connected(_on_setting_changed):
 		settings.changed.connect(_on_setting_changed)
 	_apply_net_stat()
+	# A HUD followed before setup was drawn in the default palette; now the player's.
+	_style_huds()
+	_scale_huds()
 	_ready_done = true
 	return DotResult.success(self)
 
@@ -940,8 +946,111 @@ func use_theme(id: StringName) -> bool:
 			move_child(help_hint, mini(where, get_child_count() - 1))
 	if net_stat != null:
 		net_stat.restyle(kit)
+	_style_huds()
 	theme_changed.emit(p)
 	return true
+
+
+# --- The HUD ------------------------------------------------------------------
+
+## Keeps [param root], a game's HUD layer, in the theme and at the player's `hud_scale`:
+## its [Theme] is the palette's [method DotMenuPalette.hud_theme] with [param accent] (the
+## game's own colours) laid over it, set now and again on every theme change, so dot-ui's
+## glance pieces and every plain Label under it follow the menu live. Nothing is rebuilt:
+## a piece reads its colours when it draws.
+##
+## [b]Why the menu does this rather than each game connecting [signal theme_changed][/b]:
+## the first play test (2026-10-11) found every HUD but one ignoring the theme, because each
+## game had to wire it and none had. One call, made where the HUD is built.
+##
+## With [param scaled] the HUD is also drawn at the player's `hud_scale`: a [DotHud] through
+## its `user_scale` (inside its own fit), any other Control through
+## [method DotHud.fit_control] over the viewport, re-fitted when the window changes. A root a
+## game lays out by hand passes false.
+func follow_hud(root: Control, accent: Theme = null, scaled: bool = true) -> void:
+	if root == null:
+		return
+	for entry in _huds:
+		if (entry["root"] as WeakRef).get_ref() == root:
+			entry["accent"] = accent
+			entry["scaled"] = scaled
+			_style_hud(entry)
+			_scale_hud(entry)
+			return
+	var added := {"root": weakref(root), "accent": accent, "scaled": scaled, "fitted": false}
+	_huds.append(added)
+	_style_hud(added)
+	_scale_hud(added)
+
+
+## Stops following [param root]; what it was given stays.
+func unfollow_hud(root: Control) -> void:
+	for i in range(_huds.size() - 1, -1, -1):
+		var held: Object = (_huds[i]["root"] as WeakRef).get_ref()
+		if held == null or held == root:
+			_huds.remove_at(i)
+
+
+## Every HUD root still followed. What a check reads.
+func followed_huds() -> Array[Control]:
+	var out: Array[Control] = []
+	for entry in _huds:
+		var held := (entry["root"] as WeakRef).get_ref() as Control
+		if held != null:
+			out.append(held)
+	return out
+
+
+## The player's HUD size: `hud_scale`, 1 where it is not declared.
+func hud_scale() -> float:
+	if _declared(&"hud_scale"):
+		return clampf(settings.get_float(&"hud_scale", 1.0), 0.25, 4.0)
+	return 1.0
+
+
+func _style_huds() -> void:
+	for entry in _huds:
+		_style_hud(entry)
+
+
+func _style_hud(entry: Dictionary) -> void:
+	var root := (entry["root"] as WeakRef).get_ref() as Control
+	if root == null:
+		return
+	var p: DotMenuPalette = palette() if (kit != null or themes != null) else DotMenuPalette.new()
+	root.theme = p.hud_theme(entry["accent"] as Theme)
+
+
+func _scale_huds() -> void:
+	for entry in _huds:
+		_scale_hud(entry)
+
+
+func _scale_hud(entry: Dictionary) -> void:
+	var root := (entry["root"] as WeakRef).get_ref() as Control
+	if root == null or not bool(entry["scaled"]):
+		return
+	var k := hud_scale()
+	if &"user_scale" in root:
+		root.set(&"user_scale", k)
+		return
+	# A plain root is left exactly as the game laid it out until a size other than 1 is
+	# asked for, and put back on full-rect anchors when 1 is asked for again.
+	if is_equal_approx(k, 1.0) and not bool(entry["fitted"]):
+		return
+	if not root.is_inside_tree():
+		return
+	var vp := root.get_viewport()
+	if not bool(entry["fitted"]):
+		entry["fitted"] = true
+		if not vp.size_changed.is_connected(_scale_huds):
+			vp.size_changed.connect(_scale_huds)
+	if is_equal_approx(k, 1.0):
+		root.scale = Vector2.ONE
+		root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		entry["fitted"] = false
+		return
+	DotHud.fit_control(root, vp.get_visible_rect().size, k)
 
 
 func _stored_theme() -> StringName:
@@ -957,6 +1066,8 @@ func _on_setting_changed(key: StringName, value: Variant, _why: StringName) -> v
 	match key:
 		&"ui_theme":
 			var _changed := use_theme(_stored_theme())
+		&"hud_scale":
+			_scale_huds()
 		&"show_fps", &"net_stat", &"net_stat_height", &"net_stat_position":
 			_apply_net_stat()
 		_:

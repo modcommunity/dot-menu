@@ -26,6 +26,16 @@ dot-ui ships no art and names nothing outside dot-core; its `DotSettingsPanel` g
 
 A theme is a whole palette (`DotMenuPalette`), menus and HUD, never an accent swap. The kit is an instance rebuilt per theme; static vars would mean one palette per process and two menus in one editor session sharing it. A screen is **rebuilt, not recoloured**, on a theme change: every box is set once as an override when built, and walking the tree to find each again is a second copy of the build that drifts.
 
+## The HUD follows the theme
+
+A theme picked in the menu restyles the HUD at once, in every game, through one call made where the HUD is built: `menu.follow_hud(root, accent)`. The menu sets `root.theme` to `palette.hud_theme(accent)` now, after `setup`, and on every theme change; dot-ui's glance pieces read their colours when they draw and every plain Label under the root takes the theme's text colour outlined in its ink, so nothing is rebuilt and nothing walks the tree. Until 2026-10-11 a game had to connect `theme_changed` itself, and the first play test found every HUD but one ignoring the theme.
+
+- **The palette's HUD half** is `hud_plate`, `hud_text`, `hud_detail`, `hud_ahead`, `hud_behind`, `hud_edge`, `hud_ink`, `hud_highlight`, `hud_keycap`, `hud_keycap_text`, `hud_keycap_edge` and the number `hud_team_fill` (0 to 1: how much of a side's colour fills its score plate). `hud_theme` maps them onto dot-ui's `DotHudPiece` colours.
+- **Midnight, the default, is a dark HUD**: deep plates at 0.76 alpha, white words ringed in black, dark key caps edged in the accent, score plates tinted rather than painted. Christian's first play test found the bright HUD "too similar to" a block-built platform shooter; that look is kept as the **Arcade** theme (`hud_team_fill` 1, white caps), never the default. Every stock theme's HUD text is checked at 4.5:1 or better against its plate over a white, a black and a pale-blue map.
+- **A game keeps its accent in every theme.** `accent` is a `Theme` with the game's `DotHudPiece` colours (usually `highlight` and `plate_edge`), merged over the palette's. It must leave `plate`, `text` and `ink` alone, or Paper and High contrast cannot change them.
+- **`hud_scale`** (stock, Interface group, ACCOUNT, 0.7 to 1.4, the "HUD size" row) is applied by the menu to every followed root: a `DotHud` through `user_scale`, inside its own fit; any other Control through `DotHud.fit_control` over the viewport, re-fitted when the window changes. A plain root is left exactly as the game laid it out until a size other than 1 is asked for. `follow_hud(root, accent, false)` keeps a root a game lays out by hand out of it.
+- **A delivered game calls it through `has_method`**: a pack runs on the shell's dot-menu, and a direct call to a method an older shell lacks is a parse error.
+
 ## The keys table
 
 `DotMenuBindings` is g2gfast's bindings table as an instance. Four things read it (the InputMap, the schema, the Controls page, the help screen) and must never disagree. **Rebinding a taken key SWAPS**: refusing makes a player unbind one thing to bind another, stealing leaves an action on nothing. `rebind` and `reset_all` apply to the InputMap themselves, so both halves of a swap land together.

@@ -4,7 +4,7 @@ extends RefCounted
 ## Every theme a player can pick, in the order the menu offers them and a key cycles them.
 ##
 ## [codeblock]
-## var themes := DotMenuThemes.stock()          # the six this addon ships
+## var themes := DotMenuThemes.stock()          # the seven this addon ships
 ## themes.add(my_palette)                       # a game's own
 ## themes.load_json("res://ui/themes.json")     # or a file of them
 ## themes.keep_only(["midnight", "paper"])      # an operator's choice of which to offer
@@ -23,7 +23,8 @@ const CHANNEL := "menu.themes"
 var _palettes: Array[DotMenuPalette] = []
 
 
-## The six stock themes. [b]Midnight[/b] is the default; [b]Paper[/b] is light; [b]High
+## The seven stock themes. [b]Midnight[/b] is the default, a dark HUD on deep plates;
+## [b]Arcade[/b] is the first arena HUD's bright look; [b]Paper[/b] is light; [b]High
 ## contrast[/b] is for a player who cannot read grey on grey.
 static func stock() -> DotMenuThemes:
 	var t := DotMenuThemes.new()
@@ -47,8 +48,11 @@ const STOCK: Array[Dictionary] = [
 		"accent": [0.33, 0.87, 0.78], "accent_deep": [0.13, 0.58, 0.52],
 		"warn": [0.98, 0.74, 0.35], "danger": [0.95, 0.43, 0.45],
 		"keycap": [0.16, 0.18, 0.23], "keycap_edge": [0.27, 0.3, 0.37],
-		"hud_plate": [0, 0, 0, 0.45], "hud_text": [0.92, 0.92, 0.92], "hud_detail": [0.72, 0.74, 0.78],
-		"hud_ahead": [0.35, 0.9, 0.4], "hud_behind": [0.95, 0.4, 0.35],
+		"hud_plate": [0.02, 0.028, 0.045, 0.76], "hud_text": [0.97, 0.98, 1.0], "hud_detail": [0.72, 0.77, 0.85],
+		"hud_ahead": [0.42, 0.9, 0.55], "hud_behind": [1.0, 0.36, 0.32],
+		"hud_edge": [0.33, 0.87, 0.78, 0.2], "hud_ink": [0, 0, 0, 0.9], "hud_highlight": [1.0, 0.8, 0.25],
+		"hud_keycap": [0.11, 0.13, 0.18, 0.96], "hud_keycap_text": [0.95, 0.97, 0.99],
+		"hud_keycap_edge": [0.33, 0.87, 0.78, 0.55], "hud_team_fill": 0.35,
 	},
 	{
 		"id": "ember", "name": "Ember",
@@ -59,8 +63,11 @@ const STOCK: Array[Dictionary] = [
 		"accent": [1.0, 0.6, 0.25], "accent_deep": [0.72, 0.36, 0.1],
 		"warn": [1.0, 0.82, 0.4], "danger": [0.95, 0.38, 0.38],
 		"keycap": [0.21, 0.16, 0.13], "keycap_edge": [0.36, 0.27, 0.22],
-		"hud_plate": [0.08, 0.03, 0.0, 0.5], "hud_text": [1.0, 0.95, 0.88], "hud_detail": [0.92, 0.75, 0.6],
+		"hud_plate": [0.07, 0.035, 0.02, 0.76], "hud_text": [1.0, 0.96, 0.9], "hud_detail": [0.92, 0.78, 0.64],
 		"hud_ahead": [0.5, 0.92, 0.45], "hud_behind": [1.0, 0.42, 0.32],
+		"hud_edge": [1.0, 0.6, 0.25, 0.22], "hud_ink": [0.04, 0.01, 0.0, 0.9], "hud_highlight": [1.0, 0.75, 0.3],
+		"hud_keycap": [0.2, 0.12, 0.08, 0.96], "hud_keycap_text": [1.0, 0.95, 0.88],
+		"hud_keycap_edge": [1.0, 0.6, 0.25, 0.55], "hud_team_fill": 0.38,
 	},
 	{
 		"id": "violet", "name": "Violet",
@@ -71,8 +78,11 @@ const STOCK: Array[Dictionary] = [
 		"accent": [0.72, 0.55, 1.0], "accent_deep": [0.46, 0.3, 0.78],
 		"warn": [0.98, 0.76, 0.4], "danger": [1.0, 0.45, 0.6],
 		"keycap": [0.18, 0.15, 0.26], "keycap_edge": [0.31, 0.26, 0.42],
-		"hud_plate": [0.04, 0.0, 0.1, 0.48], "hud_text": [0.96, 0.94, 1.0], "hud_detail": [0.8, 0.74, 0.95],
+		"hud_plate": [0.04, 0.02, 0.09, 0.76], "hud_text": [0.96, 0.94, 1.0], "hud_detail": [0.8, 0.74, 0.95],
 		"hud_ahead": [0.45, 0.95, 0.65], "hud_behind": [1.0, 0.45, 0.6],
+		"hud_edge": [0.72, 0.55, 1.0, 0.22], "hud_ink": [0.02, 0.0, 0.05, 0.9], "hud_highlight": [1.0, 0.82, 0.35],
+		"hud_keycap": [0.15, 0.11, 0.24, 0.96], "hud_keycap_text": [0.96, 0.94, 1.0],
+		"hud_keycap_edge": [0.72, 0.55, 1.0, 0.55], "hud_team_fill": 0.38,
 	},
 	{
 		"id": "classic", "name": "Classic",
@@ -83,8 +93,28 @@ const STOCK: Array[Dictionary] = [
 		"accent": [0.85, 0.78, 0.3], "accent_deep": [0.55, 0.5, 0.18],
 		"warn": [0.95, 0.7, 0.3], "danger": [0.9, 0.35, 0.3],
 		"keycap": [0.24, 0.25, 0.22], "keycap_edge": [0.38, 0.39, 0.34],
-		"hud_plate": [0.0, 0.0, 0.0, 0.6], "hud_text": [1.0, 1.0, 1.0], "hud_detail": [0.85, 0.82, 0.6],
+		"hud_plate": [0.0, 0.0, 0.0, 0.64], "hud_text": [1.0, 1.0, 1.0], "hud_detail": [0.85, 0.82, 0.6],
 		"hud_ahead": [0.3, 1.0, 0.3], "hud_behind": [1.0, 0.3, 0.3],
+		"hud_edge": [1, 1, 1, 0.1], "hud_ink": [0, 0, 0, 0.9], "hud_highlight": [0.95, 0.85, 0.35],
+		"hud_keycap": [0.22, 0.23, 0.2, 0.95], "hud_keycap_text": [0.95, 0.95, 0.9],
+		"hud_keycap_edge": [0.85, 0.78, 0.3, 0.5], "hud_team_fill": 0.5,
+	},
+	{
+		# The first arena HUD's bright look, kept for a player who liked it: pale see-through
+		# plates, white key caps, score plates painted in the side's colour.
+		"id": "arcade", "name": "Arcade",
+		"backdrop": [0.03, 0.04, 0.09, 0.6], "surface": [0.09, 0.11, 0.19, 0.97],
+		"sidebar": [0.07, 0.085, 0.15, 1.0], "card": [1, 1, 1, 0.045],
+		"card_hover": [1, 1, 1, 0.08], "line": [1, 1, 1, 0.09],
+		"text": [0.96, 0.97, 1.0], "muted": [0.7, 0.75, 0.86], "dim": [0.5, 0.55, 0.68],
+		"accent": [0.36, 0.66, 1.0], "accent_deep": [0.2, 0.45, 0.9],
+		"warn": [1.0, 0.8, 0.22], "danger": [1.0, 0.36, 0.4],
+		"keycap": [0.93, 0.94, 0.97], "keycap_edge": [0.7, 0.73, 0.8],
+		"hud_plate": [0.06, 0.07, 0.11, 0.62], "hud_text": [0.97, 0.98, 1.0], "hud_detail": [0.82, 0.85, 0.92],
+		"hud_ahead": [0.45, 0.92, 0.55], "hud_behind": [1.0, 0.32, 0.28],
+		"hud_edge": [1, 1, 1, 0.14], "hud_ink": [0.02, 0.02, 0.05, 0.85], "hud_highlight": [1.0, 0.8, 0.22],
+		"hud_keycap": [0.93, 0.94, 0.97, 0.95], "hud_keycap_text": [0.08, 0.09, 0.14],
+		"hud_keycap_edge": [0, 0, 0, 0], "hud_team_fill": 1.0,
 	},
 	{
 		"id": "paper", "name": "Paper",
@@ -95,8 +125,14 @@ const STOCK: Array[Dictionary] = [
 		"accent": [0.1, 0.45, 0.85], "accent_deep": [0.1, 0.4, 0.78],
 		"warn": [0.75, 0.45, 0.0], "danger": [0.78, 0.15, 0.2],
 		"keycap": [1.0, 1.0, 1.0], "keycap_edge": [0.72, 0.73, 0.76],
-		"hud_plate": [0.98, 0.98, 0.97, 0.82], "hud_text": [0.08, 0.09, 0.11], "hud_detail": [0.28, 0.3, 0.35],
-		"hud_ahead": [0.05, 0.55, 0.2], "hud_behind": [0.8, 0.12, 0.15],
+		# The menus are light; the HUD is not. It is drawn over the world, where a plate the
+		# colour of the sky is not a plate and a game's white names vanish on it (arena's
+		# kill feed, rendered 2026-10-12). Dark plates edged in the theme's blue, paper caps.
+		"hud_plate": [0.05, 0.06, 0.09, 0.78], "hud_text": [0.98, 0.98, 1.0], "hud_detail": [0.78, 0.8, 0.86],
+		"hud_ahead": [0.35, 0.85, 0.45], "hud_behind": [1.0, 0.38, 0.38],
+		"hud_edge": [0.25, 0.55, 0.95, 0.4], "hud_ink": [0, 0, 0, 0.9], "hud_highlight": [1.0, 0.78, 0.25],
+		"hud_keycap": [0.96, 0.96, 0.97, 0.96], "hud_keycap_text": [0.1, 0.11, 0.13],
+		"hud_keycap_edge": [0.25, 0.55, 0.95, 0.7], "hud_team_fill": 0.45,
 	},
 	{
 		"id": "contrast", "name": "High contrast",
@@ -107,8 +143,11 @@ const STOCK: Array[Dictionary] = [
 		"accent": [1.0, 0.86, 0.0], "accent_deep": [0.85, 0.7, 0.0],
 		"warn": [1.0, 0.7, 0.0], "danger": [1.0, 0.35, 0.35],
 		"keycap": [0.12, 0.12, 0.12], "keycap_edge": [1, 1, 1, 0.7],
-		"hud_plate": [0, 0, 0, 0.85], "hud_text": [1, 1, 1], "hud_detail": [1.0, 0.92, 0.4],
+		"hud_plate": [0, 0, 0, 0.88], "hud_text": [1, 1, 1], "hud_detail": [1.0, 0.92, 0.4],
 		"hud_ahead": [0.3, 1.0, 0.4], "hud_behind": [1.0, 0.35, 0.35],
+		"hud_edge": [1, 1, 1, 0.55], "hud_ink": [0, 0, 0, 1], "hud_highlight": [1.0, 0.86, 0.0],
+		"hud_keycap": [0, 0, 0, 1], "hud_keycap_text": [1, 1, 1],
+		"hud_keycap_edge": [1, 1, 1, 0.9], "hud_team_fill": 0.3,
 	},
 ]
 
