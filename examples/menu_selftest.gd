@@ -12,7 +12,7 @@ extends Node
 ## aborts THAT TEST, not the run; the section counter is satisfied because the section had
 ## already announced itself, and the total is what notices the checks that never ran.
 const SECTIONS := 17
-const CHECKS := 231
+const CHECKS := 232
 
 var _passed := 0
 var _failed := 0
@@ -1251,6 +1251,12 @@ func _test_help_key_and_leave() -> void:
 	_check(bare.handle_event(_key(KEY_H)) and bare.help.is_open(), "a menu with no key table puts help on H itself")
 	await get_tree().process_frame
 	_check(_texts(bare.help).has("Help and controls"), "and lists it, since no row does")
+	bare.help.close()
+	bare.help.title_text = "How to play Later"
+	bare.open_help()
+	await get_tree().process_frame
+	_check(_texts(bare.help).has("How to play Later"), "a heading set after the screen was built is the one drawn")
+	bare.help.close()
 	_check(bare.leave_label() == "Leave", "a menu that leaves the game's way keeps the config's word")
 	var quiet := DotMenu.new()
 	quiet.manage_pointer = false

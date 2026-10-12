@@ -238,6 +238,11 @@ func _rebuild() -> void:
 		return
 	var p := kit.palette
 
+	# The heading too: a game sets `title_text` (or the brand) after this screen was built.
+	var title := _window.find_child("Title", true, false) as Label
+	if title != null:
+		title.text = heading()
+
 	# The hint is rebuilt with the rest: the help key may have been rebound since.
 	var hint := _window.find_child("Hint", true, false) as HBoxContainer
 	if hint != null:
