@@ -85,6 +85,9 @@ var last_said: String = ""
 var direct: bool = true
 
 var _waiting_since_msec: int = -1
+## A long list arrives in parts (`part` of `parts`, a notice carries 8 KB): rows by part,
+## until every one is here.
+var _parts: Dictionary = {}
 var _bound_link: Object = null
 
 
@@ -205,9 +208,22 @@ func _on_notice(notice: Object) -> void:
 
 
 ## The server's answer, as the notice's data. Public for a game with its own wire and for the
-## suite: `{maps: [...], allowed, flag, vote, where}` opens the picker; `{result: {ok, text}}`
-## is the outcome of a choice.
+## suite: `{maps: [...], allowed, flag, vote, where}` opens the picker, put back together first
+## when it came in `part`s of `parts`; `{result: {ok, text}}` is the outcome of a choice.
 func receive(data: Dictionary) -> void:
+	if data.has("maps") and int(data.get("parts", 1)) > 1:
+		var parts := int(data["parts"])
+		if int(data.get("part", 1)) == 1:
+			_parts.clear()
+		_parts[int(data.get("part", 1))] = data["maps"] if data["maps"] is Array else []
+		if _parts.size() < parts:
+			return
+		var whole: Array = []
+		for i in range(1, parts + 1):
+			whole.append_array(_parts.get(i, []))
+		_parts.clear()
+		data = data.duplicate()
+		data["maps"] = whole
 	_waiting_since_msec = -1
 	if data.has("maps"):
 		last_offer = data.duplicate(true)

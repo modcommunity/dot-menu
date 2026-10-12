@@ -12,7 +12,7 @@ extends Node
 ## aborts THAT TEST, not the run; the section counter is satisfied because the section had
 ## already announced itself, and the total is what notices the checks that never ran.
 const SECTIONS := 19
-const CHECKS := 277
+const CHECKS := 278
 
 var _passed := 0
 var _failed := 0
@@ -1366,6 +1366,13 @@ func _test_map_menu() -> void:
 	_check(node.menu.picker.is_open() and _texts(node.menu.picker).has("Change map — this server"), "allowed, the server's list opens to change")
 	var _k6 := node.menu.handle_event(_key(KEY_2))
 	_check(link.sent.back() == "/mapmenu dm_yard" and changed.size() == 1, "and a choice is the server's to make, not this client's")
+	# A long list comes in parts and opens once, whole.
+	link.answer({"maps": [{"id": "a1", "name": "A1"}], "allowed": true, "flag": "generic", "vote": true, "part": 1, "parts": 2})
+	var half_open := node.menu.picker.is_open()
+	link.answer({"maps": [{"id": "a2", "name": "A2"}, {"id": "a3", "name": "A3"}], "allowed": true, "flag": "generic", "vote": true, "part": 2, "parts": 2})
+	_check(not half_open and node.menu.picker.is_open() and node.menu.picker.items.size() == 3,
+		"a list sent in parts opens once, with every part")
+	node.menu.picker.close()
 	link.answer({"result": {"ok": true, "text": "Changing to Yard."}})
 	_check(node.menu.toast_text() == "Changing to Yard.", "what the server did is said on screen")
 
