@@ -76,6 +76,7 @@ var _sub: Label = null
 var _points: Label = null
 var _status: Label = null
 var _keys: HBoxContainer = null
+var _scroll: ScrollContainer = null
 var _built := false
 var _original: Dictionary = {}
 var _hover := -1
@@ -173,6 +174,8 @@ func _build() -> void:
 	col.add_child(_sub)
 
 	var scroll := ScrollContainer.new()
+	scroll.name = "Scroll"
+	_scroll = scroll
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	col.add_child(scroll)
@@ -199,6 +202,10 @@ func _build() -> void:
 	_status = kit.label("", kit.size_small, p.warn, true)
 	_status.name = "Status"
 	_status.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	# Trimmed, never widening: a long refusal pushed the window past its design width and the
+	# right-hand column off screen (rendered in game-arena).
+	_status.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	_status.custom_minimum_size = Vector2(1, 0)
 	foot.add_child(_status)
 	_keys = HBoxContainer.new()
 	_keys.name = "Keys"
@@ -329,7 +336,7 @@ func pick(index: int) -> bool:
 		return false
 	var over := over_budget_by(str(slot["id"]), item)
 	if over > 0:
-		_status_text = "%s is %d point%s over the budget. Free some points in another slot." % [
+		_status_text = "%s is %d point%s over the budget." % [
 			item.get("name", item.get("id", "")), over, "" if over == 1 else "s"]
 		_rebuild()
 		return false
@@ -496,6 +503,10 @@ func _rebuild() -> void:
 		_grid.add_child(kit.paragraph("Nothing can go in this slot here."))
 	for i in list.size():
 		_grid.add_child(_card(i, list[i] as Dictionary))
+	# The card the keys are on stays in view (a pick by arrow keys on the third row was
+	# described below while the card itself was scrolled away).
+	if _hover < 0 and card_index >= 0 and card_index < _grid.get_child_count():
+		_scroll_to.call_deferred(_grid.get_child(card_index))
 
 	_draw_detail()
 
@@ -628,17 +639,30 @@ func _card(index: int, item: Dictionary) -> Control:
 	elif locked:
 		under = "set by the server"
 	else:
-		var tags := PackedStringArray()
-		for t: Variant in item.get("tags", []):
-			if tags.size() < 3:
-				tags.append(str(t))
-		under = "  ·  ".join(tags)
+		under = "  ·  ".join(_shown_tags(item, 3))
 	var u := kit.label(under, kit.size_small - 2, under_colour, equipped)
 	u.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	u.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	u.custom_minimum_size = Vector2(1, 0)
 	col.add_child(u)
 	return b
+
+
+func _scroll_to(card: Control) -> void:
+	if _scroll != null and is_instance_valid(card) and card.is_inside_tree():
+		_scroll.ensure_control_visible(card)
+
+
+## The tags worth showing: not the slot's own name or the kind, which the card already says.
+func _shown_tags(item: Dictionary, limit: int) -> PackedStringArray:
+	var slot := current_slot()
+	var said := [str(slot.get("id", "")).to_lower(), str(slot.get("name", "")).to_lower(), str(item.get("kind", "")).to_lower()]
+	var out := PackedStringArray()
+	for t: Variant in item.get("tags", []):
+		var tag := str(t)
+		if out.size() < limit and not said.has(tag.to_lower()):
+			out.append(tag)
+	return out
 
 
 ## A picture frame: the item's icon, or its initials when it has none (an empty box reads as
@@ -701,9 +725,7 @@ func _draw_detail() -> void:
 	var detail := str(item.get("detail", ""))
 	if detail != "":
 		words.add_child(kit.paragraph(detail, kit.size_small, p.muted))
-	var tags := PackedStringArray()
-	for t: Variant in item.get("tags", []):
-		tags.append(str(t))
+	var tags := _shown_tags(item, 8)
 	if not tags.is_empty():
 		words.add_child(kit.label("  ·  ".join(tags), kit.size_small - 1, p.dim))
 
