@@ -94,6 +94,9 @@ func _build_menu() -> void:
 	menu.add_page(gameplay, &"video")
 
 	menu.screen.subtitle = "Offline · demo"
+	menu.help.title_text = "How to play the demo"
+	menu.help.about = "Nothing to win here: every menu a game gets from dot-menu, in the theme you pick. A game puts its goal in this card."
+	menu.help.add_text("Modes", "A game describes its modes or its rules in a card like this one, and the keys come from its table on the left.")
 	menu.help.add_section("This demo", [["M", "A picker of made-up maps"], ["P", "The next theme"]], &"keys")
 	menu.layout_editor.saved.connect(func(text: String) -> void: var _s := settings.set_value(&"hud_positions", text))
 	menu.picked.connect(func(id: StringName) -> void: hud.speed.text = "Picked %s" % id)

@@ -17,5 +17,10 @@ extends RefCounted
 #    voice_mode and voice_input_device settings; DotMenuBindings.add_voice() (bind_voice_talk on
 #    the dot_voice_talk action); DotMenuApplier.bind_voice(), VOICE_SERVICE and
 #    voice_available_changed; DotMenuSettings.bind_voice(); DotMenu.hide_rows().
-const LEVEL := 3
+# 4: the help key and the stock Leave: DotMenuBindings.HELP_ACTION/HELP_SETTING/HELP_KEY,
+#    add_help(), help_group(), defaults_on(); DotMenu.help_action defaults to HELP_ACTION,
+#    leave_on_its_own, leave_link, leave_service, leave(), leave_label();
+#    DotMenuHelp.about, add_text(), heading(), help_key_shown();
+#    DotMenuSettings.leave_on_its_own and _fill_help().
+const LEVEL := 4
 const OLDEST := 1

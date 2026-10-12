@@ -19,7 +19,7 @@ It started as game-g2gfast's menus and was pulled out so every game gets the sam
 - **Stock settings.** Master, effects, interface and voice volume (music if you ask for it), window mode, V-Sync, frame-rate cap, render scale, field of view, effects quality, sensitivity, invert mouse, camera shake, screen flashes, the theme, a frame-rate counter and the chat box. Declared once with the same keys and scopes the games already used, so moving a game onto this keeps every player's choices.
 - **An applier.** `DotMenuApplier` pushes each of those at what it controls (the engine, the audio buses or a dot-audio mixer, a dot-fx config, a dot-player-controller sampler, a camera), once at load and again on every change.
 - **Keys.** `DotMenuBindings` is one table of actions. It declares a setting per key, puts them on the InputMap, draws a key button per row on the Controls page and lists them on the help screen. Binding a key that is already used swaps the two, so nothing is left unbound. Escape can never be bound.
-- **Help.** Every key as it is bound right now, the server's chat commands, your own cards, and in a browser, what the browser does with Ctrl+W and friends.
+- **Help.** On H in every game unless you say otherwise. Your game's goal and modes, every key as it is bound right now, the server's chat commands, your own cards, and in a browser, what the browser does with Ctrl+W and friends.
 - **A picker.** A numbered list, seven to a page: 1 to 7 picks, 8 and 9 turn the page, 0 closes. Maps, teams, classes.
 - **A HUD layout editor.** Drag your HUD's pieces anywhere and right-click to put one back. Positions are saved as fractions of the screen, so a layout made on a laptop fits a 4K monitor.
 - **Themes.** Six ship (Midnight, Ember, Violet, Classic, Paper, High contrast). A theme is a palette of colours for both the menus and the HUD, and can be written as JSON. P (or whatever you bind) cycles them.
@@ -42,7 +42,7 @@ To add it to your own project by hand, copy `addons/dot_menu/` into it along wit
 var keys := DotMenuBindings.new()
 keys.add_movement()                                       # WASD, Space, Ctrl
 keys.add(&"mygame_flashlight", &"bind_flashlight", "Flashlight", "F", "View")
-keys.add(&"mygame_help", &"bind_help", "Help", "H", "Interface")
+keys.add_help()                                           # H opens help; rebindable like any key
 
 # The settings: the stock ones, your own, and your config over both.
 var config := DotMenuConfig.new()
@@ -73,10 +73,12 @@ var menu := DotMenu.new()
 menu.settings = settings
 menu.bindings = keys
 menu.config = config
-menu.help_action = &"mygame_help"
 add_child(menu)
 menu.setup()
-menu.action_requested.connect(func(id): if id == &"leave": leave_server())
+menu.help.about = "First to twenty frags wins."          # the help screen's goal card
+menu.help.add_text("Modes", "Deathmatch, and Teams on a team map.")
+menu.leave_on_its_own = true                              # Leave disconnects, or quits a solo game
+
 menu.overlays_changed.connect(func(open): sampler.suspended = open)
 ```
 

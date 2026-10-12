@@ -10,7 +10,7 @@ extends CanvasLayer
 ## menu.settings = settings                       # a DotSettingsManager, set up
 ## menu.bindings = keys                           # a DotMenuBindings
 ## menu.config = config                           # a DotMenuConfig; null is the stock one
-## menu.help_action = &"mygame_help"              # H, as the player has it bound
+## menu.help_action = &"mygame_help"              # optional: H is dot_menu_help already
 ## menu.theme_action = &"mygame_theme_next"       # optional: a key that cycles themes
 ## add_child(menu)
 ## menu.setup()                                   # the stock pages, the themes, the screens
@@ -43,8 +43,8 @@ const CHANNEL := "menu"
 ## The menu, or any overlay, opened or the last one closed.
 signal overlays_changed(open: bool)
 
-## A sidebar action: &"help" is handled here (it opens help); &"leave" and a game's own are
-## the game's.
+## A sidebar action: &"help" is handled here (it opens help); &"leave" is handled here too
+## when [member leave_on_its_own] is set, and is the game's otherwise, as a game's own are.
 signal action_requested(id: StringName)
 
 ## The theme changed. A HUD that draws in the palette recolours from this.
@@ -71,7 +71,14 @@ var pages: Array[DotMenuPage] = []
 var kit: DotMenuKit = null
 
 ## Actions that, pressed with nothing open, open help and cycle the theme. Empty is none.
-var help_action: StringName = &""
+##
+## [b]Help is on H in every game unless the game says otherwise[/b] (API 4): the default is
+## [constant DotMenuBindings.HELP_ACTION], which [DotMenuSettings] and
+## [method DotMenuBindings.add_help] put in a game's key table, so it is rebindable and on the
+## help screen like any key. A game with no row for it still gets H: [method setup] puts the
+## action on the InputMap and the help screen lists it. Until 2026-10-11 this was empty and a
+## game got a help key only by setting it, which nine of thirteen had not.
+var help_action: StringName = DotMenuBindings.HELP_ACTION
 var theme_action: StringName = &""
 
 ## The action held to show the scoreboard (Tab). Empty is no scoreboard key; the board is
@@ -98,6 +105,19 @@ var manage_pointer: bool = true
 ## console — so Escape and the keys above are left to it, and a pointer it freed does not
 ## open the menu.
 var busy: Callable = Callable()
+
+## Leave does the stock thing itself (API 4): disconnects from the server when connected,
+## which hands the player back to whatever loaded the game, and quits a solo game on the
+## desktop. Off, Leave is only [signal action_requested] (a game that leaves its own way).
+## [DotMenuSettings] turns it on.
+var leave_on_its_own: bool = false
+
+## What Leave disconnects: anything with `disconnect_from_server(reason)` and
+## `is_connected_to_server()`. Null looks up [member leave_service] in [DotRegistry] when
+## Leave is pressed, which is where a client link publishes itself, so a link made after the
+## menu is still the one left.
+var leave_link: Object = null
+var leave_service: StringName = &"dot_client_link"
 
 var screen: DotMenuScreen = null
 var help: DotMenuHelp = null
@@ -141,6 +161,7 @@ func setup() -> DotResult:
 	if pages.is_empty():
 		pages = DotMenuStock.pages(config)
 	_wire_stock_rows()
+	_ensure_help_action()
 
 	_theme_id = _stored_theme()
 	kit = DotMenuKit.new(themes.named(_theme_id)) if kit == null else kit.with_palette(themes.named(_theme_id))
@@ -213,7 +234,10 @@ func _build() -> void:
 	help.bindings = bindings
 	help.config = config
 	help.help_action = help_action
-	help.extra_keys = {_last_group(): [["Esc", "Menu and settings"]]}
+	var extra: Array = [["Esc", "Menu and settings"]]
+	if _help_off_the_table():
+		extra.push_front([DotInputBinding.describe_action(help_action), "Help and controls"])
+	help.extra_keys = {_last_group(): extra}
 	help.closed.connect(_on_closed)
 	add_child(help)
 
@@ -223,8 +247,23 @@ func _actions() -> Array[Dictionary]:
 	if config.show_help:
 		out.append({"id": &"help", "text": "Help & commands"})
 	if config.show_leave:
-		out.append({"id": &"leave", "text": config.leave_text, "danger": true})
+		out.append({"id": &"leave", "text": leave_label(), "danger": true})
 	return out
+
+
+## The help action on the InputMap, on H, when nothing else put it there: a game with no key
+## table, or a table with no row for it. Never over a binding the table applied.
+func _ensure_help_action() -> void:
+	if help_action == &"" or InputMap.has_action(help_action):
+		return
+	InputMap.add_action(help_action)
+	var _bound := DotInputBinding.apply(help_action, DotMenuBindings.HELP_KEY)
+
+
+## Whether the help key is in no table row, so the help screen has to list it by hand.
+func _help_off_the_table() -> bool:
+	return help_action != &"" and InputMap.has_action(help_action) \
+		and (bindings == null or bindings.row_for_action(help_action).is_empty())
 
 
 ## The group Escape's help line goes in: the last one, which in the stock order is the
@@ -313,6 +352,7 @@ func find_row(row_id: StringName) -> DotMenuRow:
 func open(page_id: StringName = &"") -> void:
 	if screen == null:
 		return
+	_refresh_leave()
 	for o in [help, picker, layout_editor]:
 		if o != null and o.is_open():
 			o.visible = false
@@ -434,6 +474,55 @@ func _on_action(id: StringName) -> void:
 	if id == &"help":
 		open_help()
 	action_requested.emit(id)
+	if id == &"leave" and leave_on_its_own:
+		leave()
+
+
+# --- Leave --------------------------------------------------------------------
+
+## The stock Leave: off the server when connected (whatever loaded the game takes the player
+## back to its own menu on the disconnect), the whole program in a solo desktop game. A
+## browser tab cannot be closed by the page in it, and a quit there is a frozen canvas, so
+## offline in a browser it only closes the menu (and [method leave_label] hides the button).
+func leave() -> void:
+	close_all()
+	var link := _leave_link()
+	if link != null and _connected(link):
+		link.call(&"disconnect_from_server", "Left the server")
+		return
+	if not DotPlatform.is_web():
+		get_tree().quit()
+
+
+## What the Leave button says right now. With [member leave_on_its_own]: "Leave server"
+## connected, "Quit game" solo on a desktop, nothing (hidden) solo in a browser. Otherwise the
+## config's text, which a game that leaves its own way words itself.
+func leave_label() -> String:
+	if not leave_on_its_own:
+		return config.leave_text
+	if _connected(_leave_link()):
+		return "Leave server"
+	return "" if DotPlatform.is_web() else "Quit game"
+
+
+func _refresh_leave() -> void:
+	if screen == null or not leave_on_its_own or _server_rules.has("leave_text"):
+		return
+	screen.set_action_text(&"leave", leave_label())
+
+
+func _leave_link() -> Object:
+	if leave_link != null and is_instance_valid(leave_link):
+		return leave_link
+	if leave_service == &"":
+		return null
+	return DotRegistry.get_node_service(leave_service)
+
+
+static func _connected(link: Object) -> bool:
+	if link == null or not is_instance_valid(link) or not link.has_method(&"disconnect_from_server"):
+		return false
+	return not link.has_method(&"is_connected_to_server") or bool(link.call(&"is_connected_to_server"))
 
 
 # --- Input --------------------------------------------------------------------
@@ -677,7 +766,7 @@ func release_server_rules() -> void:
 	if screen != null:
 		screen.extra_hidden_rows = _hidden_rows()
 		screen.extra_hidden_pages = PackedStringArray()
-		screen.set_action_text(&"leave", config.leave_text)
+		screen.set_action_text(&"leave", leave_label())
 	if settings != null and settings.policy != null:
 		settings.release_clamps()
 	_offer_themes(PackedStringArray())

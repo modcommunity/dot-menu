@@ -44,8 +44,12 @@ var schema: DotSettingsSchema = null
 ## only if the caller did so.
 var config: DotMenuConfig = null
 
-## Keys a client reads, if it has a table. Null draws no key cards.
+## Keys a client reads, if it has a table. Null at setup is a table holding the help key alone.
 var bindings: DotMenuBindings = null
+
+## Leave does the stock thing (API 4): off the server when connected, quit when solo on a
+## desktop. See [member DotMenu.leave_on_its_own]. Off for a game that leaves its own way.
+var leave_on_its_own: bool = true
 
 ## Free the pointer while the menu is open and capture it after. Off for a client that owns
 ## its pointer and does both on [signal menu_state_changed].
@@ -69,8 +73,15 @@ func setup(store: DotSettingsStore = null, with_menu: bool = true) -> DotResult:
 	# its table, its Controls page and its help screen, on the same setting.
 	if bindings != null and schema.has(&"voice_mode") and bindings.row_for_action(&"dot_voice_talk").is_empty():
 		var _v := bindings.add_voice("Communication", bindings.free_key(["V", "K", "B", "X"]))
-	if bindings != null:
-		bindings.add_to_schema(schema)
+	# The help key, H, in every game's table (API 4), unless the game put its own help row
+	# in. A game with no table gets one with the help key alone, so H is still a rebindable
+	# key on the Controls page rather than a key nothing lists.
+	if bindings == null:
+		bindings = DotMenuBindings.new()
+	if bindings.row_for_action(DotMenuBindings.HELP_ACTION).is_empty() \
+			and bindings.row_for_setting(DotMenuBindings.HELP_SETTING).is_empty():
+		var _h := bindings.add_help("", bindings.free_key([DotMenuBindings.HELP_KEY, "F1"]))
+	bindings.add_to_schema(schema)
 	var themes := config.make_themes()
 	var _problems := config.apply_to_schema(schema, themes)
 
@@ -94,6 +105,10 @@ func setup(store: DotSettingsStore = null, with_menu: bool = true) -> DotResult:
 		menu.config = config
 		menu.themes = themes
 		menu.manage_pointer = manage_pointer
+		menu.leave_on_its_own = leave_on_its_own
+		var own_help := bindings.row_for_setting(DotMenuBindings.HELP_SETTING)
+		if not own_help.is_empty():
+			menu.help_action = own_help["action"]
 		add_child(menu)
 		var built := menu.setup()
 		if not built.ok:
@@ -103,10 +118,19 @@ func setup(store: DotSettingsStore = null, with_menu: bool = true) -> DotResult:
 			menu.queue_free()
 			menu = null
 		else:
+			_fill_help(menu.help)
 			menu.overlays_changed.connect(func(open: bool) -> void: menu_state_changed.emit(open))
 			applier.voice_available_changed.connect(_on_voice_available)
 
 	return DotResult.success(self)
+
+
+## What only the game can say on its help screen: [member DotMenuHelp.about] (the goal),
+## and cards from [method DotMenuHelp.add_text] (modes, rules) and
+## [method DotMenuHelp.add_section]. The keys are drawn from the table and need nothing here.
+## Called once, after the menu is built; a game overrides it.
+func _fill_help(_help: DotMenuHelp) -> void:
+	pass
 
 
 # --- What reads them ----------------------------------------------------------

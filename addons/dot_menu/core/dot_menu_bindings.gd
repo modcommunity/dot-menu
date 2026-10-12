@@ -29,6 +29,11 @@ extends RefCounted
 
 const CHANNEL := "menu.bindings"
 
+## The help key's action, setting and default: H in every game of the family (API 4).
+const HELP_ACTION := &"dot_menu_help"
+const HELP_SETTING := &"bind_help"
+const HELP_KEY := "H"
+
 ## Rows, in the order the Controls page and the help screen draw them:
 ## `{action, setting, label, default, group, scope}`.
 var rows: Array[Dictionary] = []
@@ -79,6 +84,34 @@ func add_movement(group: String = "Movement", crouch_key: String = "Ctrl", crouc
 ## `bind_voice_talk`, on V. [DotMenuSettings] adds it when the schema has the voice group.
 func add_voice(group: String = "Communication", key: String = "V") -> DotMenuBindings:
 	return add(&"dot_voice_talk", &"bind_voice_talk", "Push to talk", key, group)
+
+
+## The help screen's key, which every game has on H unless it says otherwise: [DotMenu]'s
+## default [member DotMenu.help_action]. [DotMenuSettings] adds it to a game's table; a game
+## that builds its [DotMenu] itself calls this. [param group] empty is [method help_group].
+func add_help(group: String = "", key: String = HELP_KEY) -> DotMenuBindings:
+	return add(HELP_ACTION, HELP_SETTING, "Help and controls", key, group if group != "" else help_group())
+
+
+## The card the help key goes on: the interface keys, or the general ones, or the last card.
+func help_group() -> String:
+	var all := groups()
+	for wanted in ["Interface", "General"]:
+		if all.has(wanted):
+			return wanted
+	return all[all.size() - 1] if not all.is_empty() else "General"
+
+
+## Every row whose DEFAULT is [param key] (as typed: "H", "Mouse 2"). More than one is a
+## table that ships a conflict the swap cannot settle; what each game's suite asserts for H.
+func defaults_on(key: String) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	var wanted := DotInputBinding.from_text(key)
+	for row in rows:
+		var other := DotInputBinding.from_text(str(row["default"]))
+		if wanted != null and other != null and same_input(wanted, other):
+			out.append(row)
+	return out
 
 
 ## The first of [param candidates] no row has as its default, or the last candidate. For a

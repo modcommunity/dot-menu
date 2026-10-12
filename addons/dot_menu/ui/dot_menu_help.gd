@@ -10,8 +10,11 @@ extends Control
 ## last week are both on it, and neither needed this file edited. A help screen that is a
 ## list somebody typed is wrong the first time anybody changes anything, and nothing says so.
 ##
-## A game adds its own cards with [method add_section] — "Running", "Your objective" — which
-## go in the right-hand column above the commands.
+## [b]What is written down is the game's, and only what no table can say:[/b] the goal
+## ([member about], the first card on the right), and cards of its own with
+## [method add_text] (a paragraph: the modes, the rules) or [method add_section] (lines: the
+## glyphs on the HUD, a mode's own keys), which go in the right-hand column above the
+## commands. [DotMenuSettings] asks a game for them in `_fill_help`.
 
 signal closed()
 
@@ -28,8 +31,38 @@ var online: bool = false
 ## The action that opens this screen, for the "H or Esc to close" hint. Empty draws Esc alone.
 var help_action: StringName = &""
 
-var title_text: String = "Help"
+## The heading. Empty is "How to play <brand>" with the config's brand, or "Help" with none.
+var title_text: String = ""
+
+## What the game is and how you win, in a sentence or three: the first card on the right,
+## headed "How to play". Empty draws no card.
+var about: String = ""
 var intro: String = "Your keys as they are bound now — change them under Menu → Controls. Commands are typed in chat."
+
+## A card of prose in the right-hand column: the modes, the rules, what the HUD's colours
+## mean. A card with the same title replaces the old one.
+func add_text(title: String, text: String) -> void:
+	add_section(title, [text], &"text")
+
+
+## The key help is on now, from the table or straight off the InputMap ([DotMenu] binds H
+## itself for a game with no row for it). Empty when there is no help key.
+func help_key_shown() -> String:
+	if help_action == &"" or not InputMap.has_action(help_action):
+		return ""
+	var k := bindings.key_for(help_action) if bindings != null else "—"
+	if k == "—":
+		k = DotInputBinding.describe_action(help_action)
+	return "" if k == DotInputBinding.UNBOUND else k
+
+
+## The heading as drawn.
+func heading() -> String:
+	if title_text != "":
+		return title_text
+	var brand := config.brand_name if config != null else ""
+	return "How to play %s" % brand if brand != "" else "Help"
+
 
 ## Lines added to a key group's card after its bindings: `{group: [[key, what], ...]}`.
 ## [DotMenu] puts Escape here, which is in no binding row on purpose.
@@ -119,7 +152,8 @@ func _build() -> void:
 
 	var head := HBoxContainer.new()
 	head.name = "Head"
-	var title := kit.label(title_text, kit.size_title, p.text, true)
+	var title := kit.label(heading(), kit.size_title, p.text, true)
+	title.name = "Title"
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head.add_child(title)
 	var hint := HBoxContainer.new()
@@ -207,8 +241,9 @@ func _rebuild() -> void:
 	var hint := _window.find_child("Hint", true, false) as HBoxContainer
 	if hint != null:
 		DotMenuKit.clear(hint)
-		if help_action != &"" and bindings != null:
-			hint.add_child(kit.keycap(bindings.key_for(help_action)))
+		var help_key := help_key_shown()
+		if help_key != "":
+			hint.add_child(kit.keycap(help_key))
 			hint.add_child(kit.label("or", kit.size_small, p.dim))
 		hint.add_child(kit.keycap("Esc"))
 		hint.add_child(kit.label("to close", kit.size_small, p.dim))
@@ -230,8 +265,16 @@ func _rebuild() -> void:
 			for line in (extra_keys[group] as Array):
 				_key_line(card, str(line[0]), str(line[1]))
 
+	if about != "":
+		var goal := _card(_side_column, "How to play")
+		_line(goal, kit.paragraph(about, kit.size_body - 1, p.text))
+
 	for s in _sections:
 		var card := _card(_side_column, str(s["title"]))
+		if StringName(s["style"]) == &"text":
+			for text in (s["lines"] as Array):
+				_line(card, kit.paragraph(str(text), kit.size_small + 1, p.muted))
+			continue
 		for line in (s["lines"] as Array):
 			match StringName(s["style"]):
 				&"keys":
@@ -346,4 +389,5 @@ func describe() -> Dictionary:
 	return {
 		"open": visible, "commands": commands.size(), "online": online,
 		"sections": _sections.size(), "browser_tips": browser_tips_shown(),
+		"about": about != "", "help_key": help_key_shown(), "title": heading(),
 	}

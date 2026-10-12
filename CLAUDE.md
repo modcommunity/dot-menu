@@ -44,6 +44,7 @@ tools/screenshot.sh
 - A theme change rebuilds the screen; never walk the tree to recolour. [design](docs/design.md#themes-go-into-the-schema-before-the-settings-load)
 - Rebinding a taken key swaps; compare effective bindings (`stored()`, in dot-ui's current spelling), never stored text. [design](docs/design.md#the-keys-table)
 - A server may hide and clamp, never set or read; a clamped row shows the player's own choice. [design](docs/design.md#a-server-may-hide-and-clamp-it-may-never-set-or-read)
+- Help is on H (`dot_menu_help`, `bind_help`) and Escape has Help & commands and Leave in every game by default; `DotMenuSettings` adds the help row and does the stock Leave. Nothing else in a game's table may default to H. [design](docs/design.md#help-on-h-and-leave-in-every-game)
 - `DotMenu` owns overlays, Escape and the pointer; while anything is open every key is the menu's. [design](docs/design.md#the-pointer-escape-and-overlays-one-list)
 - The scoreboard is held, not opened: it closes on release wherever that arrives and never takes the pointer. [design](docs/design.md#the-scoreboard-the-servers-numbers-held)
 - Voice is a stock group: `voice_mode`, `voice_input_device`, and the Push to talk key (`bind_voice_talk` on `dot_voice_talk`, V) that `DotMenuSettings` adds to a game's table. The applier binds whatever is published as `dot_voice_client`; a server with voice off hides `VOICE_ROWS` through `DotMenu.hide_rows`, never through the server's own rules. Never name dot-voice. [design](docs/design.md#voice)

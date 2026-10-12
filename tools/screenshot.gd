@@ -38,6 +38,11 @@ func _run() -> void:
 		var _t := settings.set_value(&"ui_theme", theme_id)
 		menu.open(&"video")
 		await _shot("theme_%s" % theme_id)
+		if theme_id == &"paper":
+			menu.close()
+			menu.open_help(null, false)
+			await _shot("help_paper")
+			menu.help.close()
 	var _m := settings.set_value(&"ui_theme", &"midnight")
 
 	# A server that caps the view, hides a row and turns the flashlight off.
