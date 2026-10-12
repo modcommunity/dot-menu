@@ -72,9 +72,14 @@ func _run() -> void:
 	await _shot("help")
 	menu.help.close()
 
-	menu.open_picker(_demo.call("maps"), "Change map — offline")
+	menu.open_maps()
 	await _shot("picker")
 	menu.picker.close()
+	menu.maps.open_rows(_demo.call("maps"), false, "this server", "generic", true)
+	await _shot("maps_vote")
+	menu.picker.close()
+	menu.toast("Nominated Foundry. Rocked: 1 of 3.")
+	await _shot("maps_toast")
 
 	menu.scoreboard.open()
 	await _shot("scoreboard_teams")

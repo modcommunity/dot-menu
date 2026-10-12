@@ -34,6 +34,12 @@ const HELP_ACTION := &"dot_menu_help"
 const HELP_SETTING := &"bind_help"
 const HELP_KEY := "H"
 
+## The map menu's action, setting and default: M in every game with more than one map (API 5).
+## See [DotMenuMaps].
+const MAPS_ACTION := &"dot_menu_maps"
+const MAPS_SETTING := &"bind_maps"
+const MAPS_KEY := "M"
+
 ## Rows, in the order the Controls page and the help screen draw them:
 ## `{action, setting, label, default, group, scope}`.
 var rows: Array[Dictionary] = []
@@ -91,6 +97,13 @@ func add_voice(group: String = "Communication", key: String = "V") -> DotMenuBin
 ## that builds its [DotMenu] itself calls this. [param group] empty is [method help_group].
 func add_help(group: String = "", key: String = HELP_KEY) -> DotMenuBindings:
 	return add(HELP_ACTION, HELP_SETTING, "Help and controls", key, group if group != "" else help_group())
+
+
+## The map menu key (`dot_menu_maps`, stored as `bind_maps`), M by default, on the same card
+## as help. [DotMenuSettings] adds it to every game's table; a game that builds its menu by
+## hand calls this itself.
+func add_maps(group: String = "", key: String = MAPS_KEY) -> DotMenuBindings:
+	return add(MAPS_ACTION, MAPS_SETTING, "Change map", key, group if group != "" else help_group())
 
 
 ## The card the help key goes on: the interface keys, or the general ones, or the last card.

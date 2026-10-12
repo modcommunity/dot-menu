@@ -85,9 +85,17 @@ var theme_action: StringName = &""
 ## still built and can be opened in code.
 var scoreboard_action: StringName = &""
 
-## The action that opens the picker in this game (a map list's M), which also closes it.
+## The action that opens the picker in this game (a taunt list), which also closes it.
 ## The menu does not open the picker on it — what the list holds is the game's to fetch.
 var picker_action: StringName = &""
+
+## The map menu's key (API 5): M, [constant DotMenuBindings.MAPS_ACTION], in every game with
+## more than one map. Pressed with nothing open it opens [member maps]; pressed again it closes
+## the picker. Nothing happens on it until the game calls [method use_maps].
+var maps_action: StringName = DotMenuBindings.MAPS_ACTION
+
+## The map menu. Null until [method use_maps]. See [DotMenuMaps].
+var maps: DotMenuMaps = null
 
 ## Handle Escape and the actions above from [method Node._unhandled_input]. Off for a host
 ## that routes input itself through [method handle_event].
@@ -135,6 +143,15 @@ var _fps_label: Label = null
 ## The HUD's "H  Help" hint ([member DotMenuConfig.help_hint]); null when off. Shown while
 ## nothing is open, with the key as it is bound now.
 var help_hint: PanelContainer = null
+
+## The short line [method toast] shows; null until the first one.
+var toast_plate: PanelContainer = null
+var _toast_serial := 0
+## The action that closes the picker that is open now, and who gets its choice: the map menu
+## opens the same picker a game's own list does, and its choice must not reach the game's
+## [signal picked] handler (a taunt list taking a map id as a taunt).
+var _picker_close: StringName = &""
+var _picker_chosen: Callable = Callable()
 ## Other overlays a game registered: Controls with is_open() and close().
 var _extra: Array[Control] = []
 var _theme_id: StringName = &""
@@ -231,7 +248,7 @@ func _build() -> void:
 	picker.name = "Picker"
 	picker.kit = kit
 	picker.closed.connect(_on_closed)
-	picker.chosen.connect(func(id: StringName) -> void: picked.emit(id))
+	picker.chosen.connect(_on_picker_chosen)
 	add_child(picker)
 
 	help = DotMenuHelp.new()
@@ -443,14 +460,104 @@ func open_help(commands: Variant = null, online: Variant = null) -> void:
 	_on_opened()
 
 
-## A list to pick from. See [DotMenuPicker]. [signal picked] says what was chosen.
-func open_picker(items: Array, title: String = "") -> void:
+## A list to pick from. See [DotMenuPicker]. [signal picked] says what was chosen, unless
+## [param on_chosen] is given, which then gets it instead. [param close_action] is the key that
+## closes this list (the key that opened it); empty is [member picker_action].
+func open_picker(items: Array, title: String = "", close_action: StringName = &"", on_chosen: Callable = Callable()) -> void:
 	if picker == null:
 		return
 	if screen.is_open():
 		screen.visible = false
+	_picker_close = close_action if close_action != &"" else picker_action
+	_picker_chosen = on_chosen
 	picker.open(items, title)
 	_on_opened()
+
+
+func _on_picker_chosen(id: StringName) -> void:
+	var to := _picker_chosen
+	_picker_chosen = Callable()
+	if to.is_valid():
+		to.call(id)
+	else:
+		picked.emit(id)
+
+
+# --- The map menu -------------------------------------------------------------
+
+## Turns the map menu on (API 5): M opens a picker of what [param rows_fn] returns
+## (`func() -> Array` of `{id, name, mode, detail, thumbnail, current, tags}`), and solo a
+## choice goes to [param change_fn] (`func(id) -> DotResult`). Connected to a server the server
+## is asked instead; see [DotMenuMaps]. Puts [member maps_action] on M when no table row did,
+## and then lists it on the help screen by hand, as for an off-table help key.
+func use_maps(rows_fn: Callable, change_fn: Callable) -> DotMenuMaps:
+	if maps == null:
+		maps = DotMenuMaps.new()
+	maps.menu = self
+	maps.rows_fn = rows_fn
+	maps.change_fn = change_fn
+	maps.enabled = true
+	if maps_action != &"" and not InputMap.has_action(maps_action):
+		InputMap.add_action(maps_action)
+		var _bound := DotInputBinding.apply(maps_action, DotMenuBindings.MAPS_KEY)
+	if help != null and maps_action != &"" and (bindings == null or bindings.row_for_action(maps_action).is_empty()):
+		var extra: Dictionary = help.extra_keys
+		var group := _last_group()
+		var lines: Array = extra.get(group, [])
+		var shown := DotInputBinding.describe_action(maps_action)
+		if not lines.any(func(l: Variant) -> bool: return l is Array and (l as Array).size() > 1 and str((l as Array)[1]) == "Change map"):
+			lines.push_front([shown, "Change map"])
+		extra[group] = lines
+		help.extra_keys = extra
+	return maps
+
+
+## Opens the map menu, as M does. Nothing without [method use_maps].
+func open_maps() -> void:
+	if maps != null and maps.enabled:
+		maps.open()
+
+
+# --- A line for the player ----------------------------------------------------
+
+## A short line at the top of the screen for [param seconds]: the map menu's "Changing the map
+## here needs …", "Nominated Atrium. Rocked: 1 of 3." A plate rather than chat, because the
+## player pressed a key and is looking at the screen, not at the chat box.
+func toast(text: String, seconds: float = 3.5) -> void:
+	if text == "" or kit == null:
+		return
+	if toast_plate == null:
+		toast_plate = PanelContainer.new()
+		toast_plate.name = "Toast"
+		toast_plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		toast_plate.set_anchors_preset(Control.PRESET_CENTER_TOP)
+		toast_plate.grow_horizontal = Control.GROW_DIRECTION_BOTH
+		toast_plate.offset_top = 64.0
+		toast_plate.offset_bottom = 64.0
+		var l := kit.label("", kit.size_body, kit.palette.text, true)
+		l.name = "Text"
+		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		toast_plate.add_child(l)
+		add_child(toast_plate)
+	var p := kit.palette
+	toast_plate.add_theme_stylebox_override(&"panel", kit.box(Color(p.surface, 0.92), 10, p.accent, 1, Vector4(16, 8, 16, 8)))
+	var label := toast_plate.get_node("Text") as Label
+	label.add_theme_color_override(&"font_color", p.text)
+	label.text = text
+	toast_plate.visible = true
+	move_child(toast_plate, get_child_count() - 1)
+	_toast_serial += 1
+	var serial := _toast_serial
+	if is_inside_tree() and seconds > 0.0:
+		get_tree().create_timer(seconds).timeout.connect(func() -> void:
+			if serial == _toast_serial and toast_plate != null:
+				toast_plate.visible = false)
+
+
+## What the toast says now; empty when none is up.
+func toast_text() -> String:
+	return (toast_plate.get_node("Text") as Label).text if toast_plate != null and toast_plate.visible else ""
 
 
 ## The HUD layout editor over [param target]. See [DotMenuLayoutEditor].
@@ -632,6 +739,10 @@ func handle_event(event: InputEvent) -> bool:
 		if theme_action != &"" and InputMap.has_action(theme_action) and event.is_action_pressed(theme_action):
 			var _next := cycle_theme()
 			return true
+		if maps != null and maps.enabled and maps_action != &"" and InputMap.has_action(maps_action) \
+				and event.is_action_pressed(maps_action):
+			maps.open()
+			return true
 		return false
 
 	# The same Escape that took the pointer away in a browser can arrive a moment after the
@@ -645,7 +756,7 @@ func handle_event(event: InputEvent) -> bool:
 		return true
 
 	if picker.is_open():
-		if escape or (picker_action != &"" and InputMap.has_action(picker_action) and event.is_action_pressed(picker_action)):
+		if escape or (_picker_close != &"" and InputMap.has_action(_picker_close) and event.is_action_pressed(_picker_close)):
 			picker.close()
 		else:
 			var _mine := picker.key(key.keycode)
@@ -897,6 +1008,7 @@ func describe() -> Dictionary:
 		"theme": String(_theme_id), "themes": themes.size() if themes != null else 0,
 		"pages": pages.size(), "server_rules": _server_rules.keys(),
 		"pointer": manage_pointer, "overlays": _extra.size(),
+		"maps": maps.describe() if maps != null else {},
 	}
 
 

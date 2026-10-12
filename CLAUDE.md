@@ -8,7 +8,7 @@ In-game menus as data: an Escape menu whose rows are views of dot-settings, stoc
 
 | Read | Before |
 | --- | --- |
-| [docs/design.md](docs/design.md) | rows and pages, stock keys, themes, the key table, server rules, Escape and the pointer, `DotMenuSettings`, the scoreboard |
+| [docs/design.md](docs/design.md) | rows and pages, stock keys, themes, the key table, server rules, Escape and the pointer, help and the map menu, `DotMenuSettings`, the scoreboard |
 | [docs/net-stat.md](docs/net-stat.md) | changing how net_stat scales, where it sits or what it draws |
 
 ## Layout
@@ -16,7 +16,7 @@ In-game menus as data: an Escape menu whose rows are views of dot-settings, stoc
 | Path | What |
 | --- | --- |
 | `addons/dot_menu/core/` | `dot_menu_page.gd`, `_section.gd`, `_row.gd` (a page is data), `dot_menu_config.gd` (`apply_to_schema`), `dot_menu_bindings.gd` (the key table), `dot_menu_kit.gd`, `_palette.gd`, `_themes.gd` |
-| `addons/dot_menu/runtime/` | `dot_menu.gd` (overlays, Escape, pointer, theme, server rules), `dot_menu_applier.gd` (the one place a stock setting is applied), `dot_menu_settings.gd` (the node games subclass) |
+| `addons/dot_menu/runtime/` | `dot_menu.gd` (overlays, Escape, pointer, theme, server rules, toast), `dot_menu_applier.gd` (the one place a stock setting is applied), `dot_menu_settings.gd` (the node games subclass), `dot_menu_maps.gd` (the map menu on M) |
 | `addons/dot_menu/stock/dot_menu_stock.gd` | the stock keys, groups and pages; `declare`, `declare_net_stat` |
 | `addons/dot_menu/ui/` | `dot_menu_screen.gd`, `_scoreboard.gd`, `_net_stat.gd`, `_help.gd`, `_picker.gd`, `_layout_editor.gd`, `_key_button.gd`, `_switch.gd` |
 | `addons/dot_menu/dot_menu_api.gd` | the API level |
@@ -45,6 +45,7 @@ tools/screenshot.sh
 - Rebinding a taken key swaps; compare effective bindings (`stored()`, in dot-ui's current spelling), never stored text. [design](docs/design.md#the-keys-table)
 - A server may hide and clamp, never set or read; a clamped row shows the player's own choice. [design](docs/design.md#a-server-may-hide-and-clamp-it-may-never-set-or-read)
 - Help is on H (`dot_menu_help`, `bind_help`) and Escape has Help & commands and Leave in every game by default; `DotMenuSettings` adds the help row and does the stock Leave. Nothing else in a game's table may default to H. [design](docs/design.md#help-on-h-and-leave-in-every-game)
+- The map menu is on M (`dot_menu_maps`, `bind_maps`) in every game with more than one map: `use_maps(rows_fn, change_fn)`; solo it changes directly, connected it asks the server (`/mapmenu`, the `map_menu` notice, dot-vote's `DotVoteMapMenu`). Nothing else in a game's table may default to M. A map choice never reaches the game's `picked`. [design](docs/design.md#the-map-menu-on-m-in-every-game)
 - `DotMenu` owns overlays, Escape and the pointer; while anything is open every key is the menu's. [design](docs/design.md#the-pointer-escape-and-overlays-one-list)
 - The scoreboard is held, not opened: it closes on release wherever that arrives and never takes the pointer. [design](docs/design.md#the-scoreboard-the-servers-numbers-held)
 - Voice is a stock group: `voice_mode`, `voice_input_device`, and the Push to talk key (`bind_voice_talk` on `dot_voice_talk`, V) that `DotMenuSettings` adds to a game's table. The applier binds whatever is published as `dot_voice_client`; a server with voice off hides `VOICE_ROWS` through `DotMenu.hide_rows`, never through the server's own rules. Never name dot-voice. [design](docs/design.md#voice)

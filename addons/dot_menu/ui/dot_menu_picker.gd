@@ -16,9 +16,13 @@ extends Control
 ## previous page, 9 the next, 0 closes. The mouse works as well, and a row says its number,
 ## so the two never disagree. Seven rows a page is what keeps 8 and 9 free for turning.
 ##
-## An item is `{id, name, tags, current, warn}`: `tags` is a list of short words drawn on the
-## right, `current` lights the row in the accent (and opens on its page, so "what is on now"
-## is the first thing seen), `warn` draws the tags in the warning colour.
+## An item is `{id, name, tags, current, warn, detail, thumbnail}`: `tags` is a list of short
+## words drawn on the right, `current` lights the row in the accent (and opens on its page, so
+## "what is on now" is the first thing seen), `warn` draws the tags in the warning colour.
+## `detail` is a quiet second line under the name (a map's mode, a one-line blurb), and
+## `thumbnail` a picture drawn before it: a [Texture2D], or a `res://` path loaded if it exists.
+## A path that does not resolve draws an empty frame of the same size, so a page where some maps
+## have pictures and some do not still lines up.
 
 signal closed()
 
@@ -213,13 +217,38 @@ func _rebuild() -> void:
 	_footer.text = foot + "  ·  8 previous  9 next"
 
 
+## Whether any item on this page has a picture or a second line, which makes every row on it
+## taller: rows of two heights on one page read as two lists.
+func _page_is_rich() -> bool:
+	for row in range(1, PAGE_SIZE + 1):
+		var it: Variant = at_row(row)
+		if it is Dictionary and ((it as Dictionary).get("thumbnail") != null or str((it as Dictionary).get("detail", "")) != ""):
+			return true
+	return false
+
+
+## A picture for [param value]: a texture as it is, a path loaded when it exists, else null.
+## Never `load()` a path that is not there: that is an engine error per row per draw.
+static func thumbnail_texture(value: Variant) -> Texture2D:
+	if value is Texture2D:
+		return value as Texture2D
+	if value is String or value is StringName:
+		var path := str(value)
+		if path != "" and ResourceLoader.exists(path):
+			var res := load(path)
+			if res is Texture2D:
+				return res as Texture2D
+	return null
+
+
 func _row(row: int, it: Dictionary) -> Control:
 	var p := kit.palette
+	var rich := _page_is_rich()
 	var button := Button.new()
 	button.name = "Row%d" % row
 	button.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	button.focus_mode = Control.FOCUS_NONE
-	button.custom_minimum_size = Vector2(0, 38)
+	button.custom_minimum_size = Vector2(0, 58 if rich else 38)
 	button.pressed.connect(func() -> void: var _p := pick(row))
 
 	var line := HBoxContainer.new()
@@ -232,13 +261,45 @@ func _row(row: int, it: Dictionary) -> Control:
 
 	var cap := kit.keycap(str(row))
 	cap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	cap.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	line.add_child(cap)
 
+	if rich:
+		var frame := PanelContainer.new()
+		frame.name = "Thumb"
+		frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		frame.custom_minimum_size = Vector2(80, 45)
+		frame.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		frame.add_theme_stylebox_override(&"panel", kit.box(Color(p.backdrop, 0.35), 6, p.line, 1, Vector4(0, 0, 0, 0)))
+		var tex := thumbnail_texture(it.get("thumbnail"))
+		if tex != null:
+			var pic := TextureRect.new()
+			pic.texture = tex
+			pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+			pic.clip_contents = true
+			pic.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			frame.add_child(pic)
+		line.add_child(frame)
+
 	var current := bool(it.get("current", false))
+	var words := VBoxContainer.new()
+	words.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	words.alignment = BoxContainer.ALIGNMENT_CENTER
+	words.add_theme_constant_override(&"separation", 0)
+	words.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	line.add_child(words)
 	var name := kit.label(str(it.get("name", it.get("id", "?"))), kit.size_body, p.accent if current else p.text, true)
-	name.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	name.name = "Name"
 	name.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	line.add_child(name)
+	words.add_child(name)
+	var detail := str(it.get("detail", ""))
+	if detail != "":
+		var d := kit.label(detail, kit.size_small, p.muted)
+		d.name = "Detail"
+		d.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		d.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		words.add_child(d)
 
 	var tags := PackedStringArray()
 	for t in (it.get("tags", []) as Array):

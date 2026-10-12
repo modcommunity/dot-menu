@@ -11,8 +11,8 @@ extends Node
 ## [b]CHECKS is the guard the section counter cannot be.[/b] A script error inside a test
 ## aborts THAT TEST, not the run; the section counter is satisfied because the section had
 ## already announced itself, and the total is what notices the checks that never ran.
-const SECTIONS := 17
-const CHECKS := 232
+const SECTIONS := 18
+const CHECKS := 250
 
 var _passed := 0
 var _failed := 0
@@ -46,6 +46,7 @@ func _run() -> void:
 	await _test_net_stat()
 	await _test_voice()
 	await _test_help_key_and_leave()
+	await _test_map_menu()
 
 	_line("")
 	_line("%d sections, %d passed, %d failed" % [_section_count, _passed, _failed])
@@ -1267,6 +1268,141 @@ func _test_help_key_and_leave() -> void:
 	_check(quiet.help_hint == null, "a game that lists the key in its own HUD turns the hint off")
 	quiet.queue_free()
 	bare.queue_free()
+	await get_tree().process_frame
+
+
+## Shaped like a client link for the map menu: what it was asked, and a notice signal.
+class FakeMapLink extends Node:
+	signal notice_received(notice: Object)
+	var sent: Array = []
+
+	func is_connected_to_server() -> bool:
+		return true
+
+	func send_chat(text: String, _team_only: bool = false) -> void:
+		sent.append(text)
+
+	func answer(data: Dictionary) -> void:
+		var n := FakeNotice.new()
+		n.topic = &"map_menu"
+		n.data = data
+		notice_received.emit(n)
+
+
+class FakeNotice extends RefCounted:
+	var topic: StringName = &""
+	var data: Dictionary = {}
+
+
+func _test_map_menu() -> void:
+	_section("M is the map menu: solo changes, a server decides")
+
+	# Every DotMenuSettings game gets the key, on M.
+	for a in [DotMenuBindings.MAPS_ACTION, DotMenuBindings.HELP_ACTION]:
+		if InputMap.has_action(a):
+			InputMap.erase_action(a)
+	var node := DotMenuSettings.new()
+	node.app_namespace = &"menu_maps_test"
+	node.config = DotMenuConfig.new()
+	node.config.escape_grace_ms = 0
+	add_child(node)
+	var _s := node.setup(DotSettingsStoreMemory.new())
+	var row := node.bindings.row_for_action(DotMenuBindings.MAPS_ACTION)
+	_check(not row.is_empty() and str(row["default"]) == "M" and node.settings.schema.has(DotMenuBindings.MAPS_SETTING),
+		"every game's table has the map key, on M, stored as bind_maps")
+	_check(not node.menu.handle_event(_key(KEY_M)) and not node.menu.any_open(), "and M does nothing until the game hands it a list")
+
+	var changed: Array = []
+	var game_picks: Array = []
+	node.menu.picked.connect(func(id: StringName) -> void: game_picks.append(id))
+	var rows: Array = []
+	for i in 9:
+		rows.append({"id": "course_%d" % i, "name": "Course %d" % i, "mode": "Race" if i % 2 == 0 else "Relay",
+			"current": i == 1, "thumbnail": ImageTexture.create_from_image(Image.create(16, 9, false, Image.FORMAT_RGB8)) if i == 0 else ""})
+	var maps := node.use_maps(func() -> Array: return rows, func(id: StringName) -> DotResult:
+		changed.append(id)
+		return DotResult.success(id))
+	_check(maps != null and node.menu.handle_event(_key(KEY_M)) and node.menu.picker.is_open(), "solo, M opens the picker")
+	await get_tree().process_frame
+	var texts := _texts(node.menu.picker)
+	_check(texts.has("Change map — solo") and texts.has("Race") and texts.has("Relay"), "headed solo, each row with its mode")
+	_check(node.menu.picker.find_children("*", "TextureRect", true, false).size() == 1
+		and node.menu.picker.find_children("Thumb", "PanelContainer", true, false).size() == 7,
+		"a picture where a map has one, and an empty frame of the same size where it does not")
+	var _k := node.menu.handle_event(_key(KEY_3))
+	await get_tree().process_frame
+	_check(changed == [&"course_2"] and not node.menu.picker.is_open(), "a number changes to that map, directly")
+	_check(game_picks.is_empty(), "and the choice never reaches the game's own picker handler")
+	var _k2 := node.menu.handle_event(_key(KEY_M))
+	var _k3 := node.menu.handle_event(_key(KEY_M))
+	_check(not node.menu.picker.is_open() and changed.size() == 1, "M again closes it, changing nothing")
+
+	var refuse := node.use_maps(func() -> Array: return rows, func(_id: StringName) -> DotResult:
+		return DotResult.fail(DotError.CODE_STATE, "A round is being decided."))
+	refuse.open()
+	var _k4 := node.menu.handle_event(_key(KEY_1))
+	await get_tree().process_frame
+	_check(node.menu.toast_text() == "A round is being decided.", "a change the game refuses is said on screen")
+
+	# Connected: the server is asked, and its answer decides.
+	var link := FakeMapLink.new()
+	add_child(link)
+	maps.link = link
+	maps.change_fn = func(id: StringName) -> DotResult:
+		changed.append(id)
+		return DotResult.success(id)
+	var _k5 := node.menu.handle_event(_key(KEY_M))
+	_check(link.sent == ["/mapmenu"] and not node.menu.picker.is_open(), "online, M asks the server rather than opening a list of its own")
+	link.answer({"maps": [{"id": "dm_atrium", "name": "Atrium", "current": true}, {"id": "dm_yard", "name": "Yard"}],
+		"allowed": true, "flag": "generic", "vote": true, "where": "this server"})
+	await get_tree().process_frame
+	_check(node.menu.picker.is_open() and _texts(node.menu.picker).has("Change map — this server"), "allowed, the server's list opens to change")
+	var _k6 := node.menu.handle_event(_key(KEY_2))
+	_check(link.sent.back() == "/mapmenu dm_yard" and changed.size() == 1, "and a choice is the server's to make, not this client's")
+	link.answer({"result": {"ok": true, "text": "Changing to Yard."}})
+	_check(node.menu.toast_text() == "Changing to Yard.", "what the server did is said on screen")
+
+	link.answer({"maps": [{"id": "dm_atrium", "name": "Atrium"}, {"id": "dm_yard", "name": "Yard"}],
+		"allowed": false, "flag": "generic", "vote": true, "where": "this server"})
+	await get_tree().process_frame
+	texts = _texts(node.menu.picker)
+	_check(node.menu.picker.is_open() and texts.has("Vote for a map — this server")
+		and texts.any(func(t: String) -> bool: return t.contains("'generic'") and t.contains("rocks the vote")),
+		"without the owner's flag it is a vote, and it says which flag")
+	node.menu.picker.close()
+	link.answer({"maps": [{"id": "dm_yard", "name": "Yard"}], "allowed": false, "flag": "changemap", "vote": false})
+	_check(not node.menu.picker.is_open() and node.menu.toast_text().contains("'changemap'"),
+		"with no flag and no vote, the refusal is shown and nothing opens")
+
+	# A menu built by hand with no table still gets M once the game hands it a list.
+	if InputMap.has_action(DotMenuBindings.MAPS_ACTION):
+		InputMap.erase_action(DotMenuBindings.MAPS_ACTION)
+	var bare := DotMenu.new()
+	bare.manage_pointer = false
+	add_child(bare)
+	var _b := bare.setup()
+	var _u := bare.use_maps(func() -> Array: return rows, func(id: StringName) -> DotResult: return DotResult.success(id))
+	_check(bare.handle_event(_key(KEY_M)) and bare.picker.is_open(), "a menu with no key table puts the map menu on M itself")
+	bare.picker.close()
+	bare.open_help()
+	await get_tree().process_frame
+	_check(_texts(bare.help).has("Change map"), "and lists it on the help screen, since no row does")
+	bare.help.close()
+
+	# A table with something on M already: the map key goes to F3, never onto M twice.
+	var keys := DotMenuBindings.new()
+	keys.add(&"test_mark", &"bind_mark", "Mark", "M", "Hands")
+	var taken := DotMenuSettings.new()
+	taken.app_namespace = &"menu_maps_taken_test"
+	taken.bindings = keys
+	add_child(taken)
+	var _t := taken.setup(DotSettingsStoreMemory.new(), false)
+	_check(keys.key_for(DotMenuBindings.MAPS_ACTION) == "F3" and keys.defaults_on("M").size() == 1,
+		"a table that already has M gets the map key on F3 (each game's suite fails on that, so move the game's own)")
+	taken.queue_free()
+	bare.queue_free()
+	link.queue_free()
+	node.queue_free()
 	await get_tree().process_frame
 
 

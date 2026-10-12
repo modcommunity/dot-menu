@@ -31,7 +31,7 @@ func _build_menu() -> void:
 	keys = DotMenuBindings.new()
 	keys.add_movement()
 	keys.add(&"demo_flashlight", &"bind_flashlight", "Flashlight", "F", "View")
-	keys.add(&"demo_maps", &"bind_maps", "Change map", "M", "Interface")
+	var _m := keys.add_maps("Interface")
 	keys.add(&"demo_help", &"bind_help", "Help", "H", "Interface")
 	keys.add(&"demo_theme", &"bind_theme_next", "Next theme", "P", "Interface")
 	keys.add(&"demo_scores", &"bind_scores", "Scoreboard (hold)", "Tab", "Interface")
@@ -97,7 +97,11 @@ func _build_menu() -> void:
 	menu.help.title_text = "How to play the demo"
 	menu.help.about = "Nothing to win here: every menu a game gets from dot-menu, in the theme you pick. A game puts its goal in this card."
 	menu.help.add_text("Modes", "A game describes its modes or its rules in a card like this one, and the keys come from its table on the left.")
-	menu.help.add_section("This demo", [["M", "A picker of made-up maps"], ["P", "The next theme"]], &"keys")
+	menu.help.add_section("This demo", [["P", "The next theme"]], &"keys")
+	# The map menu: M opens these, and offline a choice changes the map (here, says so).
+	var _maps := menu.use_maps(maps, func(id: StringName) -> DotResult:
+		hud.speed.text = "Changed to %s" % id
+		return DotResult.success(id))
 	menu.layout_editor.saved.connect(func(text: String) -> void: var _s := settings.set_value(&"hud_positions", text))
 	menu.picked.connect(func(id: StringName) -> void: hud.speed.text = "Picked %s" % id)
 	menu.theme_changed.connect(func(p: DotMenuPalette) -> void: hud.recolour(p))
@@ -113,11 +117,6 @@ func _build_menu() -> void:
 	menu.scoreboard.source = roster
 
 
-func _unhandled_input(event: InputEvent) -> void:
-	if menu.any_open():
-		return
-	if event.is_action_pressed(&"demo_maps"):
-		menu.open_picker(maps(), "Change map — offline")
 
 
 ## A made-up server, two teams and a spectator. What a held Tab draws in the demo.
@@ -142,12 +141,27 @@ static func roster() -> Dictionary:
 static func maps() -> Array:
 	var out: Array = []
 	var names := ["Intro", "Stages", "Quarry", "Slide Hill", "Build Plots", "Foundry", "Ice Works", "Long Fall", "Canyon", "Harbour"]
+	var modes := ["Deathmatch", "Race", "Capture the flag", "Race", "Free build", "Deathmatch", "Race", "Last one standing", "Race", "Deathmatch"]
 	for i in names.size():
 		var tags: Array = ["tier %d" % (i % 4 + 1)]
 		if i == 6:
 			tags.append("not in rotation")
-		out.append({"id": names[i].to_snake_case(), "name": names[i], "tags": tags, "current": i == 2, "warn": i == 6})
+		# A made-up picture for most maps (a game's would be a path in its pack); one has none,
+		# to show the empty frame a map without a picture keeps.
+		out.append({"id": names[i].to_snake_case(), "name": names[i], "mode": modes[i], "tags": tags,
+			"current": i == 2, "warn": i == 6, "thumbnail": _swatch(i) if i != 4 else ""})
 	return out
+
+
+## A sky-over-ground picture in a colour of its own, as a stand-in for a map's preview.
+static func _swatch(i: int) -> Texture2D:
+	var img := Image.create(64, 36, false, Image.FORMAT_RGB8)
+	var hue := fmod(0.07 * i + 0.55, 1.0)
+	for y in 36:
+		var c := Color.from_hsv(hue, 0.35, 0.95 - y * 0.008) if y < 20 else Color.from_hsv(fmod(hue + 0.3, 1.0), 0.55, 0.55 - (y - 20) * 0.01)
+		for x in 64:
+			img.set_pixel(x, y, c)
+	return ImageTexture.create_from_image(img)
 
 
 func _build_world() -> void:

@@ -51,6 +51,11 @@ var bindings: DotMenuBindings = null
 ## desktop. See [member DotMenu.leave_on_its_own]. Off for a game that leaves its own way.
 var leave_on_its_own: bool = true
 
+## The map menu key, M, in this game's table (API 5): on for every game, because every game
+## in the family has more than one map, course or layout. The key does nothing until the
+## client calls [method use_maps]; a game with one map turns this off.
+var map_menu: bool = true
+
 ## Free the pointer while the menu is open and capture it after. Off for a client that owns
 ## its pointer and does both on [signal menu_state_changed].
 var manage_pointer: bool = false
@@ -81,6 +86,11 @@ func setup(store: DotSettingsStore = null, with_menu: bool = true) -> DotResult:
 	if bindings.row_for_action(DotMenuBindings.HELP_ACTION).is_empty() \
 			and bindings.row_for_setting(DotMenuBindings.HELP_SETTING).is_empty():
 		var _h := bindings.add_help("", bindings.free_key([DotMenuBindings.HELP_KEY, "F1"]))
+	# The map menu key, M (API 5), the same way: a game's own row on that action or setting is
+	# kept. On M unless the game ships something there, which its suite fails on.
+	if map_menu and bindings.row_for_action(DotMenuBindings.MAPS_ACTION).is_empty() \
+			and bindings.row_for_setting(DotMenuBindings.MAPS_SETTING).is_empty():
+		var _m := bindings.add_maps("", bindings.free_key([DotMenuBindings.MAPS_KEY, "F3"]))
 	bindings.add_to_schema(schema)
 	var themes := config.make_themes()
 	var _problems := config.apply_to_schema(schema, themes)
@@ -134,6 +144,12 @@ func _fill_help(_help: DotMenuHelp) -> void:
 
 
 # --- What reads them ----------------------------------------------------------
+
+## The map menu: M opens [param rows_fn]'s list and solo [param change_fn] changes to the
+## choice; on a server the server decides. See [method DotMenu.use_maps]. Null without a menu.
+func use_maps(rows_fn: Callable, change_fn: Callable) -> DotMenuMaps:
+	return menu.use_maps(rows_fn, change_fn) if menu != null else null
+
 
 func bind_look(tunables: Object) -> void:
 	if applier != null:

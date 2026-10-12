@@ -23,5 +23,9 @@ extends RefCounted
 #    DotMenuHelp.about, add_text(), heading(), help_key_shown();
 #    DotMenuSettings.leave_on_its_own and _fill_help(); DotMenuConfig.help_hint and
 #    DotMenu.help_hint, the HUD's help plate.
-const LEVEL := 4
+# 5: the map menu: DotMenuMaps; DotMenu.use_maps(), open_maps(), maps, maps_action, toast(),
+#    toast_text(), open_picker(items, title, close_action, on_chosen); DotMenuBindings
+#    MAPS_ACTION/MAPS_SETTING/MAPS_KEY and add_maps(); DotMenuSettings.map_menu and use_maps();
+#    picker rows' `detail` and `thumbnail`, DotMenuPicker.thumbnail_texture().
+const LEVEL := 5
 const OLDEST := 1
