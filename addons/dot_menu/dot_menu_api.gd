@@ -21,6 +21,7 @@ extends RefCounted
 #    add_help(), help_group(), defaults_on(); DotMenu.help_action defaults to HELP_ACTION,
 #    leave_on_its_own, leave_link, leave_service, leave(), leave_label();
 #    DotMenuHelp.about, add_text(), heading(), help_key_shown();
-#    DotMenuSettings.leave_on_its_own and _fill_help().
+#    DotMenuSettings.leave_on_its_own and _fill_help(); DotMenuConfig.help_hint and
+#    DotMenu.help_hint, the HUD's help plate.
 const LEVEL := 4
 const OLDEST := 1

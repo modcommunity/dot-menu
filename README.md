@@ -165,6 +165,7 @@ DOT_MENU_THEME=paper godot --path . -- --menu-browser-tips=on
 | `rows` | {} | Per row: `title`, `description` |
 | `fps_choices` | 0, 30, 60, 75, 120, 144, 165, 240, 300 | The frame-rate caps offered. 0 is unlimited |
 | `show_help` | true | A Help entry in the sidebar |
+| `help_hint` | top_right | Where the HUD's small "H  Help" plate sits: top_right, top_left, bottom_right, bottom_left or off |
 | `show_leave` | true | A Leave entry in the sidebar |
 | `leave_text` | Leave | The words on it |
 | `browser_tips` | auto | The help screen's browser card: auto (in a browser), on or off |

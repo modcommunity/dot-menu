@@ -12,7 +12,7 @@ extends Node
 ## aborts THAT TEST, not the run; the section counter is satisfied because the section had
 ## already announced itself, and the total is what notices the checks that never ran.
 const SECTIONS := 17
-const CHECKS := 227
+const CHECKS := 231
 
 var _passed := 0
 var _failed := 0
@@ -1181,7 +1181,11 @@ func _test_help_key_and_leave() -> void:
 	var row := node.bindings.row_for_action(DotMenuBindings.HELP_ACTION) if node.bindings != null else {}
 	_check(res.ok and not row.is_empty() and str(row["default"]) == "H", "a game with no key table gets one holding the help key, on H")
 	_check(node.settings.schema.has(DotMenuBindings.HELP_SETTING), "stored as bind_help, so the Controls page can rebind it")
+	var hint := node.menu.help_hint
+	_check(hint != null and hint.visible and _texts(hint).has("H") and _texts(hint).has("Help"),
+		"the HUD shows the help key in a corner while nothing is open")
 	_check(node.menu.handle_event(_key(KEY_H)) and node.menu.help.is_open(), "H opens help with nothing else open")
+	_check(not hint.visible, "and the hint steps aside while help is up")
 	await get_tree().process_frame
 	var texts := _texts(node.menu.help)
 	_check(texts.has("How to play Test Run") and texts.has("HOW TO PLAY") and texts.has("Reach the far side first."),
@@ -1191,6 +1195,7 @@ func _test_help_key_and_leave() -> void:
 	var _r := node.bindings.rebind(row, "F2", node.settings)
 	_check(not node.menu.handle_event(_key(KEY_H)) and node.menu.handle_event(_key(KEY_F2)) and node.menu.help.is_open(),
 		"rebound, the new key opens help and H is the game's again")
+	_check(_texts(hint).has("F2"), "and the hint says the new key")
 	node.menu.help.close()
 	await get_tree().process_frame
 
@@ -1247,6 +1252,14 @@ func _test_help_key_and_leave() -> void:
 	await get_tree().process_frame
 	_check(_texts(bare.help).has("Help and controls"), "and lists it, since no row does")
 	_check(bare.leave_label() == "Leave", "a menu that leaves the game's way keeps the config's word")
+	var quiet := DotMenu.new()
+	quiet.manage_pointer = false
+	quiet.config = DotMenuConfig.new()
+	quiet.config.help_hint = &"off"
+	add_child(quiet)
+	var _q := quiet.setup()
+	_check(quiet.help_hint == null, "a game that lists the key in its own HUD turns the hint off")
+	quiet.queue_free()
 	bare.queue_free()
 	await get_tree().process_frame
 

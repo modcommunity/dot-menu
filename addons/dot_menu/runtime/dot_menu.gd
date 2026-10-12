@@ -131,6 +131,10 @@ var scoreboard: DotMenuScoreboard = null
 var net_stat: DotMenuNetStat = null
 
 var _fps_label: Label = null
+
+## The HUD's "H  Help" hint ([member DotMenuConfig.help_hint]); null when off. Shown while
+## nothing is open, with the key as it is bound now.
+var help_hint: PanelContainer = null
 ## Other overlays a game registered: Controls with is_open() and close().
 var _extra: Array[Control] = []
 var _theme_id: StringName = &""
@@ -197,6 +201,8 @@ func _build() -> void:
 	net_stat.kit = kit
 	add_child(net_stat)
 
+	_build_help_hint()
+
 	# Under everything else on this layer: the menu opened over a held board is on top.
 	scoreboard = DotMenuScoreboard.new()
 	scoreboard.name = "Scoreboard"
@@ -240,6 +246,7 @@ func _build() -> void:
 	help.extra_keys = {_last_group(): extra}
 	help.closed.connect(_on_closed)
 	add_child(help)
+	_refresh_help_hint()
 
 
 func _actions() -> Array[Dictionary]:
@@ -258,6 +265,59 @@ func _ensure_help_action() -> void:
 		return
 	InputMap.add_action(help_action)
 	var _bound := DotInputBinding.apply(help_action, DotMenuBindings.HELP_KEY)
+
+
+## The HUD's help hint: a keycap and "Help" on a quiet plate, in the corner the config names.
+## A plate rather than bare text because a HUD hint is read over whatever the map is, and
+## the light maps are where a bare label disappears (the first play test's complaint).
+func _build_help_hint() -> void:
+	var where := config.help_hint
+	if where == &"off" or where == &"" or help_action == &"":
+		return
+	var p := kit.palette
+	help_hint = PanelContainer.new()
+	help_hint.name = "HelpHint"
+	help_hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	help_hint.add_theme_stylebox_override(&"panel", kit.box(Color(p.surface, 0.72), 8, p.line, 1, Vector4(6, 4, 10, 4)))
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override(&"separation", 8)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	help_hint.add_child(row)
+	var cap := kit.keycap("H")
+	cap.name = "Key"
+	row.add_child(cap)
+	var l := kit.label("Help", kit.size_small, p.text, true)
+	l.name = "Text"
+	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	row.add_child(l)
+	var top := where == &"top_right" or where == &"top_left"
+	var right := where == &"top_right" or where == &"bottom_right"
+	help_hint.set_anchors_preset(
+		(Control.PRESET_TOP_RIGHT if right else Control.PRESET_TOP_LEFT) if top
+		else (Control.PRESET_BOTTOM_RIGHT if right else Control.PRESET_BOTTOM_LEFT))
+	help_hint.grow_horizontal = Control.GROW_DIRECTION_BEGIN if right else Control.GROW_DIRECTION_END
+	help_hint.grow_vertical = Control.GROW_DIRECTION_END if top else Control.GROW_DIRECTION_BEGIN
+	var x := -14.0 if right else 14.0
+	# Under the frame counter in the top corner, which is where that sits.
+	var y := 36.0 if top else -14.0
+	help_hint.offset_left = x
+	help_hint.offset_right = x
+	help_hint.offset_top = y
+	help_hint.offset_bottom = y
+	add_child(help_hint)
+	_refresh_help_hint()
+
+
+## The hint's key as bound now, and whether it shows: not while anything is open, not when
+## the help key is on nothing.
+func _refresh_help_hint() -> void:
+	if help_hint == null or help == null:
+		return
+	var k := help.help_key_shown()
+	var label := help_hint.find_child("Key", true, false)
+	if label != null and k != "":
+		((label as PanelContainer).get_child(0) as Label).text = k
+	help_hint.visible = k != "" and not any_open()
 
 
 ## Whether the help key is in no table row, so the help screen has to list it by hand.
@@ -464,6 +524,7 @@ func _on_closed() -> void:
 
 
 func _notify() -> void:
+	_refresh_help_hint()
 	var now := any_open()
 	if now != _was_open:
 		_was_open = now
@@ -678,6 +739,13 @@ func use_theme(id: StringName) -> bool:
 		scoreboard.restyle(kit)
 	if _fps_label != null:
 		_fps_label.add_theme_color_override(&"font_color", p.muted)
+	if help_hint != null:
+		var where := help_hint.get_index()
+		help_hint.queue_free()
+		help_hint = null
+		_build_help_hint()
+		if help_hint != null:
+			move_child(help_hint, mini(where, get_child_count() - 1))
 	if net_stat != null:
 		net_stat.restyle(kit)
 	theme_changed.emit(p)
@@ -702,6 +770,7 @@ func _on_setting_changed(key: StringName, value: Variant, _why: StringName) -> v
 		_:
 			if bindings != null:
 				var _bound := bindings.apply_setting(key, value)
+				_refresh_help_hint()
 
 
 ## The frame counter and net_stat together, because they share a corner and a number:

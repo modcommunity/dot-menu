@@ -108,6 +108,12 @@ extends DotConfig
 ## Show a frame-rate counter when the `show_fps` setting is on.
 @export var fps_counter: bool = true
 
+## Where the HUD's small "H  Help" hint sits, so a player who has never opened the menu
+## learns the key: top_right (under the frame counter), top_left, bottom_right, bottom_left,
+## or off for a game that lists the help key in its own key hints. [member DotMenu.help_hint]
+## is the Control, for a game that wants it somewhere else exactly.
+@export var help_hint: StringName = &"top_right"
+
 ## Draw the connection overlay when the `net_stat` setting asks for it. Off for a host that
 ## draws its own; the setting is still declared and stored.
 @export var net_stat: bool = true

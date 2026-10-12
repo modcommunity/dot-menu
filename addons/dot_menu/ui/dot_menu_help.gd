@@ -60,8 +60,9 @@ func help_key_shown() -> String:
 func heading() -> String:
 	if title_text != "":
 		return title_text
+	# "Menu" is the config's own default, not a game's name.
 	var brand := config.brand_name if config != null else ""
-	return "How to play %s" % brand if brand != "" else "Help"
+	return "How to play %s" % brand if brand != "" and brand != "Menu" else "Help"
 
 
 ## Lines added to a key group's card after its bindings: `{group: [[key, what], ...]}`.
