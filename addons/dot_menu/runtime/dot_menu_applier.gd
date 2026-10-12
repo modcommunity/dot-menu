@@ -145,6 +145,10 @@ func _exit_tree() -> void:
 func apply_all() -> void:
 	if settings == null or settings.schema == null:
 		return
+	# Two rows stored on one key (a default that moved under a saved document) are put right
+	# before anything reaches the InputMap; see DotMenuBindings.settle.
+	if bindings != null:
+		var _settled := bindings.settle(settings)
 	for key in settings.schema.keys():
 		_apply(key, settings.get_value(key), &"applied")
 

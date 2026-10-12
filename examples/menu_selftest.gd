@@ -11,8 +11,8 @@ extends Node
 ## [b]CHECKS is the guard the section counter cannot be.[/b] A script error inside a test
 ## aborts THAT TEST, not the run; the section counter is satisfied because the section had
 ## already announced itself, and the total is what notices the checks that never ran.
-const SECTIONS := 20
-const CHECKS := 300
+const SECTIONS := 21
+const CHECKS := 310
 
 var _passed := 0
 var _failed := 0
@@ -49,6 +49,7 @@ func _run() -> void:
 	await _test_map_menu()
 	await _test_loadout_menu()
 	await _test_hud_follows()
+	_test_moved_defaults()
 
 	_line("")
 	_line("%d sections, %d passed, %d failed" % [_section_count, _passed, _failed])
@@ -1504,6 +1505,93 @@ func _test_hud_follows() -> void:
 	root.queue_free()
 	_free_menu(menu)
 	await get_tree().process_frame
+
+
+# --- Moved defaults ----------------------------------------------------------------
+
+func _old_document_manager(schema: DotSettingsSchema, values: Dictionary) -> DotSettingsManager:
+	# A document from before documents recorded their defaults: values only.
+	var store := DotSettingsStoreMemory.new()
+	var _saved := store.save_document(&"moved", &"local", {"version": 1, "values": values})
+	var m := DotSettingsManager.new()
+	m.schema = schema
+	m.local_store = store
+	m.app_namespace = &"moved"
+	m.persist = false
+	m.register_as_service = false
+	add_child(m)
+	var _res := m.setup()
+	return m
+
+
+func _medkit_keys() -> DotMenuBindings:
+	var k := DotMenuBindings.new()
+	k.add(&"test_use", &"bind_use", "Use", "E", "Hands")
+	k.add(&"test_heal", &"bind_heal", "Medkit", "G", "Hands")
+	k.add_help("Hands")
+	return k
+
+
+func _test_moved_defaults() -> void:
+	_section("A default that moved under a saved document")
+
+	# Declared: the medkit's default was H until help took it.
+	var k := _medkit_keys().renamed(&"bind_heal", ["H"])
+	var s := DotSettingsSchema.new()
+	k.add_to_schema(s)
+	_check(s.find(&"bind_heal").previous_defaults == ["H"], "a renamed default reaches the setting's declaration")
+	var m := _old_document_manager(s, {"bind_help": "H", "bind_heal": "H", "bind_use": "Q"})
+	k.apply_all(m)
+	_check(m.get_string(&"bind_heal") == "G" and k.key_for(&"test_heal") == "G",
+		"an old file with the medkit on H puts it on its new default, G")
+	_check(m.get_string(&"bind_help") == "H" and k.key_for(DotMenuBindings.HELP_ACTION) == "H", "and help keeps H")
+	_check(m.get_string(&"bind_use") == "Q" and k.key_for(&"test_use") == "Q", "a key the player chose is kept")
+	m.queue_free()
+
+	# Not declared: the conflict check on load settles it the same way.
+	var k2 := _medkit_keys()
+	var s2 := DotSettingsSchema.new()
+	k2.add_to_schema(s2)
+	var m2 := _old_document_manager(s2, {"bind_help": "H", "bind_heal": "H", "bind_use": "Q"})
+	var moved := k2.settle(m2)
+	_check(moved.size() == 1 and m2.get_string(&"bind_heal") == "G" and m2.get_string(&"bind_help") == "H",
+		"two rows on one key: the row whose default it is keeps it, the other goes to its default (%s)" % ", ".join(moved))
+	_check(m2.get_string(&"bind_use") == "Q", "and a chosen key nobody else is on stays")
+	_check(k2.settle(m2).is_empty(), "settling twice moves nothing")
+	m2.queue_free()
+
+	# Two of the player's own choices on one key, neither a default (a file edited by hand):
+	# the first row in the table keeps it.
+	var k3 := _medkit_keys()
+	var s3 := DotSettingsSchema.new()
+	k3.add_to_schema(s3)
+	var m3 := _old_document_manager(s3, {"bind_use": "J", "bind_heal": "J"})
+	var _m3 := k3.settle(m3)
+	_check(m3.get_string(&"bind_use") == "J" and m3.get_string(&"bind_heal") == "G", "with no owner, the first row keeps the key")
+	m3.queue_free()
+
+	# A table that ships two rows on one default meant it.
+	var k4 := DotMenuBindings.new()
+	k4.add(&"test_a", &"bind_a", "A", "Q", "Hands")
+	k4.add(&"test_b", &"bind_b", "B", "Q", "Hands")
+	var s4 := DotSettingsSchema.new()
+	k4.add_to_schema(s4)
+	var m4 := _old_document_manager(s4, {})
+	_check(k4.settle(m4).is_empty(), "rows that all default to the key are left alone")
+	m4.queue_free()
+
+	# The applier settles too: it is what DotMenuSettings and the presentations boot through.
+	var k5 := _medkit_keys()
+	var s5 := DotSettingsSchema.new()
+	k5.add_to_schema(s5)
+	var m5 := _old_document_manager(s5, {"bind_heal": "H"})
+	var ap := DotMenuApplier.new()
+	ap.settings = m5
+	ap.bindings = k5
+	ap.apply_all()
+	_check(m5.get_string(&"bind_heal") == "G", "DotMenuApplier.apply_all settles before applying")
+	ap.free()
+	m5.queue_free()
 
 
 func _section(title: String) -> void:

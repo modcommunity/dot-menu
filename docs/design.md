@@ -42,6 +42,16 @@ A theme picked in the menu restyles the HUD at once, in every game, through one 
 
 **`stored()` returns the effective binding, not the stored text.** A document cleared by hand stores `""` for a key really on its default; comparing the text let a default key be bound to a second action with no conflict found. And it is in dot-ui's **current spelling**: a document from before dot-ui named the wheel stores `Mouse 4`, which the Controls page would draw as a thumb button; the round trip through `DotInputBinding` draws `Wheel up` (and changes nothing on an older dot-ui).
 
+### A default that moved
+
+Rows' defaults move when the family takes a key for everybody (help on H, the map menu on M, loadout on B, the view on F5, push to talk on V, chat on Y and U). A settings document from before that still says the old key, and the player never chose it. Three layers put it right, cheapest first:
+
+1. **dot-settings records the default each value was saved under**, so a key still on it follows any later move by itself ([dot-settings design](../../dot-settings/docs/design.md#a-value-nobody-chose-follows-its-default)).
+2. **A document from before that record** has nothing to compare with, so a game declares what each moved row's default used to be: `keys.renamed(&"bind_heal", ["H"])` in its table, before `add_to_schema`, which fills `DotSettingsDef.previous_defaults`. A stored key equal to one moves to the new default, once.
+3. **`settle(settings)`**, run by `apply_all` and `DotMenuApplier.apply_all` at boot, catches what nobody declared and files edited by hand: two rows stored on one key, the row whose default it is keeps it, the other goes back to its own default, and it is logged. Rows that all default to the key are left alone (a table that ships a shared key meant it); with no owner the first row in the table keeps it.
+
+A rebind can never make a conflict (it swaps), so the third layer only ever fires on a loaded document. A key the player chose and nobody else is on is never touched.
+
 ## A server may hide and clamp; it may never set or read
 
 `DotMenu.apply_server_rules` takes `rows_hidden`, `pages_hidden`, `themes`, `leave_text` and `clamps`, and `release_server_rules` undoes all of it on leaving. Clamps go through dot-settings' policy (`apply_server_clamps`), a bound the player's own value stays under. The row shows `chosen_value` (what the player picked and gets back) with "This server caps it at 95" under it; showing the clamped value would quietly replace their choice. A theme the server does not offer is moved off for the connection; the stored choice is untouched.

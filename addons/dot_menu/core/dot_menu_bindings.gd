@@ -50,6 +50,14 @@ const LOADOUT_KEY := "B"
 ## `{action, setting, label, default, group, scope}`.
 var rows: Array[Dictionary] = []
 
+## What a row's default USED to be: `{setting: ["old key", ...]}`, from [method renamed].
+##
+## A settings document from before documents recorded their defaults cannot tell a key the
+## player chose from the default they never touched. A stored key equal to one of these is
+## the latter and moves to the row's current default, once ([member
+## DotSettingsDef.previous_defaults], which [method add_to_schema] fills from this).
+var renamed_defaults: Dictionary = {}
+
 
 ## Adds a row. [param scope] is a [enum DotSettingsDef.Scope]. Returns this, to chain.
 ##
@@ -73,6 +81,20 @@ func add(
 			rows[i] = row
 			return self
 	rows.append(row)
+	return self
+
+
+## Declares that [param setting]'s default used to be each of [param old_keys] (as typed:
+## "H", "C"). For a row whose default moved to make room for a key the family shares (help on
+## H, the map menu on M, loadout on B, the view on F5): a returning player who never touched
+## the row gets the new default instead of keeping the old one on two actions. Call before
+## [method add_to_schema]. Returns this, to chain.
+func renamed(setting: StringName, old_keys: Array) -> DotMenuBindings:
+	var list: Array = renamed_defaults.get(setting, [])
+	for k in old_keys:
+		if not list.has(str(k)):
+			list.append(str(k))
+	renamed_defaults[setting] = list
 	return self
 
 
@@ -165,11 +187,18 @@ func remove(action: StringName) -> bool:
 func add_to_schema(s: DotSettingsSchema) -> void:
 	for row in rows:
 		var key: StringName = row["setting"]
-		if s.has(key):
-			continue
-		s.add(DotSettingsDef.binding(key, str(row["default"]), &"bindings")
-			.with_scope(int(row.get("scope", DotSettingsDef.Scope.DEVICE)) as DotSettingsDef.Scope)
-			.with_description(str(row["label"])))
+		if not s.has(key):
+			s.add(DotSettingsDef.binding(key, str(row["default"]), &"bindings")
+				.with_scope(int(row.get("scope", DotSettingsDef.Scope.DEVICE)) as DotSettingsDef.Scope)
+				.with_description(str(row["label"])))
+		# Old defaults reach a declaration the game made itself too: they only add to it.
+		var def := s.find(key)
+		var old: Array = []
+		for k in renamed_defaults.get(key, []):
+			if str(k) != str(def.default_value):
+				old.append(str(k))
+		if not old.is_empty():
+			var _d := def.with_previous_defaults(old)
 
 
 func row_for_setting(key: StringName) -> Dictionary:
@@ -222,10 +251,88 @@ func apply_row(row: Dictionary, text: String) -> String:
 	return bound
 
 
-## Every row from [param settings] onto the [InputMap]. Boot, and a reset.
+## Every row from [param settings] onto the [InputMap]. Boot, and a reset. Settles any
+## two rows stored on one key first ([method settle]).
 func apply_all(settings: DotSettingsManager) -> void:
+	var _settled := settle(settings)
 	for row in rows:
 		apply_row(row, stored(row, settings))
+
+
+## Puts right any key two rows are stored on: the row whose default it is keeps it, every
+## other goes back to its own default, and each move is logged. Returns `"label: old -> new"`
+## for each row moved. [method apply_all] and [DotMenuApplier]'s run it at boot.
+##
+## [b]Why a document can hold a conflict at all.[/b] Rebinding swaps, so a player can never
+## make one; a moved default can. A medkit saved on H by a build where H was its default,
+## loaded by one where H is help, is two actions on one key: one of them never fires. The
+## saved defaults ([DotSettingsManager]) and [method renamed] catch the moves somebody
+## declared; this catches the rest, and a file edited by hand.
+##
+## Rows that all DEFAULT to the key are left alone: a table that ships a shared key meant it.
+## Where no row's default is the key (two choices, by hand), the first row in the table keeps it.
+func settle(settings: DotSettingsManager) -> PackedStringArray:
+	var moved := PackedStringArray()
+	if settings == null:
+		return moved
+	# Bounded: a row moved to its default can land on another row's choice, which the next
+	# pass settles; each pass moves a row to its default for good, so rows.size() passes end it.
+	for _pass in range(rows.size()):
+		var groups: Array = []   # [[event, [rows]], ...]
+		for row in rows:
+			var ev := DotInputBinding.from_text(stored(row, settings))
+			if ev == null:
+				continue
+			var placed := false
+			for g in groups:
+				if same_input(g[0], ev):
+					(g[1] as Array).append(row)
+					placed = true
+					break
+			if not placed:
+				groups.append([ev, [row]])
+
+		var changed := false
+		for g in groups:
+			var on_key: Array = g[1]
+			if on_key.size() < 2:
+				continue
+			var owners: Array = []
+			for row in on_key:
+				var d := DotInputBinding.from_text(_default_text(row, settings))
+				if d != null and same_input(d, g[0]):
+					owners.append(row)
+			if owners.size() == on_key.size():
+				continue
+			if owners.is_empty():
+				owners.append(on_key[0])
+			for row in on_key:
+				if owners.has(row):
+					continue
+				var was := stored(row, settings)
+				var to := _default_text(row, settings)
+				var res := settings.set_value(row["setting"], to, &"settle")
+				if res.ok:
+					moved.append("%s: %s -> %s" % [str(row["label"]), was, to])
+					changed = true
+		if not changed:
+			break
+
+	if not moved.is_empty():
+		DotLog.info(CHANNEL, "two actions were stored on one key; the one whose default it is keeps it", {
+			"moved": ", ".join(moved),
+		})
+	return moved
+
+
+# The row's default as the schema declares it: a game may declare a row's setting itself,
+# with a default of its own, and that is the one the document falls back to.
+func _default_text(row: Dictionary, settings: DotSettingsManager) -> String:
+	if settings != null and settings.schema != null:
+		var def := settings.schema.find(row["setting"])
+		if def != null:
+			return str(def.default_value)
+	return str(row["default"])
 
 
 ## Applies [param key] if it is one of this table's settings. True if it was.

@@ -35,5 +35,8 @@ extends RefCounted
 #    hud_scale(); DotMenuPalette.hud_theme(), NUMBERS and the hud_edge, hud_ink,
 #    hud_highlight, hud_keycap, hud_keycap_text, hud_keycap_edge and hud_team_fill fields;
 #    the hud_scale stock setting and its row; the Arcade stock theme. Needs dot-ui 6.
-const LEVEL := 7
+# 8: moved defaults: DotMenuBindings.renamed(), renamed_defaults and settle(); apply_all() and
+#    DotMenuApplier.apply_all() settle two rows stored on one key. Needs the dot-settings that
+#    has DotSettingsDef.previous_defaults.
+const LEVEL := 8
 const OLDEST := 1
