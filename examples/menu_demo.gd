@@ -153,6 +153,50 @@ static func maps() -> Array:
 	return out
 
 
+## A loadout offer as dot-loadout's `offer_for` sends one, decorated as a game would: a made-up
+## silhouette per weapon (a game's are rendered from its models) and the statistics.
+static func loadout_offer() -> Dictionary:
+	var specs := {
+		"primary": [["rifle", "Rifle", 2, 0.42, 0.75, 0.7], ["carbine", "Carbine", 2, 0.36, 0.82, 0.55],
+			["smg", "SMG", 2, 0.28, 0.95, 0.35], ["marksman", "Marksman", 2, 0.78, 0.25, 0.95],
+			["shotgun", "Shotgun", 2, 0.95, 0.2, 0.12], ["launcher", "Launcher", 4, 1.0, 0.1, 0.6],
+			["minigun", "Minigun", 4, 0.3, 1.0, 0.45], ["sniper", "Long Rifle", 4, 1.0, 0.08, 1.0]],
+		"secondary": [["pistol", "Pistol", 1, 0.3, 0.5, 0.55], ["revolver", "Revolver", 1, 0.6, 0.22, 0.6],
+			["machine_pistol", "Machine Pistol", 1, 0.2, 0.9, 0.3]],
+		"melee": [["knife", "Knife", 0, 0.45, 0.6, 0.05], ["hatchet", "Hatchet", 0, 0.6, 0.4, 0.06]],
+		"thrown": [["frag", "Frag Grenade", 1, 0.9, 0.1, 0.3], ["sticky", "Sticky Bomb", 1, 0.85, 0.1, 0.25]],
+	}
+	var names := {"primary": "Primary", "secondary": "Sidearm", "melee": "Melee", "thrown": "Grenades"}
+	var current := {"primary": "rifle", "secondary": "pistol", "melee": "knife", "thrown": "frag"}
+	var slots: Array = []
+	var shade := 0
+	for slot_id: String in ["primary", "secondary", "melee", "thrown"]:
+		var choices: Array = []
+		for spec: Array in specs[slot_id]:
+			shade += 1
+			choices.append({"id": spec[0], "name": spec[1], "cost": spec[2], "tags": ["automatic"] if spec[4] > 0.7 else [],
+				"icon": _silhouette(shade, slot_id), "detail": "A stand-in description of the %s." % str(spec[1]).to_lower(),
+				"stats": [{"label": "Damage", "value": spec[3], "text": str(int(spec[3] * 120))},
+					{"label": "Fire rate", "value": spec[4], "text": "%d/min" % int(spec[4] * 900)},
+					{"label": "Range", "value": spec[5], "text": "%d m" % int(spec[5] * 200)},
+					{"label": "Magazine", "value": 0.5, "text": "30"}]})
+		slots.append({"id": slot_id, "name": names[slot_id], "current": current[slot_id], "fixed": false, "choices": choices})
+	return {"choose": true, "budget": 7, "note": "", "slots": slots}
+
+
+## A flat gun-ish shape, as a stand-in for a game's rendered weapon icon.
+static func _silhouette(i: int, slot_id: String) -> Texture2D:
+	var img := Image.create(160, 80, false, Image.FORMAT_RGBA8)
+	var ink := Color(0.86, 0.88, 0.92, 1.0)
+	var long := 120 if slot_id == "primary" else (70 if slot_id == "secondary" else 60)
+	img.fill_rect(Rect2i(20, 30, long, 12 + i % 3 * 2), ink)
+	if slot_id != "melee" and slot_id != "thrown":
+		img.fill_rect(Rect2i(30 + i % 4 * 6, 42, 14, 26), ink)
+	if slot_id == "thrown":
+		img.fill_rect(Rect2i(55, 20, 40, 44), ink)
+	return ImageTexture.create_from_image(img)
+
+
 ## A sky-over-ground picture in a colour of its own, as a stand-in for a map's preview.
 static func _swatch(i: int) -> Texture2D:
 	var img := Image.create(64, 36, false, Image.FORMAT_RGB8)

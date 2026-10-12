@@ -27,5 +27,9 @@ extends RefCounted
 #    toast_text(), open_picker(items, title, close_action, on_chosen); DotMenuBindings
 #    MAPS_ACTION/MAPS_SETTING/MAPS_KEY and add_maps(); DotMenuSettings.map_menu and use_maps();
 #    picker rows' `detail` and `thumbnail`, DotMenuPicker.thumbnail_texture().
-const LEVEL := 5
+# 6: the loadout menu: DotMenuLoadout, DotMenuLoadoutScreen; DotMenu.use_loadout(), open_loadout(),
+#    open_loadout_screen(), loadout, loadout_screen, loadout_action; DotMenuBindings
+#    LOADOUT_ACTION/LOADOUT_SETTING/LOADOUT_KEY and add_loadout(); DotMenuSettings.loadout_menu and
+#    use_loadout().
+const LEVEL := 6
 const OLDEST := 1

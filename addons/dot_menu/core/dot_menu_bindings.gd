@@ -40,6 +40,12 @@ const MAPS_ACTION := &"dot_menu_maps"
 const MAPS_SETTING := &"bind_maps"
 const MAPS_KEY := "M"
 
+## The loadout menu's key (API 6), B, in every game where players choose what they carry: the
+## same row on every such game's Controls page, so "B is loadout" holds across the family.
+const LOADOUT_ACTION := &"dot_menu_loadout"
+const LOADOUT_SETTING := &"bind_loadout"
+const LOADOUT_KEY := "B"
+
 ## Rows, in the order the Controls page and the help screen draw them:
 ## `{action, setting, label, default, group, scope}`.
 var rows: Array[Dictionary] = []
@@ -104,6 +110,12 @@ func add_help(group: String = "", key: String = HELP_KEY) -> DotMenuBindings:
 ## hand calls this itself.
 func add_maps(group: String = "", key: String = MAPS_KEY) -> DotMenuBindings:
 	return add(MAPS_ACTION, MAPS_SETTING, "Change map", key, group if group != "" else help_group())
+
+
+## The loadout menu key (`dot_menu_loadout`, stored as `bind_loadout`), B by default, on the same
+## card as help. [DotMenuSettings] adds it when [member DotMenuSettings.loadout_menu] is on.
+func add_loadout(group: String = "", key: String = LOADOUT_KEY) -> DotMenuBindings:
+	return add(LOADOUT_ACTION, LOADOUT_SETTING, "Loadout", key, group if group != "" else help_group())
 
 
 ## The card the help key goes on: the interface keys, or the general ones, or the last card.

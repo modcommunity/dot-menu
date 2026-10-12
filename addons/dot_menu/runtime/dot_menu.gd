@@ -97,6 +97,15 @@ var maps_action: StringName = DotMenuBindings.MAPS_ACTION
 ## The map menu. Null until [method use_maps]. See [DotMenuMaps].
 var maps: DotMenuMaps = null
 
+## The loadout menu's key (API 6): B, [constant DotMenuBindings.LOADOUT_ACTION], in every game where
+## players choose what they carry. Pressed with nothing open it opens [member loadout]; pressed
+## again it closes the screen, which saves. Nothing happens on it until [method use_loadout].
+var loadout_action: StringName = DotMenuBindings.LOADOUT_ACTION
+
+## The loadout menu, and its screen. Null until [method use_loadout]. See [DotMenuLoadout].
+var loadout: DotMenuLoadout = null
+var loadout_screen: DotMenuLoadoutScreen = null
+
 ## Handle Escape and the actions above from [method Node._unhandled_input]. Off for a host
 ## that routes input itself through [method handle_event].
 var handle_keys: bool = true
@@ -518,6 +527,66 @@ func open_maps() -> void:
 		maps.open()
 
 
+# --- The loadout menu ---------------------------------------------------------
+
+## Turns the loadout menu on (API 6): B opens [DotMenuLoadoutScreen] on what [param offer_fn]
+## returns (`func() -> Dictionary or DotResult`, may await: dot-loadout's
+## `DotLoadoutManager.offer_for` shape), and solo a choice goes to [param choose_fn]
+## (`func(picks: Dictionary) -> DotResult or {ok, text, now}`). [param decorate_fn]
+## (`func(slot_id, choice) -> Dictionary`) adds the icon and the statistics. Connected to a server
+## the server is asked instead; see [DotMenuLoadout]. Puts [member loadout_action] on B when no
+## table row did, and lists it on the help screen.
+func use_loadout(offer_fn: Callable, choose_fn: Callable, decorate_fn: Callable = Callable()) -> DotMenuLoadout:
+	if loadout == null:
+		loadout = DotMenuLoadout.new()
+	loadout.menu = self
+	loadout.offer_fn = offer_fn
+	loadout.choose_fn = choose_fn
+	loadout.decorate_fn = decorate_fn
+	loadout.enabled = true
+	if loadout_screen == null:
+		loadout_screen = DotMenuLoadoutScreen.new()
+		loadout_screen.name = "Loadout"
+		loadout_screen.kit = kit if kit != null else DotMenuKit.new()
+		loadout_screen.closed.connect(_on_closed)
+		loadout_screen.committed.connect(func(picks: Dictionary) -> void: loadout.commit(picks))
+		add_child(loadout_screen)
+	if loadout_action != &"" and not InputMap.has_action(loadout_action):
+		InputMap.add_action(loadout_action)
+		var _bound := DotInputBinding.apply(loadout_action, DotMenuBindings.LOADOUT_KEY)
+	if help != null and loadout_action != &"" and (bindings == null or bindings.row_for_action(loadout_action).is_empty()):
+		var extra: Dictionary = help.extra_keys
+		var group := _last_group()
+		var lines: Array = extra.get(group, [])
+		var shown := DotInputBinding.describe_action(loadout_action)
+		if not lines.any(func(l: Variant) -> bool: return l is Array and (l as Array).size() > 1 and str((l as Array)[1]) == "Loadout"):
+			lines.push_front([shown, "Loadout"])
+		extra[group] = lines
+		help.extra_keys = extra
+	return loadout
+
+
+## Opens the loadout menu, as B does. Nothing without [method use_loadout].
+func open_loadout() -> void:
+	if loadout != null and loadout.enabled:
+		loadout.open()
+
+
+## Shows the loadout screen on [param offer], over anything else this owns.
+func open_loadout_screen(offer: Dictionary) -> void:
+	if loadout_screen == null:
+		return
+	for o in [picker, help, layout_editor]:
+		if o != null and o.is_open():
+			o.close()
+	if screen != null and screen.is_open():
+		screen.close()
+	loadout_screen.toggle_action = loadout_action
+	move_child(loadout_screen, get_child_count() - 1)
+	loadout_screen.open(offer)
+	_on_opened()
+
+
 # --- A line for the player ----------------------------------------------------
 
 ## A short line at the top of the screen for [param seconds]: the map menu's "Changing the map
@@ -605,6 +674,8 @@ func close_all() -> void:
 
 func _overlays() -> Array[Control]:
 	var out: Array[Control] = [layout_editor, picker, help, screen]
+	if loadout_screen != null:
+		out.push_front(loadout_screen)
 	out.append_array(_extra)
 	return out
 
@@ -743,11 +814,21 @@ func handle_event(event: InputEvent) -> bool:
 				and event.is_action_pressed(maps_action):
 			maps.open()
 			return true
+		if loadout != null and loadout.enabled and loadout_action != &"" and InputMap.has_action(loadout_action) \
+				and event.is_action_pressed(loadout_action):
+			loadout.open()
+			return true
 		return false
 
 	# The same Escape that took the pointer away in a browser can arrive a moment after the
 	# menu it opened; closing on it would make the menu flash and vanish.
 	if escape and Time.get_ticks_msec() - _opened_msec < config.escape_grace_ms:
+		return true
+
+	if loadout_screen != null and loadout_screen.is_open():
+		# Its own keys were read in its _input; what is left is the menu's to swallow.
+		if escape:
+			loadout_screen.close()
 		return true
 
 	if layout_editor.is_open():
@@ -1009,6 +1090,7 @@ func describe() -> Dictionary:
 		"pages": pages.size(), "server_rules": _server_rules.keys(),
 		"pointer": manage_pointer, "overlays": _extra.size(),
 		"maps": maps.describe() if maps != null else {},
+		"loadout": loadout.describe() if loadout != null else {},
 	}
 
 

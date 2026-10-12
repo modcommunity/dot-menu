@@ -56,6 +56,11 @@ var leave_on_its_own: bool = true
 ## client calls [method use_maps]; a game with one map turns this off.
 var map_menu: bool = true
 
+## The loadout menu key, B, in this game's table (API 6): on for a game where players choose
+## what they carry, off by default because most of the family's games hand out their kit. The
+## key does nothing until the client calls [method use_loadout].
+var loadout_menu: bool = false
+
 ## Free the pointer while the menu is open and capture it after. Off for a client that owns
 ## its pointer and does both on [signal menu_state_changed].
 var manage_pointer: bool = false
@@ -74,6 +79,10 @@ func setup(store: DotSettingsStore = null, with_menu: bool = true) -> DotResult:
 		config = DotMenuConfig.new()
 	if schema == null:
 		schema = DotMenuStock.declare(DotSettingsSchema.new())
+	# The loadout key first, so B is the loadout's and the talk key's fallbacks skip it.
+	if loadout_menu and bindings != null and bindings.row_for_action(DotMenuBindings.LOADOUT_ACTION).is_empty() \
+			and bindings.row_for_setting(DotMenuBindings.LOADOUT_SETTING).is_empty():
+		var _l := bindings.add_loadout("", bindings.free_key([DotMenuBindings.LOADOUT_KEY, "F4"]))
 	# The talk key goes with the voice settings, so every game that has them has the key in
 	# its table, its Controls page and its help screen, on the same setting.
 	if bindings != null and schema.has(&"voice_mode") and bindings.row_for_action(&"dot_voice_talk").is_empty():
@@ -88,6 +97,9 @@ func setup(store: DotSettingsStore = null, with_menu: bool = true) -> DotResult:
 		var _h := bindings.add_help("", bindings.free_key([DotMenuBindings.HELP_KEY, "F1"]))
 	# The map menu key, M (API 5), the same way: a game's own row on that action or setting is
 	# kept. On M unless the game ships something there, which its suite fails on.
+	if loadout_menu and bindings.row_for_action(DotMenuBindings.LOADOUT_ACTION).is_empty() \
+			and bindings.row_for_setting(DotMenuBindings.LOADOUT_SETTING).is_empty():
+		var _l := bindings.add_loadout("", bindings.free_key([DotMenuBindings.LOADOUT_KEY, "F4"]))
 	if map_menu and bindings.row_for_action(DotMenuBindings.MAPS_ACTION).is_empty() \
 			and bindings.row_for_setting(DotMenuBindings.MAPS_SETTING).is_empty():
 		var _m := bindings.add_maps("", bindings.free_key([DotMenuBindings.MAPS_KEY, "F3"]))
@@ -149,6 +161,12 @@ func _fill_help(_help: DotMenuHelp) -> void:
 ## choice; on a server the server decides. See [method DotMenu.use_maps]. Null without a menu.
 func use_maps(rows_fn: Callable, change_fn: Callable) -> DotMenuMaps:
 	return menu.use_maps(rows_fn, change_fn) if menu != null else null
+
+
+## The loadout menu: B opens what [param offer_fn] returns and solo [param choose_fn] saves the
+## choice; on a server the server decides. See [method DotMenu.use_loadout]. Null without a menu.
+func use_loadout(offer_fn: Callable, choose_fn: Callable, decorate_fn: Callable = Callable()) -> DotMenuLoadout:
+	return menu.use_loadout(offer_fn, choose_fn, decorate_fn) if menu != null else null
 
 
 func bind_look(tunables: Object) -> void:
