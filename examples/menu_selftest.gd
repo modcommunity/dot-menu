@@ -12,7 +12,7 @@ extends Node
 ## aborts THAT TEST, not the run; the section counter is satisfied because the section had
 ## already announced itself, and the total is what notices the checks that never ran.
 const SECTIONS := 18
-const CHECKS := 250
+const CHECKS := 251
 
 var _passed := 0
 var _failed := 0
@@ -1329,6 +1329,12 @@ func _test_map_menu() -> void:
 	_check(node.menu.picker.find_children("*", "TextureRect", true, false).size() == 1
 		and node.menu.picker.find_children("Thumb", "PanelContainer", true, false).size() == 7,
 		"a picture where a map has one, and an empty frame of the same size where it does not")
+	node.menu.picker.open([{"id": "a", "name": "A", "detail": "blurb"}, {"id": "b", "name": "B"}], "x")
+	await get_tree().process_frame
+	_check(node.menu.picker.find_children("Thumb", "PanelContainer", true, false).is_empty(),
+		"and a page where no map has a picture draws no empty frames")
+	node.menu.picker.visible = false
+	maps.open()
 	var _k := node.menu.handle_event(_key(KEY_3))
 	await get_tree().process_frame
 	_check(changed == [&"course_2"] and not node.menu.picker.is_open(), "a number changes to that map, directly")

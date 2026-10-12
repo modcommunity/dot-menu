@@ -21,8 +21,9 @@ extends Control
 ## "what is on now" is the first thing seen), `warn` draws the tags in the warning colour.
 ## `detail` is a quiet second line under the name (a map's mode, a one-line blurb), and
 ## `thumbnail` a picture drawn before it: a [Texture2D], or a `res://` path loaded if it exists.
-## A path that does not resolve draws an empty frame of the same size, so a page where some maps
-## have pictures and some do not still lines up.
+## On a page where some rows have a picture, a row without one keeps an empty frame of the same
+## size so the names line up; a page where none has one draws no frames at all (a column of
+## empty boxes reads as broken art).
 
 signal closed()
 
@@ -220,9 +221,20 @@ func _rebuild() -> void:
 ## Whether any item on this page has a picture or a second line, which makes every row on it
 ## taller: rows of two heights on one page read as two lists.
 func _page_is_rich() -> bool:
+	if _page_has_pictures():
+		return true
 	for row in range(1, PAGE_SIZE + 1):
 		var it: Variant = at_row(row)
-		if it is Dictionary and ((it as Dictionary).get("thumbnail") != null or str((it as Dictionary).get("detail", "")) != ""):
+		if it is Dictionary and str((it as Dictionary).get("detail", "")) != "":
+			return true
+	return false
+
+
+## Whether any item on this page has a picture that resolves.
+func _page_has_pictures() -> bool:
+	for row in range(1, PAGE_SIZE + 1):
+		var it: Variant = at_row(row)
+		if it is Dictionary and thumbnail_texture((it as Dictionary).get("thumbnail")) != null:
 			return true
 	return false
 
@@ -244,6 +256,7 @@ static func thumbnail_texture(value: Variant) -> Texture2D:
 func _row(row: int, it: Dictionary) -> Control:
 	var p := kit.palette
 	var rich := _page_is_rich()
+	var pictures := _page_has_pictures()
 	var button := Button.new()
 	button.name = "Row%d" % row
 	button.alignment = HORIZONTAL_ALIGNMENT_LEFT
@@ -264,7 +277,7 @@ func _row(row: int, it: Dictionary) -> Control:
 	cap.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	line.add_child(cap)
 
-	if rich:
+	if pictures:
 		var frame := PanelContainer.new()
 		frame.name = "Thumb"
 		frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
