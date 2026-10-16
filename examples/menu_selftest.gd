@@ -12,7 +12,7 @@ extends Node
 ## aborts THAT TEST, not the run; the section counter is satisfied because the section had
 ## already announced itself, and the total is what notices the checks that never ran.
 const SECTIONS := 21
-const CHECKS := 315
+const CHECKS := 316
 
 var _passed := 0
 var _failed := 0
@@ -1082,6 +1082,9 @@ func _test_net_stat() -> void:
 	_check(not net.is_empty() and float(net["replayed"]) > 600.0 and int(net["lead"]) == 4,
 		"prediction cost is read from the manager's running totals, per second (%s)" % [net])
 	ns.net_source = Callable()
+	var px := int(ns.describe()["pixels_3d"])
+	var win := get_window().size
+	_check(px == win.x * win.y, "the 3D pixel count is the window's device pixels at scale 1 (%d)" % px)
 
 	var _off := st.set_value(&"net_stat", 0)
 	_check(not ns.visible and menu._fps_label.visible, "net_stat 0 hides it, and the counter comes back")

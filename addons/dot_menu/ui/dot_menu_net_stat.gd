@@ -370,6 +370,7 @@ func _refigure(m: Object) -> void:
 		"draw_calls": RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_DRAW_CALLS_IN_FRAME),
 		"objects": RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_OBJECTS_IN_FRAME),
 		"primitives": RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_PRIMITIVES_IN_FRAME),
+		"pixels_3d": _pixels_3d(),
 		"in_rate": float(bin) / secs, "out_rate": float(bout) / secs,
 		"in_pps": float(pin) / secs, "out_pps": float(pout) / secs,
 	}
@@ -764,6 +765,19 @@ func _draw_text(rect: Rect2) -> void:
 	_legend(Vector2(x, y), rect.size.x, transport == "websocket")
 
 
+## Pixels the 3D world is drawn at: the window in device pixels (a browser on a high-density
+## screen draws its canvas at the device's pixels, not the page's) times the 3D scale. A
+## frame whose time is in the wait column with few draws is usually this: the GPU filling
+## four times the pixels anybody expected.
+func _pixels_3d() -> int:
+	var vp := get_viewport()
+	if vp == null:
+		return 0
+	var size := Vector2(vp.get_window().size) if vp.get_window() != null else vp.get_visible_rect().size
+	var k := vp.scaling_3d_scale
+	return int(size.x * k * size.y * k)
+
+
 ## The two frame rows: where the last second's frames went on average (physics with its
 ## steps a frame, script, render, the wait), then the renderer's counts and the hitches.
 ## Returns the y of the row after them.
@@ -777,7 +791,7 @@ func _draw_frame_rows(x: float, y: float, width: float, col: float) -> float:
 	_cell(x + w4 * 3.0, y, w4, "%.1f" % float(c.get("wait_ms", 0.0)), p.hud_text, " ms wait")
 	y += _line_h()
 	_cell(x, y, col, "%d" % int(_fig.get("draw_calls", 0)), p.hud_text, " draws  %d obj" % int(_fig.get("objects", 0)))
-	_cell(x + col, y, col, "%dk" % roundi(float(_fig.get("primitives", 0)) / 1000.0), p.hud_text, " prims")
+	_cell(x + col, y, col, "%.1fM" % (float(_fig.get("pixels_3d", 0)) / 1.0e6), p.hud_text, " px  %dk prims" % roundi(float(_fig.get("primitives", 0)) / 1000.0))
 	var hitches := int(c.get("hitches", 0))
 	_cell(x + col * 2.0, y, col, "%d" % hitches, p.hud_ahead if hitches == 0 else (p.warn if hitches < 5 else p.danger),
 		" hitch/min, worst %.0f ms" % float(c.get("worst_ms", 0.0)))
@@ -853,4 +867,5 @@ func describe() -> Dictionary:
 		"fps": float(_fig.get("fps", 0.0)), "frame_ms": float(_fig.get("frame_ms", 0.0)),
 		"frames": frames.describe(), "net": _fig.get("net", {}),
 		"draw_calls": int(_fig.get("draw_calls", 0)),
+		"pixels_3d": int(_fig.get("pixels_3d", 0)),
 	}
