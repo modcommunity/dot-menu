@@ -12,7 +12,7 @@ extends Node
 ## aborts THAT TEST, not the run; the section counter is satisfied because the section had
 ## already announced itself, and the total is what notices the checks that never ran.
 const SECTIONS := 21
-const CHECKS := 310
+const CHECKS := 315
 
 var _passed := 0
 var _failed := 0
@@ -1044,6 +1044,45 @@ func _test_net_stat() -> void:
 	ns._push(null)
 	_check(not bool(ns.describe()["connected"]), "with no meter it says so, not a flat line")
 
+	# The frame clock on the wall clock: frames held to 25 ms by a busy wait read as 25 ms or
+	# more, whatever the smoothed process delta says. Headless, so render is 0 and the busy
+	# wait lands in the script part.
+	_check(ns.frames.is_running(), "the frame clock runs while the panel is shown")
+	var burn := func() -> void:
+		var until := Time.get_ticks_usec() + 25000
+		while Time.get_ticks_usec() < until:
+			pass
+	get_tree().process_frame.connect(burn)
+	for _f in 12:
+		await get_tree().process_frame
+	get_tree().process_frame.disconnect(burn)
+	var fc := ns.frames.summary(0.2)
+	_check(int(fc["frames"]) >= 3 and float(fc["mean_ms"]) >= 24.0 and float(fc["fps"]) <= 41.0,
+		"frame times are wall-clock times (%d frames, %.1f ms, %.1f fps)" % [fc["frames"], fc["mean_ms"], fc["fps"]])
+	_check(float(fc["script_ms"]) >= 20.0 and float(fc["script_ms"]) <= float(fc["mean_ms"]) + 0.5,
+		"and the busy wait is in the script part, inside the frame (%.1f of %.1f ms)" % [fc["script_ms"], fc["mean_ms"]])
+	var held := Time.get_ticks_usec() + 60000
+	while Time.get_ticks_usec() < held:
+		pass
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_check(int(ns.frames.summary(1.0)["hitches"]) >= 1, "a 60 ms frame is counted as a hitch")
+
+	# Prediction counters, from whatever the net source returns, per second.
+	var fake := FakeNetManager.new()
+	ns.net_source = func() -> Object: return fake
+	ns._net_marks.clear()
+	ns._push(null)
+	fake.counters[&"replayed_ticks"] = 600
+	fake.counters[&"snapshots"] = 20
+	fake.counters[&"lead_ticks"] = 4
+	await get_tree().create_timer(0.25).timeout
+	ns._push(null)
+	var net: Dictionary = ns.describe()["net"]
+	_check(not net.is_empty() and float(net["replayed"]) > 600.0 and int(net["lead"]) == 4,
+		"prediction cost is read from the manager's running totals, per second (%s)" % [net])
+	ns.net_source = Callable()
+
 	var _off := st.set_value(&"net_stat", 0)
 	_check(not ns.visible and menu._fps_label.visible, "net_stat 0 hides it, and the counter comes back")
 
@@ -1763,3 +1802,13 @@ func _test_loadout_menu() -> void:
 	link.queue_free()
 	node.queue_free()
 	await get_tree().process_frame
+
+
+## What net_stat reads from a dot-net manager, and nothing else.
+class FakeNetManager extends RefCounted:
+	var is_server := false
+	var counters := {&"snapshots": 0, &"snapshot_usec": 0, &"reconciles": 0, &"reconcile_usec": 0,
+		&"replayed_ticks": 0, &"client_ticks": 0, &"predict_usec": 0, &"lead_ticks": 0}
+
+	func perf_counters() -> Dictionary:
+		return counters.duplicate()

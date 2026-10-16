@@ -38,5 +38,7 @@ extends RefCounted
 # 8: moved defaults: DotMenuBindings.renamed(), renamed_defaults and settle(); apply_all() and
 #    DotMenuApplier.apply_all() settle two rows stored on one key. Needs the dot-settings that
 #    has DotSettingsDef.previous_defaults.
-const LEVEL := 8
+# 9: DotMenuFrameClock (wall-clock frame times by part); DotMenuNetStat.frames, net_source,
+#    net_manager() and the level-3 frame, renderer and prediction rows.
+const LEVEL := 9
 const OLDEST := 1

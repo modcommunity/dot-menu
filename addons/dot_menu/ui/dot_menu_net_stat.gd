@@ -6,7 +6,7 @@ extends Control
 ## [codeblock]
 ## net_stat 1    # numbers: frame rate, ping and jitter, in and out, loss
 ## net_stat 2    # and a graph of what arrives, by channel, with ping drawn across it
-## net_stat 3    # and what leaves, the frame time, the server's own frame, a legend
+## net_stat 3    # and what leaves, where each frame went, prediction, the server's frame
 ## net_stat 0    # off
 ## [/codeblock]
 ##
@@ -31,8 +31,20 @@ extends Control
 ## over WebSocket the incoming bars are one colour and the legend says why. What a client
 ## SENDS is split on both, because the channel is known at the send.
 ##
-## [b]One draw call, no child nodes.[/b] It is redrawn every frame it is shown; Labels would
-## be a layout pass per frame for text that changes every frame anyway.
+## [b]Frame times are wall-clock times.[/b] [DotMenuFrameClock] reads the clock at four
+## points of every engine iteration, so the frame strip shows what the player waited and
+## where it went (physics, script, render, and the wait for the next frame), and fps is the
+## frames actually drawn in the last second. The process delta it used before is smoothed
+## and clamped, and drew a steadier game than the one being played.
+##
+## [b]Prediction, read duck-typed.[/b] Where a client's dot-net manager is published in
+## [DotRegistry] (as [code]dot_net_manager[/code], any scope), the FULL level shows what its
+## [code]perf_counters()[/code] say the last second cost: snapshots applied, ticks
+## re-simulated, and the lead those replays run over. Nothing here names dot-net.
+##
+## [b]One draw call, no child nodes, redrawn when a bar closes.[/b] Everything drawn changes
+## once a bucket, so redrawing every frame was twenty times the canvas work for the same
+## picture — on a browser client, a measurable part of the frame it was measuring.
 
 const CHANNEL := "menu"
 
@@ -54,6 +66,7 @@ var level: int = Level.OFF:
 		visible = level != Level.OFF
 		if was == Level.OFF and level != Level.OFF:
 			reset()
+		_sync_clock()
 		_relayout()
 
 ## The height of the arrivals graph, in pixels.
@@ -110,8 +123,6 @@ const GAP := 6.0
 ## "pin": packets, "pout": packets, "frame_ms": the slowest frame in it, "rtt": ms or -1}.
 var _buckets: Array[Dictionary] = []
 var _capacity := 96
-var _acc := 0.0
-var _frame_max_ms := 0.0
 var _meter: Object = null
 var _base_in := PackedInt64Array()
 var _base_out := PackedInt64Array()
@@ -120,6 +131,21 @@ var _base_pout := 0
 var _in_scale := 2048.0
 var _out_scale := 1024.0
 var _rtt_scale := 100.0
+
+## Wall-clock frame timing; runs only while the panel is shown.
+var frames := DotMenuFrameClock.new()
+
+## `func() -> Object`: the client's dot-net manager, or null. Unset looks one up in
+## [DotRegistry]; see the class note.
+var net_source: Callable = Callable()
+
+## When the open bucket closes, in microseconds.
+var _bucket_due := 0
+## The slowest frame of the open bucket, as [wall, physics, script, render] microseconds.
+var _bucket_worst := PackedInt32Array([0, 0, 0, 0])
+## [usec, perf_counters()] per bucket, to difference over the last second.
+var _net_marks: Array = []
+var _plate: StyleBoxFlat = null
 
 # The figures under the graph, recomputed once per bucket rather than once per frame,
 # so the text holds still long enough to be read.
@@ -130,10 +156,33 @@ func _init() -> void:
 	name = "NetStat"
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	visible = false
+	frames.on_frame = _on_frame
 
 
 func _ready() -> void:
 	_relayout()
+	_sync_clock()
+
+
+func _exit_tree() -> void:
+	frames.stop()
+
+
+func _enter_tree() -> void:
+	_sync_clock()
+
+
+## The frame clock runs while there is something to show it on.
+func _sync_clock() -> void:
+	if level != Level.OFF and is_inside_tree():
+		frames.start(get_tree())
+	else:
+		frames.stop()
+
+
+func _on_frame(wall_us: int, physics_us: int, script_us: int, render_us: int, _steps: int) -> void:
+	if wall_us > _bucket_worst[0]:
+		_bucket_worst = PackedInt32Array([wall_us, physics_us, script_us, render_us])
 
 
 ## The overlay on a layer of its own under [param host], following the three `net_stat*`
@@ -186,10 +235,12 @@ func read_settings(settings: DotSettingsManager) -> int:
 ## Forgets the history. The next bars start from now.
 func reset() -> void:
 	_buckets.clear()
-	_acc = 0.0
-	_frame_max_ms = 0.0
 	_meter = null
 	_fig = {}
+	_bucket_due = 0
+	_bucket_worst = PackedInt32Array([0, 0, 0, 0])
+	_net_marks.clear()
+	frames.reset()
 
 
 ## The meter this panel reads now, or null.
@@ -204,29 +255,50 @@ func sample_source() -> Object:
 ## Redraws in [param p_kit]'s palette.
 func restyle(p_kit: DotMenuKit) -> void:
 	kit = p_kit
+	_plate = null
 	queue_redraw()
+
+
+## The client's dot-net manager, or null: [member net_source], else the one published in
+## [DotRegistry] under [code]dot_net_manager[/code] (any scope) that is not a server's.
+func net_manager() -> Object:
+	if net_source.is_valid():
+		return net_source.call()
+	for n in DotRegistry.names():
+		if not n.begins_with("dot_net_manager"):
+			continue
+		var m := DotRegistry.get_service(StringName(n))
+		if m != null and m.has_method(&"perf_counters") and not bool(m.get(&"is_server")):
+			return m
+	return null
 
 
 # --- Sampling ------------------------------------------------------------------
 
-func _process(delta: float) -> void:
+func _process(_delta: float) -> void:
 	if level == Level.OFF:
 		return
-	_frame_max_ms = maxf(_frame_max_ms, delta * 1000.0)
-	_acc += delta
-	if _acc >= bucket_sec:
+	# On the wall clock, like the frames: the process delta is smoothed.
+	var now := Time.get_ticks_usec()
+	var period := int(bucket_sec * 1e6)
+	if _bucket_due == 0:
+		_bucket_due = now + period
+	if now >= _bucket_due:
 		# A long hitch closes one bucket, not a burst of empty ones: the frame strip shows
 		# the hitch, and a run of zero-byte bars would read as the connection stalling.
-		_acc = fmod(_acc, bucket_sec) if _acc < bucket_sec * 4.0 else 0.0
+		_bucket_due = _bucket_due + period if now < _bucket_due + period * 4 else now + period
 		_push(sample_source())
-	queue_redraw()
+		queue_redraw()
 
 
 ## Closes a bucket: what moved through [param m] since the last one.
 func _push(m: Object) -> void:
+	# The bucket's slowest frame, and where its time went. A frame still running when the
+	# bucket closes is in the next one.
+	var worst := _bucket_worst
+	_bucket_worst = PackedInt32Array([0, 0, 0, 0])
 	var b := {"in": PackedInt64Array(), "out": PackedInt64Array(), "pin": 0, "pout": 0,
-		"frame_ms": _frame_max_ms, "rtt": -1.0}
-	_frame_max_ms = 0.0
+		"frame_ms": float(worst[0]) / 1000.0, "parts": worst, "rtt": -1.0}
 
 	if m != _meter:
 		# A new connection (or the first): its totals are not arrivals since the last bar.
@@ -289,13 +361,19 @@ func _refigure(m: Object) -> void:
 		pout += int(b["pout"])
 		frame_sum += float(b["frame_ms"])
 
+	var clock := frames.summary(1.0)
 	var f := {
 		"connected": m != null,
-		"fps": Engine.get_frames_per_second(),
-		"frame_ms": 1000.0 / maxf(1.0, Engine.get_frames_per_second()),
+		"fps": float(clock["fps"]),
+		"frame_ms": float(clock["mean_ms"]),
+		"clock": clock,
+		"draw_calls": RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_DRAW_CALLS_IN_FRAME),
+		"objects": RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_OBJECTS_IN_FRAME),
+		"primitives": RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_PRIMITIVES_IN_FRAME),
 		"in_rate": float(bin) / secs, "out_rate": float(bout) / secs,
 		"in_pps": float(pin) / secs, "out_pps": float(pout) / secs,
 	}
+	_refigure_net(f)
 	if m != null:
 		f["transport"] = str(m.call(&"transport_name"))
 		f["rtt"] = float(m.call(&"rtt"))
@@ -325,6 +403,35 @@ func _refigure(m: Object) -> void:
 	_in_scale = _settle(_in_scale, _nice(maxf(_percentile(ins, 0.9) * 1.6, 1024.0)))
 	_out_scale = _settle(_out_scale, _nice(maxf(_percentile(outs, 0.9) * 1.6, 512.0)))
 	_rtt_scale = _settle(_rtt_scale, _nice(maxf(peak_rtt * 1.2, 50.0)))
+
+
+## The prediction's cost over the last second, from the manager's running totals.
+func _refigure_net(f: Dictionary) -> void:
+	var nm := net_manager() if level >= Level.FULL else null
+	if nm == null:
+		_net_marks.clear()
+		return
+	var now := Time.get_ticks_usec()
+	var counters: Dictionary = nm.call(&"perf_counters")
+	_net_marks.append([now, counters])
+	while _net_marks.size() > 2 and int(_net_marks[1][0]) <= now - 1000000:
+		_net_marks.pop_front()
+	var then: Array = _net_marks[0]
+	var secs := float(now - int(then[0])) / 1e6
+	if secs <= 0.0:
+		return
+	var was: Dictionary = then[1]
+	var per := func(key: StringName) -> float:
+		return float(int(counters.get(key, 0)) - int(was.get(key, 0))) / secs
+	f["net"] = {
+		"snapshots": per.call(&"snapshots"),
+		"snapshot_ms": per.call(&"snapshot_usec") / 1000.0,
+		"reconciles": per.call(&"reconciles"),
+		"reconcile_ms": per.call(&"reconcile_usec") / 1000.0,
+		"replayed": per.call(&"replayed_ticks"),
+		"predict_ms": per.call(&"predict_usec") / 1000.0,
+		"lead": int(counters.get(&"lead_ticks", 0)),
+	}
 
 
 static func _percentile(values: PackedFloat32Array, q: float) -> float:
@@ -361,13 +468,14 @@ func _font_size() -> int:
 func _text_lines() -> int:
 	# Offline there is one line to say (the frame, and "offline"); the rest would be a
 	# block of empty rows under it.
+	# FULL keeps its two frame rows offline: where a frame goes matters solo too.
 	if level != Level.OFF and not bool(_fig.get("connected", false)):
-		return 1
+		return 3 if level == Level.FULL else 1
 	match level:
 		Level.NUMBERS, Level.GRAPH:
 			return 2
 		Level.FULL:
-			return 5
+			return 8
 	return 0
 
 
@@ -425,15 +533,17 @@ func _draw() -> void:
 		return
 	var p := _palette()
 
-	var plate := StyleBoxFlat.new()
-	# The HUD plate, made nearly solid: this sits over the world and the HUD for minutes at
-	# a time and is read in a glance. At 0.68 a HUD's message feed read straight through
-	# the graph (hungario, top left), which is two things in one place and neither legible.
-	plate.bg_color = Color(p.hud_plate, maxf(p.hud_plate.a, 0.85))
-	plate.border_color = p.line
-	plate.set_border_width_all(1)
-	plate.set_corner_radius_all(kit.radius_small if kit != null else 9)
-	draw_style_box(plate, Rect2(Vector2.ZERO, size))
+	if _plate == null:
+		# Built once per theme ([method restyle] drops it), not once per draw.
+		_plate = StyleBoxFlat.new()
+		# The HUD plate, made nearly solid: this sits over the world and the HUD for minutes
+		# at a time and is read in a glance. At 0.68 a HUD's message feed read straight
+		# through the graph, which is two things in one place and neither legible.
+		_plate.bg_color = Color(p.hud_plate, maxf(p.hud_plate.a, 0.85))
+		_plate.border_color = p.line
+		_plate.set_border_width_all(1)
+		_plate.set_corner_radius_all(kit.radius_small if kit != null else 9)
+	draw_style_box(_plate, Rect2(Vector2.ZERO, size))
 
 	var y := PAD + 2.0
 	var graph_w := size.x - PAD * 2.0 - GUTTER
@@ -540,18 +650,45 @@ func _draw_departures(rect: Rect2) -> void:
 	_bars(rect, "out", _out_scale, null, 0.75)
 
 
-## Frame time per bucket (its slowest frame), against 60 fps's 16.7 ms.
+## What a part of the frame is drawn in: physics, script, render. The wait is the bar's
+## own colour, by the frame's total, so the bar's height still reads at a glance.
+const PART_COLOURS: Array[Color] = [Color("#c58af9"), Color("#6ea8fe"), Color("#5fd38d")]
+
+
+## Each bucket's slowest frame on the wall clock, stacked by where it went: physics
+## (violet), script (blue), render (green), and the wait to the next frame on top in the
+## frame's own grade (green to 60 fps, amber to 30, red beyond). Guides at 16.7 and 33.3 ms,
+## the two vsync steps a browser frame lands on; a frame past the top is capped bright.
 func _draw_frames(rect: Rect2) -> void:
 	var p := _palette()
 	var top_ms := 50.0
 	_frame(rect, "frame", "%d ms" % roundi(top_ms), p.hud_detail)
-	var guide := rect.end.y - (1000.0 / 60.0) / top_ms * rect.size.y
-	draw_dashed_line(Vector2(rect.position.x, guide), Vector2(rect.end.x, guide), Color(p.hud_ahead, 0.5), 1.0, 3.0)
+	for guide_ms: float in [1000.0 / 60.0, 1000.0 / 30.0]:
+		var gy := rect.end.y - guide_ms / top_ms * rect.size.y
+		draw_dashed_line(Vector2(rect.position.x, gy), Vector2(rect.end.x, gy),
+			Color(p.hud_ahead if guide_ms < 20.0 else p.warn, 0.5), 1.0, 3.0)
+	var px := rect.size.y / top_ms
 	for i in _buckets.size():
 		var ms := float(_buckets[i]["frame_ms"])
-		var h := clampf(ms / top_ms, 0.0, 1.0) * rect.size.y
+		if ms <= 0.0:
+			continue
+		var x := _bar_x(rect, i)
+		var parts: PackedInt32Array = _buckets[i].get("parts", PackedInt32Array([0, 0, 0, 0]))
+		var base := rect.end.y
+		var room := rect.size.y
+		for k in 3:
+			var h := minf(float(parts[k + 1]) / 1000.0 * px, room)
+			if h > 0.0:
+				draw_rect(Rect2(x, base - h, BAR_W, h), Color(PART_COLOURS[k], 0.85))
+				base -= h
+				room -= h
+		var total_h := minf(ms * px, rect.size.y)
+		var wait_h := total_h - (rect.end.y - base)
 		var c := p.hud_ahead if ms <= 17.5 else (p.warn if ms <= 34.0 else p.danger)
-		draw_rect(Rect2(_bar_x(rect, i), rect.end.y - h, BAR_W, h), Color(c, 0.8))
+		if wait_h > 0.0:
+			draw_rect(Rect2(x, base - wait_h, BAR_W, wait_h), Color(c, 0.45))
+		if ms > top_ms:
+			draw_rect(Rect2(x - 0.5, rect.position.y, BAR_W + 1.0, 2.0), p.danger)
 
 
 func _draw_text(rect: Rect2) -> void:
@@ -563,12 +700,14 @@ func _draw_text(rect: Rect2) -> void:
 	var y := rect.position.y + float(fs)
 	var x := rect.position.x
 
-	var fps := int(_fig.get("fps", Engine.get_frames_per_second()))
+	var fps := roundi(float(_fig.get("fps", 0.0)))
 	var fps_colour := p.hud_ahead if fps >= 55 else (p.warn if fps >= 30 else p.danger)
 	_cell(x, y, col, "%d" % fps, fps_colour, " fps  %.1f ms" % float(_fig.get("frame_ms", 0.0)))
 
 	if not bool(_fig.get("connected", false)):
 		_cell(x + col, y, col * 2.0, "offline", p.hud_detail, "")
+		if level >= Level.FULL:
+			_draw_frame_rows(x, y + lh, rect.size.x, col)
 		return
 
 	var rtt := float(_fig.get("rtt", -1.0))
@@ -597,6 +736,20 @@ func _draw_text(rect: Rect2) -> void:
 	_cell(x + col * 2.0, y, col, _bytes(float(_fig.get("largest", 0))), p.hud_text, " largest")
 
 	y += lh
+	y = _draw_frame_rows(x, y, rect.size.x, col)
+
+	var net: Dictionary = _fig.get("net", {})
+	if not net.is_empty():
+		var replayed := float(net["replayed"])
+		var per_frame := replayed / maxf(1.0, float(_fig.get("fps", 1.0)))
+		_cell(x, y, col, "%.1f" % float(net["snapshot_ms"]), p.hud_text, " ms/s snap")
+		_cell(x + col, y, col, "%.0f" % per_frame, p.hud_ahead if per_frame < 6.0 else (p.warn if per_frame < 15.0 else p.danger),
+			" resim/fr %.0f ms/s" % float(net["reconcile_ms"]))
+		_cell(x + col * 2.0, y, col, "%d" % int(net["lead"]), p.hud_text, " lead  %.0f ms/s pred" % float(net["predict_ms"]))
+	else:
+		_cell(x, y, rect.size.x, "", p.hud_detail, "prediction: not published")
+	y += lh
+
 	var sv: Dictionary = _fig.get("remote", {})
 	if sv.has("tick"):
 		var tick := int(sv["tick"])
@@ -609,6 +762,26 @@ func _draw_text(rect: Rect2) -> void:
 
 	y += lh
 	_legend(Vector2(x, y), rect.size.x, transport == "websocket")
+
+
+## The two frame rows: where the last second's frames went on average (physics with its
+## steps a frame, script, render, the wait), then the renderer's counts and the hitches.
+## Returns the y of the row after them.
+func _draw_frame_rows(x: float, y: float, width: float, col: float) -> float:
+	var p := _palette()
+	var c: Dictionary = _fig.get("clock", {})
+	var w4 := width / 4.0
+	_cell(x, y, w4, "%.1f" % float(c.get("physics_ms", 0.0)), PART_COLOURS[0], " phys ×%.1f" % float(c.get("steps", 0.0)))
+	_cell(x + w4, y, w4, "%.1f" % float(c.get("script_ms", 0.0)), PART_COLOURS[1], " script")
+	_cell(x + w4 * 2.0, y, w4, "%.1f" % float(c.get("render_ms", 0.0)), PART_COLOURS[2], " render")
+	_cell(x + w4 * 3.0, y, w4, "%.1f" % float(c.get("wait_ms", 0.0)), p.hud_text, " ms wait")
+	y += _line_h()
+	_cell(x, y, col, "%d" % int(_fig.get("draw_calls", 0)), p.hud_text, " draws  %d obj" % int(_fig.get("objects", 0)))
+	_cell(x + col, y, col, "%dk" % roundi(float(_fig.get("primitives", 0)) / 1000.0), p.hud_text, " prims")
+	var hitches := int(c.get("hitches", 0))
+	_cell(x + col * 2.0, y, col, "%d" % hitches, p.hud_ahead if hitches == 0 else (p.warn if hitches < 5 else p.danger),
+		" hitch/min, worst %.0f ms" % float(c.get("worst_ms", 0.0)))
+	return y + _line_h()
 
 
 ## A swatch and a name per channel. Over WebSocket the arrivals are one stream, which is
@@ -677,4 +850,7 @@ func describe() -> Dictionary:
 		"transport": str(_fig.get("transport", "")),
 		"in_rate": float(_fig.get("in_rate", 0.0)), "out_rate": float(_fig.get("out_rate", 0.0)),
 		"rtt": float(_fig.get("rtt", -1.0)),
+		"fps": float(_fig.get("fps", 0.0)), "frame_ms": float(_fig.get("frame_ms", 0.0)),
+		"frames": frames.describe(), "net": _fig.get("net", {}),
+		"draw_calls": int(_fig.get("draw_calls", 0)),
 	}

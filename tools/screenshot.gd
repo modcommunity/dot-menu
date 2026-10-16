@@ -139,6 +139,9 @@ func _run() -> void:
 func _net_stat_shots(menu: DotMenu, settings: DotSettingsManager) -> void:
 	var meter := ShotMeter.new()
 	menu.net_stat.source = func() -> Object: return meter
+	var net := ShotNet.new()
+	meter.net = net
+	menu.net_stat.net_source = func() -> Object: return net
 	var _two := settings.set_value(&"net_stat", 2)
 	await _traffic(meter, 3.2)
 	await _shot("net_stat_2")
@@ -180,12 +183,20 @@ func _traffic(meter: ShotMeter, seconds: float) -> void:
 				meter.arrive(0 if meter.transport == "websocket" else 3, 1200)
 		meter.leave(rng.randi_range(0, 1), rng.randi_range(60, 140))
 		meter.note_rtt(42.0 + 9.0 * sin(float(n) * 0.07) + (70.0 if n % 120 > 110 else 0.0))
+		if meter.net != null:
+			meter.net.frame(n)
+		# The odd slow frame, so the frame strip has something to stack.
+		if n % 40 == 20:
+			var held := Time.get_ticks_usec() + 22000
+			while Time.get_ticks_usec() < held:
+				pass
 		await process_frame
 
 
 ## A meter with a transport to name, for a picture: the real one asks the peer under it.
 class ShotMeter extends DotMeteredPeer:
 	var transport := "enet"
+	var net: ShotNet = null
 
 	func transport_name() -> String:
 		return transport
@@ -216,3 +227,24 @@ func _shot(name: String) -> void:
 func _frames(n: int) -> void:
 	for i in n:
 		await process_frame
+
+
+## A dot-net manager's running totals, advanced a frame at a time like a client at 60 Hz
+## with a four-tick lead.
+class ShotNet extends RefCounted:
+	var is_server := false
+	var c := {&"snapshots": 0, &"snapshot_usec": 0, &"reconciles": 0, &"reconcile_usec": 0,
+		&"replayed_ticks": 0, &"client_ticks": 0, &"predict_usec": 0, &"lead_ticks": 4}
+
+	func frame(n: int) -> void:
+		c[&"client_ticks"] += 1
+		c[&"predict_usec"] += 90
+		if n % 2 == 0:
+			c[&"snapshots"] += 1
+			c[&"snapshot_usec"] += 160
+			c[&"reconciles"] += 1
+			c[&"reconcile_usec"] += 420
+			c[&"replayed_ticks"] += 4
+
+	func perf_counters() -> Dictionary:
+		return c.duplicate()
