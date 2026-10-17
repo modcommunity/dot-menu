@@ -155,6 +155,9 @@ var help_hint: PanelContainer = null
 
 ## The short line [method toast] shows; null until the first one.
 var toast_plate: PanelContainer = null
+## Where the toast's top edge sits, in pixels from the top. A game whose HUD draws a strip
+## there (scores, clock, mode label) sets this below it; read each time a toast is shown.
+var toast_top := 64.0
 var _toast_serial := 0
 ## The action that closes the picker that is open now, and who gets its choice: the map menu
 ## opens the same picker a game's own list does, and its choice must not reach the game's
@@ -607,8 +610,6 @@ func toast(text: String, seconds: float = 3.5) -> void:
 		toast_plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		toast_plate.set_anchors_preset(Control.PRESET_CENTER_TOP)
 		toast_plate.grow_horizontal = Control.GROW_DIRECTION_BOTH
-		toast_plate.offset_top = 64.0
-		toast_plate.offset_bottom = 64.0
 		var l := kit.label("", kit.size_body, kit.palette.text, true)
 		l.name = "Text"
 		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -620,6 +621,8 @@ func toast(text: String, seconds: float = 3.5) -> void:
 	var label := toast_plate.get_node("Text") as Label
 	label.add_theme_color_override(&"font_color", p.text)
 	label.text = text
+	toast_plate.offset_top = toast_top
+	toast_plate.offset_bottom = toast_top
 	toast_plate.visible = true
 	move_child(toast_plate, get_child_count() - 1)
 	_toast_serial += 1
