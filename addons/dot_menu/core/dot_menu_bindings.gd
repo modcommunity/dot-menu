@@ -23,6 +23,13 @@ extends RefCounted
 ## the two. A row may say otherwise (`scope`), which is for a key that was stored per account
 ## before it was in a table: changing a stored setting's scope resets somebody's key.
 ##
+## [b]An action may have extra keys[/b] ([method add_extra]): a row of its own that ADDS one
+## event to the action instead of replacing what is there, stored in a setting of its own,
+## and the one kind of row that may be set to nothing ([constant NONE]). The mouse wheel is
+## the reason: "jump" on Space and on both wheel directions is three keys on one action, and
+## the action, the setting and the Controls row are each still one fact. See
+## [method add_wheel_jump] and [method add_wheel_weapons].
+##
 ## [b]Escape is in no row and cannot be bound.[/b] It is the menu, it is how a browser
 ## releases the pointer, and a player who bound it to something else could never leave.
 ## [method add] refuses it.
@@ -46,8 +53,26 @@ const LOADOUT_ACTION := &"dot_menu_loadout"
 const LOADOUT_SETTING := &"bind_loadout"
 const LOADOUT_KEY := "B"
 
+## The stock weapon-cycling actions and settings ([method add_wheel_weapons], API 10): the
+## settings are the ones game-arena has always stored the wheel's weapon rows as, so a game
+## that moves its own rows onto these keeps every player's keys.
+const WEAPON_PREVIOUS_ACTION := &"dot_menu_weapon_previous"
+const WEAPON_NEXT_ACTION := &"dot_menu_weapon_next"
+const WEAPON_PREVIOUS_SETTING := &"bind_weapon_previous"
+const WEAPON_NEXT_SETTING := &"bind_weapon_next"
+
+## The wheel's extra jump keys ([method add_wheel_jump], API 10).
+const JUMP_ACTION := &"dot_fps_jump"
+const WHEEL_JUMP_UP_SETTING := &"bind_jump_wheel_up"
+const WHEEL_JUMP_DOWN_SETTING := &"bind_jump_wheel_down"
+
+## What an extra row ([method add_extra]) stores to say "no key". A word rather than "",
+## because "" already means "the default" for every row (a document cleared by hand).
+const NONE := "None"
+
 ## Rows, in the order the Controls page and the help screen draw them:
-## `{action, setting, label, default, group, scope}`.
+## `{action, setting, label, default, group, scope}`, plus `extra: true` on a row from
+## [method add_extra].
 var rows: Array[Dictionary] = []
 
 ## What a row's default USED to be: `{setting: ["old key", ...]}`, from [method renamed].
@@ -58,11 +83,17 @@ var rows: Array[Dictionary] = []
 ## DotSettingsDef.previous_defaults], which [method add_to_schema] fills from this).
 var renamed_defaults: Dictionary = {}
 
+# What each extra row put on its action: {setting: InputEvent}. A primary row's apply erases
+# every event on the action (dot-ui's apply replaces, on purpose), so it puts these back, and
+# an extra's own re-apply takes off exactly the one it added.
+var _extra_events: Dictionary = {}
+
 
 ## Adds a row. [param scope] is a [enum DotSettingsDef.Scope]. Returns this, to chain.
 ##
 ## A second row for the same action or the same setting replaces the first in place, so a
-## game can rename a stock row ("Duck" for "Crouch") without moving it.
+## game can rename a stock row ("Duck" for "Crouch") without moving it. Extra rows
+## ([method add_extra]) are not the action's row and are never replaced by one.
 func add(
 	action: StringName, setting: StringName, label: String, default_key: String,
 	group: String = "General", scope: int = DotSettingsDef.Scope.DEVICE
@@ -77,11 +108,61 @@ func add(
 		"group": group, "scope": scope,
 	}
 	for i in range(rows.size()):
-		if rows[i]["action"] == action or rows[i]["setting"] == setting:
+		if (rows[i]["action"] == action and not is_extra(rows[i])) or rows[i]["setting"] == setting:
 			rows[i] = row
 			return self
 	rows.append(row)
 	return self
+
+
+## Adds an EXTRA key for [param action]: a row of its own, stored in [param setting], that
+## adds its event to the action beside the action's own row instead of replacing it.
+## Rebinding swaps with any other row as usual; unlike an action's own row it can be set to
+## nothing ([constant NONE]; Delete on the Controls page). [param group] empty is the group of
+## the action's own row. Drawn right after the action's last row. Returns this, to chain.
+##
+## [b]A row, not a second column.[/b] Every reader of the table (schema, Controls page,
+## help screen, settle, the swap) already understands a row; a second column would be a
+## second kind of binding each of them had to learn, and a table of one key per row is what
+## lets "is this key taken" have one answer.
+func add_extra(
+	action: StringName, setting: StringName, label: String, default_key: String,
+	group: String = "", scope: int = DotSettingsDef.Scope.DEVICE
+) -> DotMenuBindings:
+	var own := row_for_action(action)
+	var row := {
+		"action": action, "setting": setting, "label": label, "default": default_key,
+		"group": group if group != "" else (str(own["group"]) if not own.is_empty() else "General"),
+		"scope": scope, "extra": true,
+	}
+	for i in range(rows.size()):
+		if rows[i]["setting"] == setting:
+			rows[i] = row
+			return self
+	var at := -1
+	for i in range(rows.size()):
+		if rows[i]["action"] == action:
+			at = i
+	if at < 0:
+		rows.append(row)
+	else:
+		rows.insert(at + 1, row)
+	return self
+
+
+## Whether [param row] is an extra key ([method add_extra]) rather than its action's own row.
+static func is_extra(row: Dictionary) -> bool:
+	return bool(row.get("extra", false))
+
+
+## Removes the row stored as [param setting], whichever kind it is. True if there was one.
+func remove_setting(setting: StringName) -> bool:
+	for i in range(rows.size()):
+		if rows[i]["setting"] == setting:
+			_take_off_extra(rows[i])
+			rows.remove_at(i)
+			return true
+	return false
 
 
 ## Declares that [param setting]'s default used to be each of [param old_keys] (as typed:
@@ -110,6 +191,51 @@ func add_movement(group: String = "Movement", crouch_key: String = "Ctrl", crouc
 	add(&"dot_fps_right", &"bind_right", "Strafe right", "D", group)
 	add(&"dot_fps_jump", &"bind_jump", "Jump", "Space", group)
 	add(&"dot_fps_crouch", &"bind_duck", crouch_label, crouch_key, group)
+	return self
+
+
+## The mouse wheel also jumps, both ways (`bind_jump_wheel_up`, `bind_jump_wheel_down`): two
+## extra rows on `dot_fps_jump` beside Space. For every game where the wheel has nothing else
+## to do; a game that cycles weapons calls [method add_wheel_weapons] instead, which takes
+## these off again. Each is rebindable and may be set to nothing.
+##
+## [b]Not part of [method add_movement].[/b] Half the family's games put the wheel on their
+## weapons, and in those a default wheel jump would be the wheel on two actions in every
+## table that forgot to say otherwise, which [method settle] leaves alone (both rows default
+## to it) and the player meets as a jump on every weapon change. Opting in is one call; a
+## forgotten one is a wheel that does nothing, which is visible, not one that does two things.
+##
+## [b]A wheel tick is a press and a release in one event pair[/b], so it is never "held" when
+## anything polls; dot-player-controller's `DotFpsSampler` latches presses between samples
+## (its API 5) so each tick reaches the command as one press of jump.
+func add_wheel_jump(group: String = "") -> DotMenuBindings:
+	add_extra(JUMP_ACTION, WHEEL_JUMP_UP_SETTING, "Jump (wheel up)", "Wheel up", group)
+	add_extra(JUMP_ACTION, WHEEL_JUMP_DOWN_SETTING, "Jump (wheel down)", "Wheel down", group)
+	return self
+
+
+## Takes the wheel's jump rows off again ([method add_wheel_jump]). True if there were any.
+func remove_wheel_jump() -> bool:
+	var a := remove_setting(WHEEL_JUMP_UP_SETTING)
+	var b := remove_setting(WHEEL_JUMP_DOWN_SETTING)
+	return a or b
+
+
+## The wheel goes through the weapons: "Previous weapon" on Wheel up and "Next weapon" on
+## Wheel down, as the action's own rows, and the wheel's jump rows (if any) are taken off.
+## For every game with weapons or items to switch between. The defaults are the stock
+## actions ([constant WEAPON_PREVIOUS_ACTION], [constant WEAPON_NEXT_ACTION]); a game with
+## actions of its own passes them. The game still does the cycling: it reads the actions
+## from its own input handler (`event.is_action_pressed(WEAPON_NEXT_ACTION)`), because only
+## it knows what a slot is.
+func add_wheel_weapons(
+	previous_action: StringName = WEAPON_PREVIOUS_ACTION, next_action: StringName = WEAPON_NEXT_ACTION,
+	group: String = "Weapons",
+	previous_setting: StringName = WEAPON_PREVIOUS_SETTING, next_setting: StringName = WEAPON_NEXT_SETTING
+) -> DotMenuBindings:
+	var _off := remove_wheel_jump()
+	add(previous_action, previous_setting, "Previous weapon", "Wheel up", group)
+	add(next_action, next_setting, "Next weapon", "Wheel down", group)
 	return self
 
 
@@ -174,12 +300,15 @@ func free_key(candidates: Array) -> String:
 	return str(candidates.back()) if not candidates.is_empty() else ""
 
 
+## Removes [param action]'s own row and any extra keys it has. True if there was any.
 func remove(action: StringName) -> bool:
-	for i in range(rows.size()):
+	var found := false
+	for i in range(rows.size() - 1, -1, -1):
 		if rows[i]["action"] == action:
+			_take_off_extra(rows[i])
 			rows.remove_at(i)
-			return true
-	return false
+			found = true
+	return found
 
 
 ## Declares a binding setting for every row the schema does not already have. A row whose
@@ -208,9 +337,10 @@ func row_for_setting(key: StringName) -> Dictionary:
 	return {}
 
 
+## The action's own row, never one of its extra keys.
 func row_for_action(action: StringName) -> Dictionary:
 	for row in rows:
-		if row["action"] == action:
+		if row["action"] == action and not is_extra(row):
 			return row
 	return {}
 
@@ -238,7 +368,12 @@ func rows_in(group: String) -> Array[Dictionary]:
 ## cleared by hand would otherwise leave Forward bound to nothing, and the menu that could
 ## put it back is reached with a key the same file may have broken. Unbinding on purpose is
 ## binding the key to something else, which swaps (see [method rebind]).
+##
+## An extra row ([method add_extra]) adds its one event instead, and [constant NONE] takes it
+## off; what it returns then is [constant NONE].
 func apply_row(row: Dictionary, text: String) -> String:
+	if is_extra(row):
+		return _apply_extra(row, text)
 	var wanted := text if DotInputBinding.is_bound(text) else str(row["default"])
 	var bound := DotInputBinding.apply(row["action"], wanted)
 
@@ -248,7 +383,61 @@ func apply_row(row: Dictionary, text: String) -> String:
 		})
 		bound = DotInputBinding.apply(row["action"], str(row["default"]))
 
+	# dot-ui's apply replaced every event on the action, the extra keys' with them.
+	for other in rows:
+		if is_extra(other) and other["action"] == row["action"] and _extra_events.has(other["setting"]):
+			var ev: InputEvent = _extra_events[other["setting"]]
+			if not InputMap.action_has_event(row["action"], ev):
+				InputMap.action_add_event(row["action"], ev)
 	return bound
+
+
+func _apply_extra(row: Dictionary, text: String) -> String:
+	var action: StringName = row["action"]
+	if not InputMap.has_action(action):
+		InputMap.add_action(action)
+	_take_off_extra(row)
+	if is_none(text):
+		row["bound"] = NONE
+		return NONE
+	var event := DotInputBinding.from_text(text)
+	if event == null:
+		event = DotInputBinding.from_text(str(row["default"]))
+	if event == null:
+		row["bound"] = NONE
+		return NONE
+	if not InputMap.action_has_event(action, event):
+		InputMap.action_add_event(action, event)
+	_extra_events[row["setting"]] = event
+	row["bound"] = DotInputBinding.to_text(event)
+	return str(row["bound"])
+
+
+# Takes off exactly the event this extra row added, and nothing the action's own row has.
+func _take_off_extra(row: Dictionary) -> void:
+	if not is_extra(row) or not _extra_events.has(row["setting"]):
+		return
+	var ev: InputEvent = _extra_events[row["setting"]]
+	var _gone := _extra_events.erase(row["setting"])
+	var action: StringName = row["action"]
+	if not InputMap.has_action(action):
+		return
+	# Another row of the action may be on the same input; then it stays.
+	var own := row_for_action(action)
+	if not own.is_empty():
+		var own_ev := DotInputBinding.from_text(DotInputBinding.describe_action(action))
+		if own_ev != null and same_input(own_ev, ev):
+			return
+	for other_setting in _extra_events:
+		if same_input(_extra_events[other_setting], ev):
+			return
+	if InputMap.action_has_event(action, ev):
+		InputMap.action_erase_event(action, ev)
+
+
+## Whether [param text] is the stored "no key" of an extra row.
+static func is_none(text: String) -> bool:
+	return text.strip_edges().to_lower() == NONE.to_lower()
 
 
 ## Every row from [param settings] onto the [InputMap]. Boot, and a reset. Settles any
@@ -297,20 +486,30 @@ func settle(settings: DotSettingsManager) -> PackedStringArray:
 			var on_key: Array = g[1]
 			if on_key.size() < 2:
 				continue
-			var owners: Array = []
+			# An extra key never wins against an action's own row: it is new beside a key a
+			# player may have put on the wheel long before it existed, and that choice stays.
+			var contenders: Array = []
 			for row in on_key:
+				if not is_extra(row):
+					contenders.append(row)
+			if contenders.is_empty():
+				contenders = on_key
+			var owners: Array = []
+			for row in contenders:
 				var d := DotInputBinding.from_text(_default_text(row, settings))
 				if d != null and same_input(d, g[0]):
 					owners.append(row)
 			if owners.size() == on_key.size():
 				continue
 			if owners.is_empty():
-				owners.append(on_key[0])
+				owners.append(contenders[0])
 			for row in on_key:
 				if owners.has(row):
 					continue
 				var was := stored(row, settings)
-				var to := _default_text(row, settings)
+				# An extra goes to nothing, not to its default: its default is usually the
+				# very key it lost.
+				var to := NONE if is_extra(row) else _default_text(row, settings)
 				var res := settings.set_value(row["setting"], to, &"settle")
 				if res.ok:
 					moved.append("%s: %s -> %s" % [str(row["label"]), was, to])
@@ -356,8 +555,12 @@ func apply_setting(key: StringName, value: Variant) -> bool:
 ## named the wheel says "Mouse 4" for it; the Controls page draws this text, and "Mouse 4"
 ## sends a player to their thumb button. On a dot-ui that has no names the round trip
 ## gives back the same text.
+##
+## An extra row set to nothing is [constant NONE].
 func stored(row: Dictionary, settings: DotSettingsManager) -> String:
 	var text := settings.get_string(row["setting"], str(row["default"])) if settings != null else str(row["default"])
+	if is_extra(row) and is_none(text):
+		return NONE
 	var event := DotInputBinding.from_text(text)
 	if event == null:
 		event = DotInputBinding.from_text(str(row["default"]))
@@ -368,6 +571,9 @@ func stored(row: Dictionary, settings: DotSettingsManager) -> String:
 static func shown(row: Dictionary) -> String:
 	if row.is_empty():
 		return "—"
+	if is_extra(row):
+		var b := str(row.get("bound", row["default"]))
+		return "—" if is_none(b) or b == "" else b
 	var text := DotInputBinding.describe_action(row["action"])
 	return text if text != DotInputBinding.UNBOUND else "—"
 
@@ -406,6 +612,14 @@ func rebind(row: Dictionary, text: String, settings: DotSettingsManager) -> DotR
 	var old := stored(row, settings)
 	var other := row_using(text, key, settings)
 
+	# Only an extra key can be on nothing, and only an extra key can be given nothing. An
+	# action's own row would fall back to its default and leave the key on two actions.
+	if is_none(text) and not is_extra(row):
+		return DotResult.fail(DotError.CODE_INVALID, "%s needs a key." % str(row["label"]))
+	if is_none(old) and not other.is_empty() and not is_extra(other):
+		return DotResult.fail(DotError.CODE_CONFLICT,
+			"%s is %s. Give %s another key first." % [text, str(other["label"]), str(other["label"])])
+
 	var res := settings.set_value(key, text)
 	if not res.ok:
 		return res
@@ -418,7 +632,11 @@ func rebind(row: Dictionary, text: String, settings: DotSettingsManager) -> DotR
 		if not swapped.ok:
 			return swapped
 		var _moved := apply_row(other, old)
+		if is_none(old):
+			return DotResult.success("%s is on %s now, and %s is on nothing." % [str(row["label"]), text, str(other["label"])])
 		return DotResult.success("%s is on %s now, and %s moved to %s." % [str(row["label"]), text, str(other["label"]), old])
+	if is_none(text):
+		return DotResult.success("%s is on nothing now." % str(row["label"]))
 	return DotResult.success("%s is on %s now." % [str(row["label"]), text])
 
 

@@ -11,8 +11,8 @@ extends Node
 ## [b]CHECKS is the guard the section counter cannot be.[/b] A script error inside a test
 ## aborts THAT TEST, not the run; the section counter is satisfied because the section had
 ## already announced itself, and the total is what notices the checks that never ran.
-const SECTIONS := 21
-const CHECKS := 317
+const SECTIONS := 22
+const CHECKS := 338
 
 var _passed := 0
 var _failed := 0
@@ -50,6 +50,7 @@ func _run() -> void:
 	await _test_loadout_menu()
 	await _test_hud_follows()
 	_test_moved_defaults()
+	_test_wheel()
 
 	_line("")
 	_line("%d sections, %d passed, %d failed" % [_section_count, _passed, _failed])
@@ -1820,3 +1821,123 @@ class FakeNetManager extends RefCounted:
 
 	func perf_counters() -> Dictionary:
 		return counters.duplicate()
+
+
+# --- 22 ---------------------------------------------------------------------------
+
+func _wheel(index: MouseButton) -> InputEventMouseButton:
+	var e := InputEventMouseButton.new()
+	e.button_index = index
+	e.pressed = true
+	return e
+
+
+func _on_action(action: StringName, text: String) -> bool:
+	var ev := DotInputBinding.from_text(text)
+	for other in InputMap.action_get_events(action):
+		if DotMenuBindings.same_input(ev, other):
+			return true
+	return false
+
+
+func _test_wheel() -> void:
+	_section("Extra keys and the wheel")
+
+	# A game with nothing to switch: the wheel also jumps.
+	var k := _keys().add_wheel_jump()
+	var labels: Array = []
+	for row in k.rows_in("Movement"):
+		labels.append(str(row["label"]))
+	_check(labels.slice(4, 7) == ["Jump", "Jump (wheel up)", "Jump (wheel down)"],
+		"the wheel's jump rows are drawn right after Jump (%s)" % [labels])
+	_check(k.row_for_action(&"dot_fps_jump")["setting"] == &"bind_jump", "the action's own row is still the one row_for_action finds")
+	var s := DotSettingsSchema.new()
+	k.add_to_schema(s)
+	_check(s.has(DotMenuBindings.WHEEL_JUMP_UP_SETTING) and s.has(DotMenuBindings.WHEEL_JUMP_DOWN_SETTING),
+		"each extra key is a setting of its own")
+	var st := _manager(s)
+	k.apply_all(st)
+	_check(_on_action(&"dot_fps_jump", "Space") and _on_action(&"dot_fps_jump", "Wheel up") and _on_action(&"dot_fps_jump", "Wheel down"),
+		"Space and both wheel directions are all on jump at once")
+	_check(_wheel(MOUSE_BUTTON_WHEEL_UP).is_action_pressed(&"dot_fps_jump"), "a wheel tick is a press of jump")
+
+	var _f := k.apply_setting(&"bind_jump", "J")
+	_check(_on_action(&"dot_fps_jump", "J") and not _on_action(&"dot_fps_jump", "Space") and _on_action(&"dot_fps_jump", "Wheel up"),
+		"re-applying Jump's own key replaces only that key and keeps the wheel")
+	var _back := k.apply_setting(&"bind_jump", "Space")
+
+	var up := k.row_for_setting(DotMenuBindings.WHEEL_JUMP_UP_SETTING)
+	var res := k.rebind(up, "F", st)
+	_check(res.ok and st.get_string(DotMenuBindings.WHEEL_JUMP_UP_SETTING) == "F" and st.get_string(&"bind_flashlight") == "Wheel up",
+		"rebinding the wheel's jump onto a taken key swaps (%s)" % (str(res.value) if res.ok else res.error.message))
+	_check(_on_action(&"dot_fps_jump", "F") and not _on_action(&"dot_fps_jump", "Wheel up") and _on_action(&"dot_fps_jump", "Space")
+		and _on_action(&"test_flashlight", "Wheel up") and not _on_action(&"test_flashlight", "F"),
+		"and both halves land on the InputMap, Space untouched")
+
+	var down := k.row_for_setting(DotMenuBindings.WHEEL_JUMP_DOWN_SETTING)
+	var cleared := k.rebind(down, DotMenuBindings.NONE, st)
+	_check(cleared.ok and k.stored(down, st) == DotMenuBindings.NONE and not _on_action(&"dot_fps_jump", "Wheel down")
+		and DotMenuBindings.shown(down) == "—", "an extra key can be set to nothing")
+	_check(not k.rebind(k.row_for_action(&"dot_fps_forward"), DotMenuBindings.NONE, st).ok
+		and st.get_string(&"bind_forward") == "W", "an action's own row cannot")
+	var steal := k.rebind(down, "W", st)
+	_check(not steal.ok and steal.error.code == DotError.CODE_CONFLICT and st.get_string(&"bind_forward") == "W",
+		"a key on nothing is not swapped onto Forward, which would leave Forward on nothing")
+	var _r := k.rebind(down, "Wheel down", st)
+	_check(_on_action(&"dot_fps_jump", "Wheel down") and DotMenuBindings.shown(down) == "Wheel down", "and set back")
+
+	k.reset_all(st)
+	_check(st.get_string(DotMenuBindings.WHEEL_JUMP_UP_SETTING) == "Wheel up" and _on_action(&"dot_fps_jump", "Wheel up")
+		and st.get_string(&"bind_flashlight") == "F", "a reset puts the wheel back on jump")
+	st.queue_free()
+
+	# A document where the player had put the wheel on something before the wheel jumped.
+	var k2 := _keys().add_wheel_jump()
+	var s2 := DotSettingsSchema.new()
+	k2.add_to_schema(s2)
+	var m := _old_document_manager(s2, {"bind_flashlight": "Wheel up"})
+	k2.apply_all(m)
+	_check(m.get_string(&"bind_flashlight") == "Wheel up" and _on_action(&"test_flashlight", "Wheel up"),
+		"a key the player put on the wheel is kept when the wheel jump arrives")
+	_check(k2.stored(k2.row_for_setting(DotMenuBindings.WHEEL_JUMP_UP_SETTING), m) == DotMenuBindings.NONE
+		and not _on_action(&"dot_fps_jump", "Wheel up") and _on_action(&"dot_fps_jump", "Wheel down"),
+		"and that direction's jump goes to nothing, the other still jumps")
+	m.queue_free()
+
+	# A game with weapons: the wheel goes through them, and does not jump.
+	var w := _keys().add_wheel_jump().add_wheel_weapons()
+	_check(w.row_for_setting(DotMenuBindings.WHEEL_JUMP_UP_SETTING).is_empty() and w.row_for_setting(DotMenuBindings.WHEEL_JUMP_DOWN_SETTING).is_empty(),
+		"add_wheel_weapons takes the wheel's jump rows off")
+	var s3 := DotSettingsSchema.new()
+	w.add_to_schema(s3)
+	var m3 := _manager(s3)
+	w.apply_all(m3)
+	_check(w.key_for(DotMenuBindings.WEAPON_PREVIOUS_ACTION) == "Wheel up" and w.key_for(DotMenuBindings.WEAPON_NEXT_ACTION) == "Wheel down",
+		"previous weapon on wheel up, next on wheel down")
+	_check(not _on_action(&"dot_fps_jump", "Wheel up") and not _on_action(&"dot_fps_jump", "Wheel down") and _on_action(&"dot_fps_jump", "Space"),
+		"and jump is on Space alone")
+	_check(_wheel(MOUSE_BUTTON_WHEEL_DOWN).is_action_pressed(DotMenuBindings.WEAPON_NEXT_ACTION)
+		and not _wheel(MOUSE_BUTTON_WHEEL_DOWN).is_action_pressed(&"dot_fps_jump"), "a wheel tick is a weapon change, not a jump")
+	var own := _keys().add_wheel_weapons(&"test_prev", &"test_next")
+	_check(own.row_for_action(&"test_prev")["default"] == "Wheel up" and own.row_for_action(&"test_next")["setting"] == DotMenuBindings.WEAPON_NEXT_SETTING,
+		"a game's own actions, stored as the stock settings")
+	m3.queue_free()
+
+	# The Controls page: Delete clears an extra key's button, and only an extra key's.
+	var b := DotMenuKeyButton.new()
+	b.clearable = true
+	var got: Array = []
+	b.captured.connect(func(t: String) -> void: got.append(t))
+	add_child(b)
+	b.listen()
+	b._opened_on_frame = -1
+	var del := InputEventKey.new()
+	del.physical_keycode = KEY_DELETE
+	del.pressed = true
+	b._input(del)
+	_check(got == [DotMenuBindings.NONE] and b.prompt.contains("Del"), "Delete on an extra key's button sets it to nothing")
+	b.queue_free()
+
+	for a in [DotMenuBindings.WEAPON_PREVIOUS_ACTION, DotMenuBindings.WEAPON_NEXT_ACTION]:
+		if InputMap.has_action(a):
+			InputMap.erase_action(a)

@@ -688,6 +688,10 @@ func _select(row: DotMenuRow) -> Control:
 func _key_button(row: DotMenuRow) -> Control:
 	var button := DotMenuKeyButton.new(kit)
 	button.binding = bindings.stored(row.binding_row, settings) if bindings != null else str(row.binding_row.get("default", ""))
+	# An extra key may be on nothing, which the button draws as its dash.
+	button.clearable = DotMenuBindings.is_extra(row.binding_row)
+	if DotMenuBindings.is_none(button.binding):
+		button.binding = ""
 	button.captured.connect(func(text: String) -> void: _rebind(row.binding_row, text))
 	return button
 

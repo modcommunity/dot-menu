@@ -42,6 +42,19 @@ A theme picked in the menu restyles the HUD at once, in every game, through one 
 
 **`stored()` returns the effective binding, not the stored text.** A document cleared by hand stores `""` for a key really on its default; comparing the text let a default key be bound to a second action with no conflict found. And it is in dot-ui's **current spelling**: a document from before dot-ui named the wheel stores `Mouse 4`, which the Controls page would draw as a thumb button; the round trip through `DotInputBinding` draws `Wheel up` (and changes nothing on an older dot-ui).
 
+### Extra keys, and the wheel
+
+An action may have more than one key: `add_extra(action, setting, label, default)` is a row of its own that ADDS its event to the action instead of replacing what is there (dot-ui's `DotInputBinding.apply` replaces, on purpose). It has its own setting, swaps like any row, is drawn right after its action's row, and is the only kind of row that may be on nothing: it stores `"None"` (`DotMenuBindings.NONE`; `""` still means "the default", as for every row), and Delete or Backspace clears it on the Controls page. A row rather than a second column, because every reader of the table (schema, Controls page, help screen, `settle`, the swap) already understands rows. `settle` never lets an extra key win against an action's own row, and a losing extra goes to nothing, not to its default: an extra added under a document where the player already had the wheel on something keeps the player's choice.
+
+The wheel is one call per game:
+
+| Game | Call | Result |
+| --- | --- | --- |
+| nothing to switch between | `keys.add_wheel_jump()` after `add_movement()` (or after a `ROWS` loop) | "Jump (wheel up)" and "Jump (wheel down)" on `dot_fps_jump`, as `bind_jump_wheel_up` / `bind_jump_wheel_down` |
+| weapons or items | `keys.add_wheel_weapons()` (stock `dot_menu_weapon_previous` / `_next`) or `add_wheel_weapons(&"my_prev", &"my_next")` | "Previous weapon" on Wheel up, "Next weapon" on Wheel down, stored as `bind_weapon_previous` / `bind_weapon_next`; takes any wheel-jump rows off. The game reads the actions in its own input handler and cycles its own slots |
+
+`add_movement()` does not include the wheel jump: half the family cycles weapons on it, and a default there would be the wheel on two actions in every weapon game that forgot to opt out. A delivered game calls these through `has_method` (API 10). A wheel tick is a press and a release in one pair of events and is never "held" when polled, so the jump needs dot-player-controller's `DotFpsSampler` latch (its API 5), and a client that forwards only mouse motion to `handle_event` must forward every event.
+
 ### A default that moved
 
 Rows' defaults move when the family takes a key for everybody (help on H, the map menu on M, loadout on B, the view on F5, push to talk on V, chat on Y and U). A settings document from before that still says the old key, and the player never chose it. Three layers put it right, cheapest first:

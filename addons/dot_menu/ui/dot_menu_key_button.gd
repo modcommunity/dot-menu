@@ -29,6 +29,15 @@ var listening: bool = false
 ## The words beside the key while it listens.
 var prompt: String = "Press a key  ·  Esc cancels"
 
+## Whether Delete (or Backspace) while listening sets the row to nothing, emitting
+## `DotMenuBindings.NONE`. Only an extra key ([method DotMenuBindings.add_extra]) is: an
+## action's own row with no key is a control the player cannot use. Set before it is drawn.
+var clearable: bool = false:
+	set(value):
+		clearable = value
+		if value and prompt == "Press a key  ·  Esc cancels":
+			prompt = "Press a key  ·  Del clears  ·  Esc cancels"
+
 var _cap: PanelContainer = null
 var _cap_label: Label = null
 var _hint: Label = null
@@ -87,6 +96,10 @@ func _input(event: InputEvent) -> void:
 
 		if key.physical_keycode == KEY_ESCAPE:
 			_stop()
+			return
+
+		if clearable and (key.physical_keycode == KEY_DELETE or key.physical_keycode == KEY_BACKSPACE):
+			_finish(DotMenuBindings.NONE)
 			return
 
 		# A modifier on its own is a binding ("Ctrl" is Duck). Pressed with another key it

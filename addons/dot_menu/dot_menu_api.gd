@@ -40,5 +40,8 @@ extends RefCounted
 #    has DotSettingsDef.previous_defaults.
 # 9: DotMenuFrameClock (wall-clock frame times by part); DotMenuNetStat.frames, net_source,
 #    net_manager() and the level-3 frame, renderer and prediction rows.
-const LEVEL := 9
+# 10: extra keys on one action: DotMenuBindings.add_extra(), is_extra(), is_none(), NONE,
+#     remove_setting(); the wheel: add_wheel_jump(), remove_wheel_jump(), add_wheel_weapons()
+#     and the WEAPON_*/WHEEL_JUMP_* constants; DotMenuKeyButton.clearable (Delete clears).
+const LEVEL := 10
 const OLDEST := 1
