@@ -312,6 +312,11 @@ func _push(m: Object) -> void:
 		b["pin"] = int(m.get(&"packets_in")) - _base_pin
 		b["pout"] = int(m.get(&"packets_out")) - _base_pout
 		b["rtt"] = float(m.call(&"rtt"))
+		# Over WebSocket the ping is one heartbeat every couple of seconds, held between
+		# them. Marking the buckets where it moved lets the line show where it was measured
+		# instead of drawing a held number as if it were a reading every bucket.
+		var prev := float(_buckets[_buckets.size() - 1].get("rtt", -1.0)) if not _buckets.is_empty() else -1.0
+		b["fresh"] = float(b["rtt"]) >= 0.0 and not is_equal_approx(float(b["rtt"]), prev)
 		_rebase(m)
 
 	_buckets.append(b)
@@ -625,22 +630,39 @@ func _draw_arrivals(rect: Rect2) -> void:
 
 
 ## Ping across the arrivals graph, on its own scale, labelled in the gutter in its colour.
+##
+## The gutter's bottom row is the [i]current[/i] ping, the number the line ends on, and the
+## scale is written on the dashed midline as half of it. The first draw wrote the scale's top
+## at the bottom of the gutter, right beside a line that sits low on its own scale (the scale
+## is at least 1.2x the window's peak), so "200 ms" next to a flat line read as a 200 ms ping
+## while the readout said far less.
 func _draw_ping(rect: Rect2) -> void:
 	var points := PackedVector2Array()
+	var samples := PackedVector2Array()
 	for i in _buckets.size():
 		var rtt := float(_buckets[i]["rtt"])
 		if rtt < 0.0:
 			continue
-		points.append(Vector2(_bar_x(rect, i) + BAR_W * 0.5, rect.end.y - clampf(rtt / _rtt_scale, 0.0, 1.0) * rect.size.y))
-	var colour := _ping_colour(float(_fig.get("rtt", -1.0)))
+		var at := Vector2(_bar_x(rect, i) + BAR_W * 0.5, rect.end.y - clampf(rtt / _rtt_scale, 0.0, 1.0) * rect.size.y)
+		points.append(at)
+		if bool(_buckets[i].get("fresh", false)):
+			samples.append(at)
+	var now := float(_fig.get("rtt", -1.0))
+	var colour := _ping_colour(now)
 	var fs := _font_size() - 2
+	var lx := rect.position.x - GUTTER
 	if rect.size.y >= float(fs) * 4.0 + 8.0:
-		var lx := rect.position.x - GUTTER
 		draw_string(_font(), Vector2(lx, rect.end.y - float(fs) - 4.0), "ping", HORIZONTAL_ALIGNMENT_LEFT, GUTTER - 6.0, fs, colour)
-		draw_string(_font(), Vector2(lx, rect.end.y - 3.0), "%d ms" % roundi(_rtt_scale), HORIZONTAL_ALIGNMENT_LEFT, GUTTER - 4.0, fs - 1, Color(colour, 0.8))
+		draw_string(_font(), Vector2(lx, rect.end.y - 3.0), ("%d ms" % roundi(now)) if now >= 0.0 else "—", HORIZONTAL_ALIGNMENT_LEFT, GUTTER - 4.0, fs - 1, Color(colour, 0.8))
+	if rect.size.y >= float(fs) * 6.0 + 8.0:
+		# Right-aligned against the graph, on the dashed rule it names.
+		draw_string(_font(), Vector2(lx, rect.get_center().y + float(fs) * 0.5 - 1.0), "%d ms" % roundi(_rtt_scale * 0.5),
+			HORIZONTAL_ALIGNMENT_RIGHT, GUTTER - 6.0, fs - 1, Color(colour, 0.7))
 	if points.size() >= 2:
 		draw_polyline(points, Color(0, 0, 0, 0.5), 3.5, true)
 		draw_polyline(points, colour, 1.6, true)
+	for at in samples:
+		draw_circle(at, 2.5, colour)
 	if not points.is_empty():
 		draw_circle(points[points.size() - 1], 3.0, colour)
 

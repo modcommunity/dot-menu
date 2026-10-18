@@ -182,7 +182,10 @@ func _traffic(meter: ShotMeter, seconds: float) -> void:
 			for k in 6:
 				meter.arrive(0 if meter.transport == "websocket" else 3, 1200)
 		meter.leave(rng.randi_range(0, 1), rng.randi_range(60, 140))
-		meter.note_rtt(42.0 + 9.0 * sin(float(n) * 0.07) + (70.0 if n % 120 > 110 else 0.0))
+		# Over WebSocket the ping is a heartbeat, a sample every so often held between, which
+		# is what the line's sample dots are for; ENet's is fresh every frame.
+		if meter.transport != "websocket" or n % 45 == 0:
+			meter.note_rtt(42.0 + 9.0 * sin(float(n) * 0.07) + (70.0 if n % 120 > 110 else 0.0))
 		if meter.net != null:
 			meter.net.frame(n)
 		# The odd slow frame, so the frame strip has something to stack.

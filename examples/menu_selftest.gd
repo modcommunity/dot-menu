@@ -12,7 +12,7 @@ extends Node
 ## aborts THAT TEST, not the run; the section counter is satisfied because the section had
 ## already announced itself, and the total is what notices the checks that never ran.
 const SECTIONS := 21
-const CHECKS := 316
+const CHECKS := 317
 
 var _passed := 0
 var _failed := 0
@@ -1032,6 +1032,11 @@ func _test_net_stat() -> void:
 		ns._push(meter)
 	var d := ns.describe()
 	_check(bool(d["connected"]) and is_equal_approx(float(d["rtt"]), 40.0), "it reads the meter it is given (%s)" % [d])
+	# A held ping is one sample, not one a bar: the line marks where it was measured.
+	var fresh := 0
+	for b: Dictionary in ns._buckets:
+		fresh += 1 if bool(b.get("fresh", false)) else 0
+	_check(fresh == 1, "a ping held across bars is marked as one sample (%d)" % fresh)
 	# Twenty-five bars, so the last second (twenty) is all traffic: the first only takes the
 	# baseline, because a meter's totals are not arrivals since a bar.
 	_check(is_equal_approx(float(d["in_rate"]), 4608.0 / ns.bucket_sec) and is_equal_approx(float(d["out_rate"]), 100.0 / ns.bucket_sec),

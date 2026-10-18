@@ -14,6 +14,8 @@ Three things decided by looking at it rather than by reasoning about it:
 
 **A browser's arrivals are one colour, honestly.** Godot's WebSocket peer reports every packet on channel 0 (dot-core's `dual_transport_selftest` pins it), so over WebSocket the incoming bars cannot be split and the legend says so; departures are split on both, because the channel is known at the send. Jitter is ENet's own round-trip variance where it has one: the heartbeat samples every two seconds and carries the frame it waited for, which read ±36 ms against an 8 ms ping in a slow process.
 
+**The ping line marks its samples, and the gutter names the current ping, not the scale.** Over WebSocket the ping is one heartbeat every two seconds, held between them, so a 3-5 second graph holds one to three real readings; a dot marks each bucket where the value changed, and the flat runs between them are the hold. The gutter's bottom row is the current ping (the number the line ends on) and the dashed midline carries half the scale. The first version wrote the scale's top (at least 1.2x the window's peak) at the bottom of the gutter beside a line sitting low on that scale, which read as "ping 200 ms" while the readout said 60.
+
 `tools/screenshot.sh` renders `net_stat_1/2/3`, a tall one in the paper theme over WebSocket, and the Advanced page, over made-up traffic shaped like a client's. dot-server-deploy's `wipeout_client` proves the chain end to end over a real socket (a delivered game's console, its menu, the link's meter).
 
 More that a picture decided:
