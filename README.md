@@ -122,7 +122,9 @@ server.scoreboard_extra = func(): return {"teams": [{"id": 1, "name": "Red", "co
     "header": {"Time left": "7:42"}}
 ```
 
-Offline, or for a board that is entirely your own numbers, set `menu.scoreboard.source` to a function returning the same dictionary. Columns are data (`key`, `title`, `kind` of text, number, ping, duration, avatar or custom, `width`, `format`, `build`), `group_by` and `sort_by` choose teams and order, and `build_header`, `build_team_header` and `build_row` replace those pieces with your own.
+Offline, or for a board that is entirely your own numbers, set `menu.scoreboard.source` to a function returning the same dictionary. Columns are data (`key`, `title`, `kind` of text, number, ping, duration, avatar or custom, `width`, `format`, `build`, `required`, `hidden`), `group_by` and `sort_by` choose teams and order, and `build_header`, `build_team_header` and `build_row` replace those pieces with your own.
+
+**Players choose their columns, with no game code.** Settings > General > Scoreboard lists the live board's columns by title as switches and stores the choice in `scoreboard_hidden` (column keys; `+key` is "show this one though the game hides it"). A column with `"required": true` cannot be hidden (the `name` column is required unless it says `"required": false`); one with `"hidden": true` starts hidden and the player's choice wins. Choices are keyed by column key, so reordering or retitling columns keeps them and a key no column has is ignored. A column with no `title` (the avatar) gets no switch. `build_row` is given only the visible columns.
 
 A game whose Escape is its own (a garage, a lobby) sets `menu.open_on_escape = false` and opens the menu some other way; Escape still closes it.
 
@@ -200,6 +202,7 @@ The stock settings and their defaults:
 | `shake_scale` | 1.0 | 0 to 2 | device |
 | `allow_flashes` | on | | device |
 | `ui_theme` | midnight | the themes | account |
+| `scoreboard_hidden` | empty | | device |
 | `show_fps` | off | | device |
 | `net_stat` | 0 (off) | 0 to 3 | device |
 | `net_stat_height` | 96 | 32 to 320 pixels | device |

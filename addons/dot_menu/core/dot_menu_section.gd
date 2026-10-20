@@ -19,6 +19,11 @@ var rows: Array[DotMenuRow] = []
 var binding_group: String = ""
 
 
+## DYNAMIC: `func() -> Array[DotMenuRow]`, asked each time the page is drawn and drawn after
+## [member rows]. For a card whose rows exist only at runtime (the live scoreboard's columns).
+var rows_from: Callable = Callable()
+
+
 static func make(p_title: String, p_id: StringName = &"") -> DotMenuSection:
 	var s := DotMenuSection.new()
 	s.title = p_title

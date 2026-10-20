@@ -27,12 +27,18 @@ extends Control
 ## `scoreboard_received` signal.
 ##
 ## [b]Customising it, from a column to the whole thing.[/b] [member columns] are data —
-## `{key, title, kind, width, align, format, build}` — and a `kind` is text, number, ping,
-## duration, avatar or custom. [member decorate] edits each row before it is drawn (a face
+## `{key, title, kind, width, align, format, build, required, hidden}` — and a `kind` is text,
+## number, ping, duration, avatar or custom. [member decorate] edits each row before it is drawn (a face
 ## from a client-side cache, a colour). [member group_by] and [member sort_by] decide teams
 ## and order. And [member build_header], [member build_team_header] and [member build_row]
 ## replace the default pieces outright, each given the kit, so a game whose board looks
 ## nothing like this one still gets the feed, the hold key and the theme.
+##
+## [b]A player picks their columns.[/b] The `scoreboard_hidden` setting ([method read_settings])
+## hides columns by key, in Settings > General > Scoreboard, for every game with no game code.
+## A column with `"required": true` (the `name` column unless it says otherwise) cannot be
+## hidden; one with `"hidden": true` starts hidden and the player may turn it on. See
+## [method column_hidden].
 ##
 ## [b]Held, not opened.[/b] It never takes the mouse or the keyboard and never stops the
 ## player moving — a scoreboard is glanced at mid-round — so it is not one of [DotMenu]'s
@@ -40,6 +46,9 @@ extends Control
 ## menu over it.
 
 const CHANNEL := "menu.scoreboard"
+
+## The stock setting holding the player's column choices. See [method parse_choices].
+const SETTING := &"scoreboard_hidden"
 
 signal opened()
 signal closed()
@@ -106,6 +115,12 @@ var refresh_sec: float = 0.5
 var spectators_title: String = "Spectating"
 
 var snapshot: Dictionary = {}
+
+## What the player chose, by column key: true hides it, false shows it even when the game's
+## column says `"hidden": true`. A key with no entry is the game's default. Keyed by column
+## key rather than position or title so a game that reorders or retitles its columns keeps
+## every player's choice, and a key no column has is simply never asked about.
+var player_hidden: Dictionary = {}
 
 var _feed: Object = null
 var _window: PanelContainer = null
@@ -204,6 +219,99 @@ func remove_column(key: StringName) -> bool:
 			columns.remove_at(i)
 			return true
 	return false
+
+
+## Whether the column keyed [param key] is hidden now: the player's choice if they made one,
+## else the column's own `"hidden"`; never a required column. An unknown key is not hidden.
+func column_hidden(column: Dictionary) -> bool:
+	if column_required(column):
+		return false
+	var key := StringName(str(column.get("key", "")))
+	if player_hidden.has(key):
+		return bool(player_hidden[key])
+	return bool(column.get("hidden", false))
+
+
+## True for a column the player may not hide: `"required": true`, and by default the name
+## (a board with no names tells nobody anything).
+static func column_required(column: Dictionary) -> bool:
+	return bool(column.get("required", str(column.get("key", "")) == "name"))
+
+
+## The columns that are drawn, in order. Titles, rows and a game's `build_row` all use this,
+## so any subset lays out the same way.
+func visible_columns() -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for c in columns:
+		if not column_hidden(c):
+			out.append(c)
+	return out
+
+
+## The columns a player is offered a switch for: titled and not required.
+func optional_columns() -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for c in columns:
+		if not column_required(c) and str(c.get("title", "")) != "":
+			out.append(c)
+	return out
+
+
+## Hides or shows the column keyed [param key] by the player's choice, redrawing an open board.
+func set_column_hidden(key: StringName, hide: bool) -> void:
+	player_hidden[key] = hide
+	_changed_columns()
+
+
+## The `scoreboard_hidden` setting's text: `ping,seconds` hides those; `+best` shows `best`
+## though the game hides it. Tokens rather than a bare list so "the player chose to show it"
+## survives, which a plain hidden set could not say.
+static func parse_choices(text: String) -> Dictionary:
+	var out := {}
+	for token in text.split(",", false):
+		var t := token.strip_edges()
+		if t.begins_with("+"):
+			if t.length() > 1:
+				out[StringName(t.substr(1))] = false
+		elif t != "":
+			out[StringName(t)] = true
+	return out
+
+
+static func format_choices(choices: Dictionary) -> String:
+	var parts := PackedStringArray()
+	var keys := choices.keys()
+	keys.sort()
+	for k in keys:
+		parts.append(str(k) if bool(choices[k]) else "+" + str(k))
+	return ",".join(parts)
+
+
+## Reads the `scoreboard_hidden` setting and redraws if it changed. A schema without it
+## leaves every column to the game.
+func read_settings(settings: DotSettingsManager) -> void:
+	var text := ""
+	if settings != null and settings.schema != null and settings.schema.has(SETTING):
+		text = settings.get_string(SETTING, "")
+	var parsed := parse_choices(text)
+	if parsed == player_hidden:
+		return
+	player_hidden = parsed
+	_changed_columns()
+
+
+func _changed_columns() -> void:
+	DotLog.debug(CHANNEL, "columns changed", {"hidden": ",".join(hidden_keys())})
+	if visible:
+		redraw()
+
+
+func hidden_keys() -> PackedStringArray:
+	var out := PackedStringArray()
+	for c in columns:
+		if column_hidden(c):
+			out.append(str(c.get("key", "")))
+	return out
 
 
 # --- The feed ---------------------------------------------------------------------
@@ -435,7 +543,7 @@ func _team_block(team: Dictionary, members: Array) -> Control:
 	if members.is_empty():
 		list.add_child(kit.paragraph("Nobody yet.", kit.size_small, kit.palette.dim))
 	for r in members:
-		var drawn: Control = build_row.call(kit, r, columns) if build_row.is_valid() else _row(r)
+		var drawn: Control = build_row.call(kit, r, visible_columns()) if build_row.is_valid() else _row(r)
 		if drawn != null:
 			list.add_child(drawn)
 	return block
@@ -472,7 +580,7 @@ func _column_titles() -> Control:
 	pad.add_theme_constant_override(&"margin_left", 18 + ROW_PAD)
 	pad.add_theme_constant_override(&"margin_right", 18 + ROW_PAD)
 	pad.add_child(line)
-	for c in columns:
+	for c in visible_columns():
 		var l := kit.label(str(c.get("title", "")), kit.size_small - 1, kit.palette.dim, true)
 		_size_cell(l, c)
 		line.add_child(l)
@@ -491,7 +599,7 @@ func _row(row: Dictionary) -> Control:
 	line.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	line.add_theme_constant_override(&"separation", 12)
 	panel.add_child(line)
-	for c in columns:
+	for c in visible_columns():
 		var cell := _cell(c, row)
 		_size_cell(cell, c)
 		line.add_child(cell)
@@ -594,6 +702,6 @@ func ping_colour(ms: int) -> Color:
 
 func describe() -> Dictionary:
 	return {
-		"open": visible, "columns": columns.size(), "rows": (snapshot.get("players", []) as Array).size(),
+		"open": visible, "columns": columns.size(), "hidden": hidden_keys(), "rows": (snapshot.get("players", []) as Array).size(),
 		"teams": teams().size(), "fed": _feed != null, "source": source.is_valid(),
 	}

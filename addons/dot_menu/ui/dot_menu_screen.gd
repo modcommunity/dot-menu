@@ -417,6 +417,10 @@ func _draw_section(section: DotMenuSection) -> void:
 	for row in section.rows:
 		if _row_shown(row):
 			drawable.append(row)
+	if section.rows_from.is_valid():
+		for row in (section.rows_from.call() as Array):
+			if row is DotMenuRow and _row_shown(row):
+				drawable.append(row)
 	var group_rows: Array[Dictionary] = []
 	if section.binding_group != "" and bindings != null:
 		group_rows = bindings.rows_in(section.binding_group)

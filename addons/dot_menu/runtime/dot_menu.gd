@@ -207,6 +207,7 @@ func setup() -> DotResult:
 	if settings != null and not settings.changed.is_connected(_on_setting_changed):
 		settings.changed.connect(_on_setting_changed)
 	_apply_net_stat()
+	scoreboard.read_settings(settings)
 	# A HUD followed before setup was drawn in the default palette; now the player's.
 	_style_huds()
 	_scale_huds()
@@ -372,6 +373,9 @@ func _last_group() -> String:
 ## catalogue still has — the config may have narrowed it after the schema was declared.
 func _wire_stock_rows() -> void:
 	for p in pages:
+		var board_section := p.find_section(&"scoreboard")
+		if board_section != null and not board_section.rows_from.is_valid():
+			board_section.rows_from = scoreboard_column_rows
 		var theme_row := p.find_row(&"ui_theme")
 		if theme_row != null and theme_row.options.is_empty():
 			theme_row.options = themes.options()
@@ -1073,6 +1077,9 @@ func _on_setting_changed(key: StringName, value: Variant, _why: StringName) -> v
 			_scale_huds()
 		&"show_fps", &"net_stat", &"net_stat_height", &"net_stat_position":
 			_apply_net_stat()
+		DotMenuScoreboard.SETTING:
+			if scoreboard != null:
+				scoreboard.read_settings(settings)
 		_:
 			if bindings != null:
 				var _bound := bindings.apply_setting(key, value)
@@ -1089,6 +1096,31 @@ func _apply_net_stat() -> void:
 	if _fps_label != null:
 		_fps_label.visible = config.fps_counter and level == 0 and _declared(&"show_fps") \
 			and settings.get_bool(&"show_fps", false)
+
+
+## One switch per column the live scoreboard has and a player may hide, titled as the board
+## titles it. Built each time the page is drawn, because a game sets its columns after the
+## menu exists and may change them between rounds. Writes the `scoreboard_hidden` setting, so
+## the choice is saved like any other and [method _on_setting_changed] redraws an open board.
+func scoreboard_column_rows() -> Array[DotMenuRow]:
+	var out: Array[DotMenuRow] = []
+	if scoreboard == null or not _declared(DotMenuScoreboard.SETTING):
+		return out
+	for c in scoreboard.optional_columns():
+		var key := StringName(str(c.get("key", "")))
+		var shown_row := DotMenuRow.live_toggle(str(c.get("title", "")), "",
+			func() -> bool: return not scoreboard.column_hidden(c),
+			func(on: bool) -> void: _set_scoreboard_column(key, not on))
+		out.append(shown_row.named(StringName("scoreboard_col_" + String(key))))
+	return out
+
+
+func _set_scoreboard_column(key: StringName, hide: bool) -> void:
+	var choices := scoreboard.player_hidden.duplicate()
+	choices[key] = hide
+	var res := settings.set_value(DotMenuScoreboard.SETTING, DotMenuScoreboard.format_choices(choices))
+	if not res.ok:
+		DotLog.warn(CHANNEL, "the scoreboard columns were refused", {"why": res.error.message})
 
 
 func _declared(key: StringName) -> bool:

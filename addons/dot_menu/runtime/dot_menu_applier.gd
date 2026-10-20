@@ -65,6 +65,7 @@ const APPLIES: Array[StringName] = [
 ]
 const APPLIED_BY_MENU: Array[StringName] = [
 	&"ui_theme", &"hud_scale", &"show_fps", &"net_stat", &"net_stat_height", &"net_stat_position",
+	&"scoreboard_hidden",
 ]
 
 ## Stock keys only the game can apply, through [method on]. See the class note.

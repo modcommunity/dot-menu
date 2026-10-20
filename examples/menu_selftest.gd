@@ -12,7 +12,7 @@ extends Node
 ## aborts THAT TEST, not the run; the section counter is satisfied because the section had
 ## already announced itself, and the total is what notices the checks that never ran.
 const SECTIONS := 22
-const CHECKS := 338
+const CHECKS := 352
 
 var _passed := 0
 var _failed := 0
@@ -371,6 +371,8 @@ func _test_stock() -> void:
 					seen[r.key] = true
 					if not all.has(r.key):
 						unknown.append(String(r.key))
+	# Its switches are the live board's columns, one per column, so no single row names it.
+	seen[DotMenuScoreboard.SETTING] = true
 	for key in all.keys():
 		if not seen.has(key):
 			rowless.append(String(key))
@@ -964,6 +966,76 @@ func _test_scoreboard() -> void:
 	_check(texts.has("ROW Solo") and texts.has("Scoreboard"), "offline, the game's own snapshot and its own rows")
 	link.scoreboard_received.emit(_snapshot())
 	_check(board.rows().size() == 1, "and a source wins over the feed")
+
+	# --- Columns a player hides ---
+	board.build_row = Callable()
+	board.source = func() -> Dictionary:
+		return {"players": [{"id": "me", "name": "Solo", "score": 3, "seconds": 30, "ping": 77, "kills": 9, "rank": 4}], "you": "me"}
+	board.add_column({"key": &"best", "title": "Best", "kind": DotMenuScoreboard.KIND_NUMBER, "hidden": true}, &"ping")
+	board.open()
+	await get_tree().process_frame
+	texts = _texts(board)
+	_check(not texts.has("Best") and texts.has("Ping") and texts.has("Score"), "a column the game starts hidden is not drawn")
+	menu.open(&"general")
+	await get_tree().process_frame
+	_check(_row_control(menu, "scoreboard_col_ping") != null and _row_control(menu, "scoreboard_col_best") != null
+		and _row_control(menu, "scoreboard_col_kills") != null,
+		"Settings lists the live board's columns, the game's own included")
+	_check(_row_control(menu, "scoreboard_col_name") == null and _row_control(menu, "scoreboard_col_avatar") == null,
+		"but neither the required name nor an untitled column")
+	var titles := menu.screen.find_children("*", "Label", true, false).map(func(l: Label) -> String: return l.text)
+	_check(titles.has("Ping") and titles.has("Time") and titles.has("Best"), "by the titles the board draws")
+	menu.close()
+	# Opening the menu puts a held board away; hold it again.
+	board.open()
+
+	var ping_off := menu.settings.set_value(DotMenuScoreboard.SETTING, "ping,seconds")
+	await get_tree().process_frame
+	texts = _texts(board)
+	_check(ping_off.ok and not texts.has("Ping") and not texts.has("77") and not texts.has("Time") and not texts.has("0:30"),
+		"a setting change redraws the open board: titles and rows lose the column")
+	_check(texts.has("Score") and texts.has("Player") and texts.has("3") and texts.has("Solo") and texts.has("K"),
+		"and the rest still lays out")
+	_check(board.visible_columns().size() == board.columns.size() - 3, "visible_columns is the subset (ping, seconds, best)")
+
+	var _nm := menu.settings.set_value(DotMenuScoreboard.SETTING, "name,score")
+	await get_tree().process_frame
+	texts = _texts(board)
+	_check(texts.has("Player") and texts.has("Solo") and not texts.has("Score"), "the name column cannot be hidden")
+	var _all := menu.settings.set_value(DotMenuScoreboard.SETTING, "avatar,name,score,seconds,ping,kills,rank,nonsense")
+	await get_tree().process_frame
+	_check(board.visible_columns().size() == 1 and _texts(board).has("Solo"), "any subset draws, an unknown key is ignored")
+
+	var _show := menu.settings.set_value(DotMenuScoreboard.SETTING, "+best")
+	await get_tree().process_frame
+	texts = _texts(board)
+	_check(texts.has("Best") and texts.has("Ping"), "the player's choice overrides the game's default-hidden")
+	var _toggle := menu.settings.set_value(DotMenuScoreboard.SETTING, "")
+	menu.scoreboard_column_rows()[0].setter.call(false)
+	_check(DotMenuScoreboard.parse_choices(menu.settings.get_string(DotMenuScoreboard.SETTING, "")).size() == 1,
+		"a Settings switch writes the setting")
+
+	var req := DotMenuScoreboard.column_required({"key": &"score", "required": true})
+	_check(req and DotMenuScoreboard.column_required({"key": &"name"}) and not DotMenuScoreboard.column_required({"key": &"name", "required": false}),
+		"required defaults on for the name column only")
+	var rt := DotMenuScoreboard.parse_choices(DotMenuScoreboard.format_choices({&"ping": true, &"best": false}))
+	_check(rt == {&"ping": true, &"best": false}, "the stored text round-trips")
+
+	# Persisted: a second manager over the same store sees the choice.
+	var store := DotSettingsStoreMemory.new()
+	var m1 := DotMenuStock.manager(_schema(DotMenuStock.DEFAULT_GROUPS), "", &"menu_persist", &"", store)
+	add_child(m1)
+	var _s1 := m1.setup()
+	var _w := m1.set_value(DotMenuScoreboard.SETTING, "ping,+best")
+	var _f := m1.flush()
+	var m2 := DotMenuStock.manager(_schema(DotMenuStock.DEFAULT_GROUPS), "", &"menu_persist", &"", store)
+	add_child(m2)
+	var _s2 := m2.setup()
+	_check(m2.get_string(DotMenuScoreboard.SETTING, "") == "ping,+best", "the choice survives a restart")
+	m1.queue_free()
+	m2.queue_free()
+	board.player_hidden = {}
+	board.remove_column(&"best")
 
 	var _e := menu.handle_event(_key(KEY_ESCAPE))
 	_check(menu.is_open() and not board.is_open(), "Escape while it is held opens the menu instead")

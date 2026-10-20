@@ -66,7 +66,7 @@ const KEYS := {
 	GROUP_VIDEO: [&"window_mode", &"vsync", &"fps_max", &"render_scale", &"field_of_view", &"fx_quality"],
 	GROUP_CONTROLS: [&"sensitivity", &"invert_mouse"],
 	GROUP_COMFORT: [&"shake_scale", &"allow_flashes"],
-	GROUP_INTERFACE: [&"ui_theme", &"hud_scale", &"show_fps", &"net_stat", &"net_stat_height", &"net_stat_position"],
+	GROUP_INTERFACE: [&"ui_theme", &"hud_scale", &"show_fps", &"net_stat", &"net_stat_height", &"net_stat_position", &"scoreboard_hidden"],
 	GROUP_CHAT: [&"chat_window"],
 	GROUP_VOICE: [&"voice_mode", &"voice_input_device"],
 }
@@ -153,6 +153,10 @@ static func _declare(schema: DotSettingsSchema, groups: Array[StringName], theme
 			.with_description("How large the HUD is drawn."))
 		_add(schema, DotSettingsDef.boolean(&"show_fps", false, &"video"))
 		var _ns := declare_net_stat(schema)
+		# DEVICE (per game): column keys differ by game. Text, not a set, because the
+		# columns exist only once the game has made its scoreboard; see DotMenuScoreboard.
+		_add(schema, DotSettingsDef.text(DotMenuScoreboard.SETTING, "", &"hud")
+			.with_description("Scoreboard columns the player turned off, by key; +key turns one on that the game hides."))
 
 	if groups.has(GROUP_VOICE):
 		# ACCOUNT: how a person likes to talk is theirs on every server. The device is a fact
@@ -250,6 +254,8 @@ static func general_page() -> DotMenuPage:
 		.add(DotMenuRow.slider(&"hud_scale", "HUD size", "How large health, ammunition, the clock and the rest are drawn.")
 			.formatted(DotMenuRow.FORMAT_PERCENT)) \
 		.add(DotMenuRow.toggle(&"show_fps", "Frame rate counter", "In the top-right corner."))
+	# Its rows are the live scoreboard's columns, supplied by DotMenu when the page is drawn.
+	var _board := p.section("Scoreboard")
 	p.section("Comfort") \
 		.add(DotMenuRow.slider(&"shake_scale", "Camera shake", "How hard the view shakes for a landing, a hit or an explosion.")
 			.formatted(DotMenuRow.FORMAT_PERCENT_OR_OFF)) \
