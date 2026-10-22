@@ -43,5 +43,6 @@ extends RefCounted
 # 10: extra keys on one action: DotMenuBindings.add_extra(), is_extra(), is_none(), NONE,
 #     remove_setting(); the wheel: add_wheel_jump(), remove_wheel_jump(), add_wheel_weapons()
 #     and the WEAPON_*/WHEEL_JUMP_* constants; DotMenuKeyButton.clearable (Delete clears).
-const LEVEL := 10
+# 11: DotProfileEditorScreen (list profile kinds and ids, edit one in DotUiForm; save and reset are callables).
+const LEVEL := 11
 const OLDEST := 1
