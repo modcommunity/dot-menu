@@ -47,5 +47,6 @@ extends RefCounted
 # 12: DotMenuCfg.load_admin_menu reads cfg/addons/dot_menu/admin_menu.yml and the operator's
 #     cfg/server/addons/dot_menu/, with the flat cfg/admin_menu.yml as a shim until 2026-12-31.
 #     Needs dot-core API level 17.
-const LEVEL := 12
+# 13: DotAddonConfigEditorScreen (edit the player's user-tier override of addon cfg files in DotUiForm; needs dot-core API 18).
+const LEVEL := 13
 const OLDEST := 1
