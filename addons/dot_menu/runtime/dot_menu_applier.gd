@@ -112,6 +112,7 @@ var _connected := false
 ## Connects to the settings and applies every value now.
 func setup() -> DotResult:
 	if settings == null:
+		DotLog.warn(CHANNEL, "setup refused: no settings bound", {"applier": str(get_path()) if is_inside_tree() else name})
 		return DotResult.fail(DotError.CODE_STATE, "DotMenuApplier has no settings.")
 	if not _connected:
 		settings.changed.connect(_on_changed)
