@@ -44,5 +44,8 @@ extends RefCounted
 #     remove_setting(); the wheel: add_wheel_jump(), remove_wheel_jump(), add_wheel_weapons()
 #     and the WEAPON_*/WHEEL_JUMP_* constants; DotMenuKeyButton.clearable (Delete clears).
 # 11: DotProfileEditorScreen (list profile kinds and ids, edit one in DotUiForm; save and reset are callables).
-const LEVEL := 11
+# 12: DotMenuCfg.load_admin_menu reads cfg/addons/dot_menu/admin_menu.yml and the operator's
+#     cfg/server/dot_menu/, with the flat cfg/admin_menu.yml as a shim until 2026-12-31.
+#     Needs dot-core API level 16.
+const LEVEL := 12
 const OLDEST := 1
