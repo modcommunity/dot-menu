@@ -61,7 +61,7 @@ const APPLIES: Array[StringName] = [
 	&"voice_mode", &"voice_input_device",
 	&"fps_max", &"vsync", &"window_mode", &"render_scale",
 	&"shake_scale", &"allow_flashes", &"fx_quality",
-	&"sensitivity", &"invert_mouse", &"field_of_view",
+	&"sensitivity", &"invert_mouse", &"field_of_view", &"viewmodel_fov",
 ]
 const APPLIED_BY_MENU: Array[StringName] = [
 	&"ui_theme", &"hud_scale", &"show_fps", &"net_stat", &"net_stat_height", &"net_stat_position",
@@ -70,6 +70,10 @@ const APPLIED_BY_MENU: Array[StringName] = [
 
 ## Stock keys only the game can apply, through [method on]. See the class note.
 const LEFT_TO_THE_GAME: Array[StringName] = [&"chat_window"]
+
+## Nodes in this group with `set_hands_fov_at_4_3(horizontal)` get `viewmodel_fov`, now and
+## when they are added (zee-dot-weapons' `ZeeViewModel` joins it itself).
+const VIEW_MODEL_GROUP := &"dot_view_model"
 
 ## The registry name a client publishes its own player's voice under (dot-voice's
 ## `DotVoiceManager.CLIENT_SERVICE`, as text: dot-menu does not depend on dot-voice).
@@ -117,6 +121,8 @@ func setup() -> DotResult:
 	if not _connected:
 		settings.changed.connect(_on_changed)
 		_connected = true
+		if is_inside_tree() and not get_tree().node_added.is_connected(_on_node_added):
+			get_tree().node_added.connect(_on_node_added)
 		# The voice is found, not handed over: a game's chat client publishes its manager
 		# and this binds it whichever of the two is built first. A game wires nothing.
 		var bus := DotRegistry.signals()
@@ -140,6 +146,8 @@ func _exit_tree() -> void:
 	var bus := DotRegistry.signals()
 	if bus.service_registered.is_connected(_on_service_registered):
 		bus.service_registered.disconnect(_on_service_registered)
+	if is_inside_tree() and get_tree().node_added.is_connected(_on_node_added):
+		get_tree().node_added.disconnect(_on_node_added)
 	_connected = false
 
 
@@ -270,6 +278,8 @@ func _apply(key: StringName, value: Variant, why: StringName) -> void:
 				_apply_look()
 			&"field_of_view":
 				_apply_fov()
+			&"viewmodel_fov":
+				_apply_view_models()
 			_:
 				if bindings != null:
 					var _bound := bindings.apply_setting(key, value)
@@ -366,6 +376,16 @@ func _apply_look() -> void:
 			target.set(&"mouse_sensitivity", degrees)
 		if _has(&"invert_mouse") and "invert_look_y" in target:
 			target.set(&"invert_look_y", settings.get_bool(&"invert_mouse", false))
+
+
+func _apply_view_models() -> void:
+	if is_inside_tree() and _has(&"viewmodel_fov"):
+		get_tree().call_group(VIEW_MODEL_GROUP, &"set_hands_fov_at_4_3", settings.get_float(&"viewmodel_fov", 65.0))
+
+
+func _on_node_added(node: Node) -> void:
+	if node.is_in_group(VIEW_MODEL_GROUP) and _has(&"viewmodel_fov"):
+		node.call(&"set_hands_fov_at_4_3", settings.get_float(&"viewmodel_fov", 65.0))
 
 
 func _apply_fov() -> void:

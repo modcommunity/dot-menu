@@ -12,7 +12,7 @@ extends Node
 ## aborts THAT TEST, not the run; the section counter is satisfied because the section had
 ## already announced itself, and the total is what notices the checks that never ran.
 const SECTIONS := 22
-const CHECKS := 354
+const CHECKS := 357
 
 var _passed := 0
 var _failed := 0
@@ -166,6 +166,16 @@ class FakeFx extends RefCounted:
 class FakeLook extends RefCounted:
 	var mouse_sensitivity := 0.0
 	var invert_look_y := false
+
+
+class FakeHands extends Node:
+	var horizontal := 0.0
+
+	func _init() -> void:
+		add_to_group(DotMenuApplier.VIEW_MODEL_GROUP)
+
+	func set_hands_fov_at_4_3(v: float) -> void:
+		horizontal = v
 
 
 class FakeCamera extends RefCounted:
@@ -461,6 +471,14 @@ func _test_applier() -> void:
 	_check(fx.shake_scale == 0.0, "the shake reaches the effects")
 	_check(cam.fov == 90.0, "and the field of view the camera")
 	_check(heard.size() == 1 and heard[0][1] == &"applied", "a game's handler hears the boot value once")
+
+	var hands := FakeHands.new()
+	add_child(hands)
+	_check(hands.horizontal == 65.0, "a view model added after boot gets the viewmodel_fov default")
+	var _vm := st.set_value(&"viewmodel_fov", 80)
+	_check(hands.horizontal == 80.0, "and follows the setting live")
+	_check(DotMenuStock.video_page().sections.any(func(sec) -> bool: return sec.rows.any(func(r) -> bool: return r.key == &"viewmodel_fov")), "the Video page has its slider")
+	hands.queue_free()
 
 	var _d := st.set_value(&"sfx_volume", 0.25)
 	var _e := st.set_value(&"invert_mouse", true)

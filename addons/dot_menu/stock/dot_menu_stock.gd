@@ -44,6 +44,14 @@ const GROUP_VOICE := &"voice"
 ## A music volume. Not in [constant DEFAULT_GROUPS]: a slider for a bus nothing plays on is
 ## a control that does nothing, and most games here have no music.
 const GROUP_MUSIC := &"music"
+## `viewmodel_fov`, the lens a first-person weapon is drawn through. Never named by a game:
+## [method declare] adds it with the video group when the project has a view model class.
+const GROUP_VIEWMODEL := &"viewmodel"
+
+## A game with this script class gets `viewmodel_fov` (zee-dot-weapons' `ZeeViewModel`).
+const VIEW_MODEL_CLASS := &"ZeeViewModel"
+## `viewmodel_fov` default, horizontal degrees on a 4:3 frame like `field_of_view`.
+const VIEWMODEL_FOV := 65
 
 ## What [method declare] adds when it is not told: everything except music.
 const DEFAULT_GROUPS: Array[StringName] = [
@@ -52,7 +60,7 @@ const DEFAULT_GROUPS: Array[StringName] = [
 
 const ALL_GROUPS: Array[StringName] = [
 	GROUP_AUDIO, GROUP_MUSIC, GROUP_VIDEO, GROUP_CONTROLS, GROUP_COMFORT, GROUP_INTERFACE, GROUP_CHAT,
-	GROUP_VOICE,
+	GROUP_VOICE, GROUP_VIEWMODEL,
 ]
 
 ## The voice rows a client hides while its server has voice off (`sv_voice_enable 0`): the
@@ -69,6 +77,7 @@ const KEYS := {
 	GROUP_INTERFACE: [&"ui_theme", &"hud_scale", &"show_fps", &"net_stat", &"net_stat_height", &"net_stat_position", &"scoreboard_hidden"],
 	GROUP_CHAT: [&"chat_window"],
 	GROUP_VOICE: [&"voice_mode", &"voice_input_device"],
+	GROUP_VIEWMODEL: [&"viewmodel_fov"],
 }
 
 
@@ -82,6 +91,9 @@ static func declare(
 	except: Array[StringName] = []
 ) -> DotSettingsSchema:
 	var before := schema.keys()
+	if groups.has(GROUP_VIDEO) and not groups.has(GROUP_VIEWMODEL) and has_view_model():
+		groups = groups.duplicate()
+		groups.append(GROUP_VIEWMODEL)
 	_declare(schema, groups, themes)
 	if not except.is_empty():
 		var kept: Array[DotSettingsDef] = []
@@ -124,6 +136,10 @@ static func _declare(schema: DotSettingsSchema, groups: Array[StringName], theme
 		_add(schema, DotSettingsDef.integer(&"field_of_view", 90, 70, 120, &"video")
 			.with_scope(DotSettingsDef.Scope.SERVER_CLAMPED))
 		_add(schema, DotSettingsDef.integer(&"fx_quality", 3, 0, 3, &"video"))
+
+	if groups.has(GROUP_VIEWMODEL):
+		_add(schema, DotSettingsDef.integer(&"viewmodel_fov", VIEWMODEL_FOV, 50, 100, &"video")
+			.with_description("How wide the lens that draws your hands and gun is. Lower is a larger, flatter gun; higher is a smaller one."))
 
 	if groups.has(GROUP_CONTROLS):
 		# ACCOUNT, and under the shared namespace the same number in every game: a
@@ -196,6 +212,14 @@ static func declare_net_stat(schema: DotSettingsSchema, corner: StringName = &""
 	_add(schema, DotSettingsDef.choice(&"net_stat_position", default_corner, DotMenuNetStat.POSITIONS, &"network")
 		.with_description("The corner net_stat is drawn in."))
 	return schema
+
+
+## Whether this project ships a first-person view model (a global script class, so no addon is named).
+static func has_view_model() -> bool:
+	for c in ProjectSettings.get_global_class_list():
+		if c.get("class") == VIEW_MODEL_CLASS:
+			return true
+	return false
 
 
 static func _add(schema: DotSettingsSchema, def: DotSettingsDef) -> void:
@@ -281,6 +305,7 @@ static func video_page(config: DotMenuConfig = null) -> DotMenuPage:
 
 	p.section("Image") \
 		.add(DotMenuRow.slider(&"field_of_view", "Field of view", "").formatted(DotMenuRow.FORMAT_DEGREES)) \
+		.add(DotMenuRow.slider(&"viewmodel_fov", "Weapon field of view", "How wide the lens that draws your hands and gun is. Lower is a larger gun.").formatted(DotMenuRow.FORMAT_DEGREES)) \
 		.add(DotMenuRow.slider(&"render_scale", "Render scale", "Draw the 3D world at a lower resolution and scale it up.")
 			.with_range(0.5, 1.0, 0.05).formatted(DotMenuRow.FORMAT_PERCENT)) \
 		.add(DotMenuRow.select(&"fx_quality", "Effects", "Particles and other effects that change nothing about the game.",

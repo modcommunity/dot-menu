@@ -196,6 +196,7 @@ The stock settings and their defaults:
 | `fps_max` | 0 (unlimited) | 0 to 1000 | device |
 | `render_scale` | 1.0 | 0.5 to 1 | device |
 | `field_of_view` | 90 | 70 to 120 | account, a server may cap it |
+| `viewmodel_fov` | 65 | 50 to 100 | device; only in a project with a `ZeeViewModel`, applied to every node in group `dot_view_model` |
 | `fx_quality` | 3 | 0 to 3 | device |
 | `sensitivity` | 2.5 | 0.05 to 20 | account, shared between games |
 | `invert_mouse` | off | | account |
