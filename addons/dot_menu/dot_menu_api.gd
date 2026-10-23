@@ -49,5 +49,6 @@ extends RefCounted
 #     Needs dot-core API level 17.
 # 13: DotAddonConfigEditorScreen (edit the player's user-tier override of addon cfg files in DotUiForm; needs dot-core API 18).
 # 14: DotAddonConfigEditorScreen undo()/is_open()/close(); DotMenu.use_mods adds a Mods action to Escape.
-const LEVEL := 14
+# 15: DotMenuStock.add_gore_row (the Blood splatters row, for a game that declares `gore`).
+const LEVEL := 15
 const OLDEST := 1

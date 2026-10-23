@@ -12,7 +12,7 @@ extends Node
 ## aborts THAT TEST, not the run; the section counter is satisfied because the section had
 ## already announced itself, and the total is what notices the checks that never ran.
 const SECTIONS := 22
-const CHECKS := 357
+const CHECKS := 358
 
 var _passed := 0
 var _failed := 0
@@ -1236,6 +1236,11 @@ func _test_voice() -> void:
 	_check(schema.has(&"voice_mode") and schema.has(&"voice_input_device"), "the default groups declare voice_mode and voice_input_device")
 	_check(DotMenuStock.audio_page().find_row(&"voice_mode") != null and DotMenuStock.audio_page().find_row(&"voice_input_device") != null,
 		"and the Audio page has a row for each")
+
+	var vpage := DotMenuStock.video_page()
+	DotMenuStock.add_gore_row(vpage)
+	_check(vpage.find_section(&"image").find_row(&"gore") != null, "add_gore_row puts the gore toggle in the Image section")
+	DotMenuStock.add_gore_row(null)
 
 	var node := DotMenuSettings.new()
 	node.app_namespace = &"menu_voice_test"

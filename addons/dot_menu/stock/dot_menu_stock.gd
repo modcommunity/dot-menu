@@ -313,6 +313,15 @@ static func video_page(config: DotMenuConfig = null) -> DotMenuPage:
 	return p
 
 
+## Adds the "Blood splatters" row (`gore`, a game-declared setting dot-fx's decals read) to a
+## video page's Image section. Not stock: only games with blood declare the key.
+static func add_gore_row(video: DotMenuPage) -> void:
+	if video == null:
+		return
+	video.section("Image").add(DotMenuRow.toggle(&"gore", "Blood splatters",
+		"Blood on the walls and floor behind a body you hit. Off draws none."))
+
+
 ## The frame-rate select, built when the page is drawn so the list always holds the value
 ## stored — a cap typed at the console must not vanish from the list that shows it.
 static func fps_row(config: DotMenuConfig = null) -> DotMenuRow:
