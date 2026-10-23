@@ -12,7 +12,7 @@ extends Node
 ## aborts THAT TEST, not the run; the section counter is satisfied because the section had
 ## already announced itself, and the total is what notices the checks that never ran.
 const SECTIONS := 22
-const CHECKS := 352
+const CHECKS := 354
 
 var _passed := 0
 var _failed := 0
@@ -780,6 +780,10 @@ func _test_help_and_picker() -> void:
 
 func _test_layout() -> void:
 	_section("Moving the HUD")
+	DotMenuKit._backdrop_shader()
+	DotMenuKit.clear_cache()
+	_check(DotMenuKit._shader == null, "clear_cache() drops the shared shader")
+	_check(DotMenuKit._backdrop_shader() != null and DotMenuKit._shader != null, "and use refills it")
 
 	var hud := FakeHud.new()
 	add_child(hud)

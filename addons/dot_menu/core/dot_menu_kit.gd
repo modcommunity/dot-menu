@@ -342,6 +342,11 @@ func backdrop(strength: float = 1.0) -> ColorRect:
 static var _shader: Shader = null
 
 
+## Drops the shared backdrop shader so a process can exit without leaking it.
+static func clear_cache() -> void:
+	_shader = null
+
+
 static func _backdrop_shader() -> Shader:
 	if _shader == null:
 		_shader = Shader.new()
