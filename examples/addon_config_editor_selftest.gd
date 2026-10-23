@@ -177,6 +177,8 @@ func _test_escape_port() -> void:
 	_check(ed.is_open() and menu.any_open(), "the action opens the editor as an overlay")
 	menu.close_all()
 	_check(not ed.is_open(), "close_all (Escape) closes it")
+	var themed := menu.use_theme(&"contrast")
+	_check(themed and ed.get_parent() == menu, "a theme change with the mods editor registered restyles without error")
 	menu.open_mods()
 	ed._close_btn.pressed.emit()
 	_check(not ed.is_open(), "its Close button closes it")

@@ -973,7 +973,8 @@ func use_theme(id: StringName) -> bool:
 	_theme_id = p.id
 	kit = kit.with_palette(p) if kit != null else DotMenuKit.new(p)
 	for o in _overlays():
-		if o != null and o.has_method(&"restyle"):
+		# The mods editor restyles from DotFormTokens, not a kit.
+		if o != null and o != mods_screen and o.has_method(&"restyle"):
 			o.call(&"restyle", kit)
 	if scoreboard != null:
 		scoreboard.restyle(kit)
