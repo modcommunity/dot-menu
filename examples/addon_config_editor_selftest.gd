@@ -6,8 +6,8 @@ extends Node
 ## godot --headless --path . res://examples/addon_config_editor_selftest.tscn
 ## [/codeblock]
 
-const SECTIONS := 4
-const CHECKS := 17
+const SECTIONS := 6
+const CHECKS := 29
 const ADDON := "solo-demo"
 
 var _passed := 0
@@ -26,6 +26,8 @@ func _run() -> void:
 	await _test_reset()
 	await _test_tier_off()
 	await _test_failures()
+	await _test_undo()
+	await _test_escape_port()
 	clean()
 	DotAddonConfig.set_user_tier(false)
 	_line("")
@@ -139,6 +141,46 @@ func _test_failures() -> void:
 	_check(not ed.apply().ok and not ed.reset_file().ok, "apply and reset with nothing open fail")
 	_check(ed.describe().contains("1 files"), "describe counts the files")
 	ed.queue_free()
+
+
+func _test_undo() -> void:
+	_section("Undo")
+	var ed := _editor()
+	await get_tree().process_frame
+	_check(not ed.undo().ok, "undo with no file open fails")
+	var _o := ed.open(ADDON, "tuning.yml")
+	_check(not ed.undo().ok and ed._undo_btn.disabled, "undo with no edit fails and the button is off")
+	var _a := ed.form.set_value("voices", 32)
+	var _b := ed.form.set_value("voices", 40)
+	var _c := ed.form.set_value("subtitles", true)
+	_check(ed.undo_depth() == 3 and not ed._undo_btn.disabled, "each edit is a step")
+	_check(ed.undo().ok and ed.form.values()["subtitles"] == false, "undo takes back the last edit")
+	_check(ed.undo().ok and ed.form.values()["voices"] == 32, "undo steps back one edit, not to the file")
+	_check(ed.undo().ok and ed.form.values()["voices"] == 16 and not ed.form.is_dirty(), "the first edit undone leaves the form clean")
+	_check(ed.undo_depth() == 0 and ed._undo_btn.disabled, "the history is empty")
+	ed.queue_free()
+
+
+func _test_escape_port() -> void:
+	_section("Escape menu port")
+	var ed := _editor()
+	var menu := DotMenu.new()
+	add_child(menu)
+	menu.settings = null
+	var _s := menu.setup()
+	menu.use_mods(ed)
+	await get_tree().process_frame
+	var _o := ed.open(ADDON, "tuning.yml")
+	_check(not ed.is_open(), "the editor starts hidden under the menu")
+	_check(menu.screen.find_child("Action_mods", true, false) != null, "Escape gets a Mods action")
+	menu._on_action(&"mods")
+	_check(ed.is_open() and menu.any_open(), "the action opens the editor as an overlay")
+	menu.close_all()
+	_check(not ed.is_open(), "close_all (Escape) closes it")
+	menu.open_mods()
+	ed._close_btn.pressed.emit()
+	_check(not ed.is_open(), "its Close button closes it")
+	menu.queue_free()
 
 
 func _section(title: String) -> void:

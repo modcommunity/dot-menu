@@ -166,6 +166,10 @@ var _picker_close: StringName = &""
 var _picker_chosen: Callable = Callable()
 ## Other overlays a game registered: Controls with is_open() and close().
 var _extra: Array[Control] = []
+
+## The player's addon cfg editor, once [method use_mods] gave one.
+var mods_screen: DotAddonConfigEditorScreen = null
+var mods_label := "Mods"
 var _theme_id: StringName = &""
 var _was_open := false
 var _lock_seen := false
@@ -289,6 +293,8 @@ func _actions() -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	if config.show_help:
 		out.append({"id": &"help", "text": "Help & commands"})
+	if mods_screen != null:
+		out.append({"id": &"mods", "text": mods_label})
 	if config.show_leave:
 		out.append({"id": &"leave", "text": leave_label(), "danger": true})
 	return out
@@ -666,6 +672,33 @@ func add_overlay(overlay: Control) -> void:
 		overlay.connect(&"closed", _on_closed)
 
 
+## Adds a "Mods" action to Escape that opens [param editor] (files added by the caller) over the menu.
+## Solo and listen-host only: the editor says why when the user tier is off.
+func use_mods(editor: DotAddonConfigEditorScreen, label: String = "Mods") -> void:
+	mods_screen = editor
+	mods_label = label
+	editor.visible = false
+	editor.set_anchors_preset(Control.PRESET_FULL_RECT)
+	if editor.get_parent() != self:
+		if editor.get_parent() != null:
+			editor.get_parent().remove_child(editor)
+		add_child(editor)
+	add_overlay(editor)
+	if screen != null:
+		screen.actions = _actions()
+		screen.restyle(kit)
+
+
+func open_mods() -> void:
+	if mods_screen == null:
+		return
+	if screen != null and screen.is_open():
+		screen.close()
+	move_child(mods_screen, get_child_count() - 1)
+	mods_screen.open_screen()
+	_on_opened()
+
+
 ## Call after opening a registered overlay, so the pointer is freed and the grace starts.
 func overlay_opened() -> void:
 	_on_opened()
@@ -725,6 +758,8 @@ func _notify() -> void:
 func _on_action(id: StringName) -> void:
 	if id == &"help":
 		open_help()
+	elif id == &"mods":
+		open_mods()
 	action_requested.emit(id)
 	if id == &"leave" and leave_on_its_own:
 		leave()

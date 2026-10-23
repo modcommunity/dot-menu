@@ -16,6 +16,8 @@ extends PanelContainer
 signal file_opened(addon: String, file: String)
 signal saved(addon: String, file: String, changes: Dictionary)
 signal reset_done(addon: String, file: String)
+## An overlay use ([method DotMenu.use_mods]) was closed.
+signal closed
 
 ## Where Apply writes, shown under the title.
 var target_label := "Your mods on this device"
@@ -32,6 +34,12 @@ var _list: HFlowContainer = null
 var _reset_btn: Button = null
 var _note: Label = null
 var _buttons := {}
+var _history: Array[Dictionary] = []
+var _undoing := false
+var _before := {}
+var _undo_btn: Button = null
+var _close_btn: Button = null
+var _as_overlay := false
 
 
 
@@ -39,6 +47,42 @@ var _buttons := {}
 func add_file(addon: String, file: String, schema: Array, label: String = "") -> void:
 	_files.append({"addon": addon, "file": file, "schema": schema, "label": label if label != "" else file.get_basename().capitalize()})
 	_build()
+
+
+## Shows the screen as an overlay; hidden until then when used through [method DotMenu.use_mods].
+func open_screen() -> void:
+	visible = true
+	_as_overlay = true
+	if _close_btn != null:
+		_close_btn.visible = true
+
+
+func close() -> void:
+	if visible:
+		visible = false
+		closed.emit()
+
+
+func is_open() -> bool:
+	return visible
+
+
+## Takes back the last edit in the open form (before Apply). Fails when there is none.
+func undo() -> DotResult:
+	if form == null or _history.is_empty():
+		return DotResult.fail(DotError.CODE_STATE, "nothing to undo")
+	var last: Dictionary = _history.pop_back()
+	_before[last["key"]] = last["old"]
+	_undoing = true
+	var res := form.set_value(last["key"], last["old"])
+	_undoing = false
+	_refresh_undo()
+	return res
+
+
+## How many edits [method undo] can take back.
+func undo_depth() -> int:
+	return _history.size()
 
 
 func current_addon() -> String:
@@ -56,6 +100,7 @@ func open(addon: String, file: String) -> DotResult:
 		return DotResult.fail(DotError.CODE_INVALID, "no editable file %s/%s" % [addon, file])
 	_addon = addon
 	_file = file
+	_history.clear()
 	_show_form(entry)
 	for key in _buttons:
 		(_buttons[key] as Button).set_pressed_no_signal(key == "%s/%s" % [addon, file])
@@ -79,6 +124,9 @@ func reset_file() -> DotResult:
 		_say(res.error.message, true)
 		return res
 	form.set_values(_values(_entry(_addon, _file)))
+	_before = form.values()
+	_history.clear()
+	_refresh_undo()
 	_say("Back to the defaults", false)
 	_refresh_reset()
 	reset_done.emit(_addon, _file)
@@ -181,6 +229,13 @@ func _show_form(entry: Dictionary) -> void:
 		_say("Mods are off in this session (a server or an online game owns these values)", true)
 	_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	col.add_child(_note)
+	_undo_btn = Button.new()
+	_undo_btn.theme_type_variation = &"FormGhost"
+	_undo_btn.text = "Undo last edit"
+	_undo_btn.custom_minimum_size.y = tokens.target()
+	_undo_btn.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	_undo_btn.pressed.connect(_on_undo_pressed)
+	col.add_child(_undo_btn)
 	_reset_btn = Button.new()
 	_reset_btn.theme_type_variation = &"FormGhost"
 	_reset_btn.text = "Reset to defaults"
@@ -188,6 +243,16 @@ func _show_form(entry: Dictionary) -> void:
 	_reset_btn.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	_reset_btn.pressed.connect(_on_reset_pressed)
 	col.add_child(_reset_btn)
+	var back := Button.new()
+	back.name = "Close"
+	back.theme_type_variation = &"FormGhost"
+	back.text = "Close"
+	back.custom_minimum_size.y = tokens.target()
+	back.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	back.visible = _as_overlay
+	back.pressed.connect(close)
+	bar.add_child(back)
+	_close_btn = back
 	form = DotUiForm.new()
 	form.tokens = tokens
 	form.title = entry["label"]
@@ -197,8 +262,28 @@ func _show_form(entry: Dictionary) -> void:
 	var built := form.build(entry["schema"], _values(entry))
 	if not built.ok:
 		_say(built.error.message, true)
+	_before = form.values()
 	form.applied.connect(_on_applied)
+	form.value_changed.connect(_on_value_changed)
+	_refresh_undo()
 	_refresh_reset()
+
+
+func _on_value_changed(key: String, _value: Variant) -> void:
+	if _undoing:
+		return
+	_history.append({"key": key, "old": _before.get(key)})
+	_before[key] = _value
+	_refresh_undo()
+
+
+func _on_undo_pressed() -> void:
+	var _r := undo()
+
+
+func _refresh_undo() -> void:
+	if _undo_btn != null:
+		_undo_btn.disabled = _history.is_empty()
 
 
 func _on_applied(changes: Dictionary) -> void:

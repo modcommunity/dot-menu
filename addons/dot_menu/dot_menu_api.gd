@@ -48,5 +48,6 @@ extends RefCounted
 #     cfg/server/addons/dot_menu/, with the flat cfg/admin_menu.yml as a shim until 2026-12-31.
 #     Needs dot-core API level 17.
 # 13: DotAddonConfigEditorScreen (edit the player's user-tier override of addon cfg files in DotUiForm; needs dot-core API 18).
-const LEVEL := 13
+# 14: DotAddonConfigEditorScreen undo()/is_open()/close(); DotMenu.use_mods adds a Mods action to Escape.
+const LEVEL := 14
 const OLDEST := 1
