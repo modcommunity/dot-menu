@@ -50,5 +50,7 @@ extends RefCounted
 # 13: DotAddonConfigEditorScreen (edit the player's user-tier override of addon cfg files in DotUiForm; needs dot-core API 18).
 # 14: DotAddonConfigEditorScreen undo()/is_open()/close(); DotMenu.use_mods adds a Mods action to Escape.
 # 15: DotMenuStock.add_gore_row (the Blood splatters row, for a game that declares `gore`).
-const LEVEL := 15
+# 16: DotMenuBindings.add_avatar_actions() and the AVATAR_* constants (emote, pose, gesture on , . /);
+#     DotMenuSettings.avatar_actions adds them.
+const LEVEL := 16
 const OLDEST := 1

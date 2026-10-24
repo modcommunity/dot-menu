@@ -11,8 +11,8 @@ extends Node
 ## [b]CHECKS is the guard the section counter cannot be.[/b] A script error inside a test
 ## aborts THAT TEST, not the run; the section counter is satisfied because the section had
 ## already announced itself, and the total is what notices the checks that never ran.
-const SECTIONS := 22
-const CHECKS := 360
+const SECTIONS := 23
+const CHECKS := 363
 
 var _passed := 0
 var _failed := 0
@@ -48,6 +48,7 @@ func _run() -> void:
 	await _test_help_key_and_leave()
 	await _test_map_menu()
 	await _test_loadout_menu()
+	_test_avatar_action_keys()
 	await _test_hud_follows()
 	_test_moved_defaults()
 	_test_wheel()
@@ -1794,6 +1795,33 @@ static func _loadout_offer(choose: bool = true) -> Dictionary:
 				{"id": "frag", "name": "Frag", "cost": 1}]},
 		],
 	}
+
+
+func _test_avatar_action_keys() -> void:
+	_section("comma, period and slash are the emote, pose and gesture rows")
+	var node := DotMenuSettings.new()
+	node.app_namespace = &"menu_avatar_test"
+	node.avatar_actions = true
+	node.config = DotMenuConfig.new()
+	add_child(node)
+	var _s := node.setup(DotSettingsStoreMemory.new(), false)
+	var want := {DotMenuBindings.AVATAR_EMOTE_ACTION: KEY_COMMA, DotMenuBindings.AVATAR_POSE_ACTION: KEY_PERIOD,
+		DotMenuBindings.AVATAR_GESTURE_ACTION: KEY_SLASH}
+	var good := true
+	for action in want:
+		var row := node.bindings.row_for_action(action)
+		var ev := DotInputBinding.from_text(str(row.get("default", ""))) as InputEventKey
+		good = good and ev != null and ev.physical_keycode == want[action]
+	_check(good, "each default reads back as its key")
+	_check(node.settings.schema.has(DotMenuBindings.AVATAR_GESTURE_SETTING), "stored as bind_avatar_gesture")
+	var plain := DotMenuSettings.new()
+	plain.app_namespace = &"menu_avatar_off"
+	plain.config = DotMenuConfig.new()
+	add_child(plain)
+	var _t := plain.setup(DotSettingsStoreMemory.new(), false)
+	_check(plain.bindings.row_for_action(DotMenuBindings.AVATAR_EMOTE_ACTION).is_empty(), "a game that does not ask has none")
+	node.queue_free()
+	plain.queue_free()
 
 
 func _test_loadout_menu() -> void:

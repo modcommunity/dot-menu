@@ -53,6 +53,15 @@ const LOADOUT_ACTION := &"dot_menu_loadout"
 const LOADOUT_SETTING := &"bind_loadout"
 const LOADOUT_KEY := "B"
 
+## The avatar emote, pose and gesture keys (API 16): `,` `.` `/` in every game that plays avatar
+## actions. The actions are the ones dot-user-avatar's `DotAvatarActionInput` listens on.
+const AVATAR_EMOTE_ACTION := &"dot_avatar_emote"
+const AVATAR_POSE_ACTION := &"dot_avatar_pose"
+const AVATAR_GESTURE_ACTION := &"dot_avatar_gesture"
+const AVATAR_EMOTE_SETTING := &"bind_avatar_emote"
+const AVATAR_POSE_SETTING := &"bind_avatar_pose"
+const AVATAR_GESTURE_SETTING := &"bind_avatar_gesture"
+
 ## The stock weapon-cycling actions and settings ([method add_wheel_weapons], API 10): the
 ## settings are the ones game-arena has always stored the wheel's weapon rows as, so a game
 ## that moves its own rows onto these keeps every player's keys.
@@ -264,6 +273,14 @@ func add_maps(group: String = "", key: String = MAPS_KEY) -> DotMenuBindings:
 ## card as help. [DotMenuSettings] adds it when [member DotMenuSettings.loadout_menu] is on.
 func add_loadout(group: String = "", key: String = LOADOUT_KEY) -> DotMenuBindings:
 	return add(LOADOUT_ACTION, LOADOUT_SETTING, "Loadout", key, group if group != "" else help_group())
+
+
+## The three avatar action keys (emote, pose, gesture), on [param group] or the help card.
+func add_avatar_actions(group: String = "") -> DotMenuBindings:
+	var where := group if group != "" else help_group()
+	var _e := add(AVATAR_EMOTE_ACTION, AVATAR_EMOTE_SETTING, "Emote", "Comma", where)
+	var _p := add(AVATAR_POSE_ACTION, AVATAR_POSE_SETTING, "Pose", "Period", where)
+	return add(AVATAR_GESTURE_ACTION, AVATAR_GESTURE_SETTING, "Gesture", "Slash", where)
 
 
 ## The card the help key goes on: the interface keys, or the general ones, or the last card.

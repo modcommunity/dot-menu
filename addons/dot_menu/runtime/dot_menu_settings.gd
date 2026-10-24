@@ -61,6 +61,9 @@ var map_menu: bool = true
 ## key does nothing until the client calls [method use_loadout].
 var loadout_menu: bool = false
 
+## The emote, pose and gesture keys on the Controls page (API 16), for a game that plays avatar actions.
+var avatar_actions: bool = false
+
 ## Free the pointer while the menu is open and capture it after. Off for a client that owns
 ## its pointer and does both on [signal menu_state_changed].
 var manage_pointer: bool = false
@@ -103,6 +106,9 @@ func setup(store: DotSettingsStore = null, with_menu: bool = true) -> DotResult:
 	if loadout_menu and bindings.row_for_action(DotMenuBindings.LOADOUT_ACTION).is_empty() \
 			and bindings.row_for_setting(DotMenuBindings.LOADOUT_SETTING).is_empty():
 		var _l := bindings.add_loadout("", bindings.free_key([DotMenuBindings.LOADOUT_KEY, "F4"]))
+	if avatar_actions and bindings.row_for_action(DotMenuBindings.AVATAR_EMOTE_ACTION).is_empty() \
+			and bindings.row_for_setting(DotMenuBindings.AVATAR_EMOTE_SETTING).is_empty():
+		var _a := bindings.add_avatar_actions()
 	if map_menu and bindings.row_for_action(DotMenuBindings.MAPS_ACTION).is_empty() \
 			and bindings.row_for_setting(DotMenuBindings.MAPS_SETTING).is_empty():
 		var _m := bindings.add_maps("", bindings.free_key([DotMenuBindings.MAPS_KEY, "F3"]))
