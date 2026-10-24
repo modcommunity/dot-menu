@@ -102,6 +102,13 @@ var sensitivity_to_degrees: Callable = Callable()
 ## setting itself. For a game whose setting is in another measure (horizontal at 4:3).
 var fov_transform: Callable = Callable()
 
+
+## The vertical field of view (what [Camera3D] takes) that is [param horizontal] degrees across a
+## 4:3 frame: the same number means the same view on any window, as in the other games.
+static func vertical_from_horizontal_4_3(horizontal: float) -> float:
+	var half := deg_to_rad(clampf(horizontal, 20.0, 170.0) * 0.5)
+	return rad_to_deg(2.0 * atan(tan(half) * 0.75))
+
 var _audio: Array[Object] = []
 var _voice: Array[Object] = []
 var _fx: Array[Object] = []

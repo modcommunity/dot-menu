@@ -12,7 +12,7 @@ extends Node
 ## aborts THAT TEST, not the run; the section counter is satisfied because the section had
 ## already announced itself, and the total is what notices the checks that never ran.
 const SECTIONS := 22
-const CHECKS := 358
+const CHECKS := 359
 
 var _passed := 0
 var _failed := 0
@@ -490,6 +490,7 @@ func _test_applier() -> void:
 	var cam2 := FakeCamera.new()
 	applier.bind_camera(cam2, &"fov_desired")
 	_check(cam2.fov_desired == 100.0, "a camera with its own property, through the game's own measure")
+	_check(absf(DotMenuApplier.vertical_from_horizontal_4_3(90.0) - 73.74) < 0.05 and absf(DotMenuApplier.vertical_from_horizontal_4_3(100.0) - 83.6) < 0.1, "4:3 horizontal degrees become the vertical ones a camera takes")
 
 	var _g := st.set_value(&"fps_max", 144)
 	_check(Engine.max_fps == 144, "the frame-rate cap is the engine's")

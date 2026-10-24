@@ -68,6 +68,9 @@ var manage_pointer: bool = false
 ## Built by [method setup].
 var settings: DotSettingsManager = null
 var applier: DotMenuApplier = null
+
+## [member DotSettingsManager.migrations] for the game's schema versions, set before [method setup].
+var migrations: Dictionary = {}
 var menu: DotMenu = null
 
 
@@ -108,6 +111,7 @@ func setup(store: DotSettingsStore = null, with_menu: bool = true) -> DotResult:
 	var _problems := config.apply_to_schema(schema, themes)
 
 	settings = DotMenuStock.manager(schema, directory, app_namespace, shared_namespace, store)
+	settings.migrations = migrations
 	add_child(settings)
 	var loaded := settings.setup()
 	if not loaded.ok:
