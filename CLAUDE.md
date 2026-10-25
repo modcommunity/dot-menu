@@ -4,6 +4,8 @@ In-game menus as data: an Escape menu whose rows are views of dot-settings, stoc
 
 **The distributable is `addons/dot_menu/`.** It depends on dot-core, dot-ui and dot-settings and nothing else; dot-audio, dot-fx, dot-player-controller and dot-server are reached duck-typed or through dot-core. Read the family [CLAUDE.md](../../CLAUDE.md) first, and dot-ui's and dot-settings' own, because this sits on both and keeps their rules.
 
+Also requires **dot-profile** (`DotProfileSet`, `DotProfile`, `DotProfileRuntime`, split from dot-core): link `addons/dot_profile` next to `addons/dot_core`.
+
 ## Read before
 
 | Read | Before |
