@@ -12,7 +12,7 @@ extends Node
 ## aborts THAT TEST, not the run; the section counter is satisfied because the section had
 ## already announced itself, and the total is what notices the checks that never ran.
 const SECTIONS := 22
-const CHECKS := 359
+const CHECKS := 360
 
 var _passed := 0
 var _failed := 0
@@ -150,6 +150,7 @@ class FakeMixer extends RefCounted:
 	var ui := 1.0
 	var music := 1.0
 	var voice := 1.0
+	var ambience := 1.0
 	var applied := 0
 
 	func apply_to_buses() -> PackedStringArray:
@@ -485,6 +486,8 @@ func _test_applier() -> void:
 	var _f := st.set_value(&"chat_window", &"off")
 	_check(is_equal_approx(mixer.sfx, 0.25) and look.invert_look_y, "a change is applied when it is made")
 	_check(heard.size() == 2 and heard[1][0] == &"off", "and the handler hears it")
+	var _amb := st.set_value(&"ambience_volume", 0.3)
+	_check(is_equal_approx(mixer.ambience, 0.3), "the ambience slider reaches the mixer's ambience level")
 
 	applier.fov_transform = func(v: float) -> float: return v + 10.0
 	var cam2 := FakeCamera.new()

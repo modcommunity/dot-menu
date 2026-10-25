@@ -190,6 +190,7 @@ The stock settings and their defaults:
 | `sfx_volume` | 1.0 | 0 to 1 | device |
 | `ui_volume` | 0.8 | 0 to 1 | device |
 | `voice_volume` | 1.0 | 0 to 1 | device |
+| `ambience_volume` | 0.7 | 0 to 1 | device |
 | `music_volume` (asked for) | 0.6 | 0 to 1 | device |
 | `window_mode` | windowed | windowed, borderless, fullscreen | device |
 | `vsync` | off | | device |

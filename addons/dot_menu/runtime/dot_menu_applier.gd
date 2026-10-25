@@ -23,7 +23,7 @@ extends Node
 ## again whenever something new is bound, then `changed` keeps them current.
 ##
 ## [b]Duck-typed, so dot-menu depends on none of what it drives.[/b] An audio target is
-## anything with `master`/`sfx`/`ui`/`music`/`voice` (dot-audio's mixer) or a `mixer` that
+## anything with `master`/`sfx`/`ui`/`music`/`voice`/`ambience` (dot-audio's mixer) or a `mixer` that
 ## has them; with none bound the volumes go straight onto the [AudioServer]'s buses of those
 ## names, so a game with no dot-audio still has working sliders. An fx target is anything
 ## with `shake_scale`, `allow_flashes` and `quality`. A look target is anything with
@@ -50,6 +50,7 @@ const VOLUMES := {
 	&"ui_volume": [&"ui", &"UI"],
 	&"music_volume": [&"music", &"Music"],
 	&"voice_volume": [&"voice", &"Voice"],
+	&"ambience_volume": [&"ambience", &"Ambience"],
 }
 
 ## Every stock key this applies, and which of them [DotMenu] applies instead. The suite holds
@@ -57,7 +58,7 @@ const VOLUMES := {
 ## setting nothing applies — this family's most repeated bug — fails a check rather than
 ## shipping as a switch that does nothing.
 const APPLIES: Array[StringName] = [
-	&"master_volume", &"sfx_volume", &"ui_volume", &"music_volume", &"voice_volume",
+	&"master_volume", &"sfx_volume", &"ui_volume", &"music_volume", &"voice_volume", &"ambience_volume",
 	&"voice_mode", &"voice_input_device",
 	&"fps_max", &"vsync", &"window_mode", &"render_scale",
 	&"shake_scale", &"allow_flashes", &"fx_quality",
@@ -333,6 +334,8 @@ func _volumes_to_buses() -> void:
 		if bus < 0:
 			continue
 		var linear := clampf(settings.get_float(key, 1.0), 0.0, 1.0)
+		if key == &"ambience_volume" and _has(&"sfx_volume"):
+			linear *= clampf(settings.get_float(&"sfx_volume", 1.0), 0.0, 1.0)
 		AudioServer.set_bus_volume_db(bus, linear_to_db(linear) if linear > 0.0 else -80.0)
 
 

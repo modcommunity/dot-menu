@@ -69,7 +69,7 @@ const VOICE_ROWS: PackedStringArray = ["voice_mode", "voice_input_device", "voic
 
 ## Every key [method declare] can add, by group. What a suite checks the applier against.
 const KEYS := {
-	GROUP_AUDIO: [&"master_volume", &"sfx_volume", &"ui_volume", &"voice_volume"],
+	GROUP_AUDIO: [&"master_volume", &"sfx_volume", &"ui_volume", &"voice_volume", &"ambience_volume"],
 	GROUP_MUSIC: [&"music_volume"],
 	GROUP_VIDEO: [&"window_mode", &"vsync", &"fps_max", &"render_scale", &"field_of_view", &"fx_quality"],
 	GROUP_CONTROLS: [&"sensitivity", &"invert_mouse"],
@@ -114,6 +114,8 @@ static func _declare(schema: DotSettingsSchema, groups: Array[StringName], theme
 		# split, a vote opening), this is "how loud is my split" rather than a click volume.
 		_add(schema, DotSettingsDef.number(&"ui_volume", 0.8, 0.0, 1.0, &"audio"))
 		_add(schema, DotSettingsDef.number(&"voice_volume", 1.0, 0.0, 1.0, &"audio"))
+		# Wind, birdsong, room tone. The mixer also multiplies in Effects, so both sliders reach it.
+		_add(schema, DotSettingsDef.number(&"ambience_volume", 0.7, 0.0, 1.0, &"audio"))
 
 	if groups.has(GROUP_MUSIC):
 		_add(schema, DotSettingsDef.number(&"music_volume", 0.6, 0.0, 1.0, &"audio"))
@@ -344,6 +346,7 @@ static func audio_page() -> DotMenuPage:
 	p.section("Volume") \
 		.add(DotMenuRow.slider(&"master_volume", "Master").formatted(DotMenuRow.FORMAT_PERCENT)) \
 		.add(DotMenuRow.slider(&"sfx_volume", "Effects", "Footsteps, weapons, the world.").formatted(DotMenuRow.FORMAT_PERCENT)) \
+		.add(DotMenuRow.slider(&"ambience_volume", "Ambience", "Wind, birdsong and room tone. Also follows Effects.").formatted(DotMenuRow.FORMAT_PERCENT)) \
 		.add(DotMenuRow.slider(&"ui_volume", "Interface", "Menus, and the round's own cues.").formatted(DotMenuRow.FORMAT_PERCENT)) \
 		.add(DotMenuRow.slider(&"music_volume", "Music").formatted(DotMenuRow.FORMAT_PERCENT)) \
 		.add(DotMenuRow.slider(&"voice_volume", "Voice chat").formatted(DotMenuRow.FORMAT_PERCENT))
