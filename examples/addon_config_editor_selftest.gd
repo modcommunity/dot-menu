@@ -7,7 +7,7 @@ extends Node
 ## [/codeblock]
 
 const SECTIONS := 6
-const CHECKS := 29
+const CHECKS := 30
 const ADDON := "solo-demo"
 
 var _passed := 0
