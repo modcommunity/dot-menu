@@ -69,7 +69,7 @@ const VOICE_ROWS: PackedStringArray = ["voice_mode", "voice_input_device", "voic
 
 ## Every key [method declare] can add, by group. What a suite checks the applier against.
 const KEYS := {
-	GROUP_AUDIO: [&"master_volume", &"sfx_volume", &"ui_volume", &"voice_volume", &"ambience_volume"],
+	GROUP_AUDIO: [&"master_volume", &"sfx_volume", &"ui_volume", &"voice_volume", &"ambience_volume", &"slide_volume"],
 	GROUP_MUSIC: [&"music_volume"],
 	GROUP_VIDEO: [&"window_mode", &"vsync", &"fps_max", &"render_scale", &"field_of_view", &"fx_quality"],
 	GROUP_CONTROLS: [&"sensitivity", &"invert_mouse"],
@@ -116,6 +116,8 @@ static func _declare(schema: DotSettingsSchema, groups: Array[StringName], theme
 		_add(schema, DotSettingsDef.number(&"voice_volume", 1.0, 0.0, 1.0, &"audio"))
 		# Wind, birdsong, room tone. The mixer also multiplies in Effects, so both sliders reach it.
 		_add(schema, DotSettingsDef.number(&"ambience_volume", 0.35, 0.0, 1.0, &"audio"))
+		# dot-game's DotGameSlideSounds applies it (same default there); a game without it leaves it out with `except`.
+		_add(schema, DotSettingsDef.number(&"slide_volume", 1.0, 0.0, 1.0, &"audio").with_description("How loud sliding scrapes the ground."))
 
 	if groups.has(GROUP_MUSIC):
 		_add(schema, DotSettingsDef.number(&"music_volume", 0.6, 0.0, 1.0, &"audio"))
@@ -347,6 +349,7 @@ static func audio_page() -> DotMenuPage:
 		.add(DotMenuRow.slider(&"master_volume", "Master").formatted(DotMenuRow.FORMAT_PERCENT)) \
 		.add(DotMenuRow.slider(&"sfx_volume", "Effects", "Footsteps, weapons, the world.").formatted(DotMenuRow.FORMAT_PERCENT)) \
 		.add(DotMenuRow.slider(&"ambience_volume", "Ambience", "Wind, birdsong and room tone. Also follows Effects.").formatted(DotMenuRow.FORMAT_PERCENT)) \
+		.add(DotMenuRow.slider(&"slide_volume", "Sliding", "The scrape of a slide along the ground.").formatted(DotMenuRow.FORMAT_PERCENT)) \
 		.add(DotMenuRow.slider(&"ui_volume", "Interface", "Menus, and the round's own cues.").formatted(DotMenuRow.FORMAT_PERCENT)) \
 		.add(DotMenuRow.slider(&"music_volume", "Music").formatted(DotMenuRow.FORMAT_PERCENT)) \
 		.add(DotMenuRow.slider(&"voice_volume", "Voice chat").formatted(DotMenuRow.FORMAT_PERCENT))

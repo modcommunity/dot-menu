@@ -12,7 +12,7 @@ extends Node
 ## aborts THAT TEST, not the run; the section counter is satisfied because the section had
 ## already announced itself, and the total is what notices the checks that never ran.
 const SECTIONS := 23
-const CHECKS := 363
+const CHECKS := 365
 
 var _passed := 0
 var _failed := 0
@@ -373,6 +373,9 @@ func _test_stock() -> void:
 	_check(orphans.is_empty(), "every stock key is applied by something (%s)" % ", ".join(orphans))
 
 	var all := _schema(DotMenuStock.ALL_GROUPS)
+	var sl := all.find(&"slide_volume")
+	_check(sl != null and is_equal_approx(float(sl.default_value), 1.0) and sl.category == &"audio", "slide_volume is stock, default 1.0 in the audio group (dot-game's default)")
+	_check(DotMenuStock.audio_page().sections.any(func(sec) -> bool: return sec.rows.any(func(r) -> bool: return r.key == &"slide_volume")), "the Audio page has the slide_volume slider")
 	var rowless := PackedStringArray()
 	var unknown := PackedStringArray()
 	var seen := {}

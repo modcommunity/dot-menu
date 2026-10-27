@@ -70,7 +70,7 @@ const APPLIED_BY_MENU: Array[StringName] = [
 ]
 
 ## Stock keys only the game can apply, through [method on]. See the class note.
-const LEFT_TO_THE_GAME: Array[StringName] = [&"chat_window"]
+const LEFT_TO_THE_GAME: Array[StringName] = [&"chat_window", &"slide_volume"]
 
 ## Nodes in this group with `set_hands_fov_at_4_3(horizontal)` get `viewmodel_fov`, now and
 ## when they are added (zee-dot-weapons' `ZeeViewModel` joins it itself).
