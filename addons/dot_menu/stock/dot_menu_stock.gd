@@ -115,7 +115,7 @@ static func _declare(schema: DotSettingsSchema, groups: Array[StringName], theme
 		_add(schema, DotSettingsDef.number(&"ui_volume", 0.8, 0.0, 1.0, &"audio"))
 		_add(schema, DotSettingsDef.number(&"voice_volume", 1.0, 0.0, 1.0, &"audio"))
 		# Wind, birdsong, room tone. The mixer also multiplies in Effects, so both sliders reach it.
-		_add(schema, DotSettingsDef.number(&"ambience_volume", 0.7, 0.0, 1.0, &"audio"))
+		_add(schema, DotSettingsDef.number(&"ambience_volume", 0.35, 0.0, 1.0, &"audio"))
 
 	if groups.has(GROUP_MUSIC):
 		_add(schema, DotSettingsDef.number(&"music_volume", 0.6, 0.0, 1.0, &"audio"))
