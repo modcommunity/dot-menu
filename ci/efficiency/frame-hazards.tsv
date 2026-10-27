@@ -1,0 +1,27 @@
+# frame-hazards
+# Baselines only shrink: scripts/<gate> --update lowers or drops entries and refuses to add.
+addons/dot_menu/runtime/dot_menu.gd::_overlays::alloc_array	1
+addons/dot_menu/runtime/dot_menu.gd::_process::string_build	1
+addons/dot_menu/ui/dot_menu_net_stat.gd::_percentile::duplicate	1
+addons/dot_menu/ui/dot_menu_net_stat.gd::_push::alloc_dict	1
+addons/dot_menu/ui/dot_menu_net_stat.gd::_rebase::duplicate	2
+addons/dot_menu/ui/dot_menu_net_stat.gd::_refigure::alloc_dict	1
+addons/dot_menu/ui/dot_menu_net_stat.gd::_refigure::string_build	1
+addons/dot_menu/ui/dot_menu_scoreboard.gd::_cell::string_build	2
+addons/dot_menu/ui/dot_menu_scoreboard.gd::_column_titles::string_build	1
+addons/dot_menu/ui/dot_menu_scoreboard.gd::_header::string_build	7
+addons/dot_menu/ui/dot_menu_scoreboard.gd::_size_cell::string_build	1
+addons/dot_menu/ui/dot_menu_scoreboard.gd::_team_block::string_build	1
+addons/dot_menu/ui/dot_menu_scoreboard.gd::_team_header::string_build	3
+addons/dot_menu/ui/dot_menu_scoreboard.gd::column_hidden::string_build	1
+addons/dot_menu/ui/dot_menu_scoreboard.gd::column_required::string_build	1
+addons/dot_menu/ui/dot_menu_scoreboard.gd::drawn_snapshot::duplicate	1
+addons/dot_menu/ui/dot_menu_scoreboard.gd::duration::string_build	1
+addons/dot_menu/ui/dot_menu_scoreboard.gd::format_value::string_build	5
+addons/dot_menu/ui/dot_menu_scoreboard.gd::redraw::alloc_array	4
+addons/dot_menu/ui/dot_menu_scoreboard.gd::redraw::string_build	3
+addons/dot_menu/ui/dot_menu_scoreboard.gd::rows::alloc_array	1
+addons/dot_menu/ui/dot_menu_scoreboard.gd::rows::duplicate	1
+addons/dot_menu/ui/dot_menu_scoreboard.gd::rows::string_build	1
+addons/dot_menu/ui/dot_menu_scoreboard.gd::teams::alloc_array	1
+addons/dot_menu/ui/dot_menu_scoreboard.gd::visible_columns::alloc_array	1
