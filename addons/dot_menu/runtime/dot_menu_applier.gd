@@ -70,7 +70,10 @@ const APPLIED_BY_MENU: Array[StringName] = [
 ]
 
 ## Stock keys only the game can apply, through [method on]. See the class note.
-const LEFT_TO_THE_GAME: Array[StringName] = [&"chat_window", &"slide_volume"]
+## The render quality keys are applied by dot-fx's DotFxRenderQuality (DotGameClient wires it).
+const LEFT_TO_THE_GAME: Array[StringName] = [
+	&"chat_window", &"slide_volume", &"aniso", &"aa", &"mip_bias", &"sharpness",
+]
 
 ## Nodes in this group with `set_hands_fov_at_4_3(horizontal)` get `viewmodel_fov`, now and
 ## when they are added (zee-dot-weapons' `ZeeViewModel` joins it itself).

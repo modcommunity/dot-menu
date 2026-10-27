@@ -71,7 +71,7 @@ const VOICE_ROWS: PackedStringArray = ["voice_mode", "voice_input_device", "voic
 const KEYS := {
 	GROUP_AUDIO: [&"master_volume", &"sfx_volume", &"ui_volume", &"voice_volume", &"ambience_volume", &"slide_volume"],
 	GROUP_MUSIC: [&"music_volume"],
-	GROUP_VIDEO: [&"window_mode", &"vsync", &"fps_max", &"render_scale", &"field_of_view", &"fx_quality"],
+	GROUP_VIDEO: [&"window_mode", &"vsync", &"fps_max", &"render_scale", &"field_of_view", &"fx_quality", &"aniso", &"aa", &"mip_bias", &"sharpness"],
 	GROUP_CONTROLS: [&"sensitivity", &"invert_mouse"],
 	GROUP_COMFORT: [&"shake_scale", &"allow_flashes"],
 	GROUP_INTERFACE: [&"ui_theme", &"hud_scale", &"show_fps", &"net_stat", &"net_stat_height", &"net_stat_position", &"scoreboard_hidden"],
@@ -140,6 +140,11 @@ static func _declare(schema: DotSettingsSchema, groups: Array[StringName], theme
 		_add(schema, DotSettingsDef.integer(&"field_of_view", 90, 70, 120, &"video")
 			.with_scope(DotSettingsDef.Scope.SERVER_CLAMPED))
 		_add(schema, DotSettingsDef.integer(&"fx_quality", 3, 0, 3, &"video"))
+		# Defaults are dot-fx's DotFxRenderConfig (-1 and 0 mean "the platform picks").
+		_add(schema, DotSettingsDef.integer(&"aniso", -1, -1, 16, &"video"))
+		_add(schema, DotSettingsDef.integer(&"aa", 0, 0, 7, &"video"))
+		_add(schema, DotSettingsDef.number(&"mip_bias", 0.0, -2.0, 2.0, &"video"))
+		_add(schema, DotSettingsDef.number(&"sharpness", 0.2, 0.0, 2.0, &"video"))
 
 	if groups.has(GROUP_VIEWMODEL):
 		_add(schema, DotSettingsDef.integer(&"viewmodel_fov", VIEWMODEL_FOV, 50, 100, &"video")
@@ -314,6 +319,15 @@ static func video_page(config: DotMenuConfig = null) -> DotMenuPage:
 			.with_range(0.5, 1.0, 0.05).formatted(DotMenuRow.FORMAT_PERCENT)) \
 		.add(DotMenuRow.select(&"fx_quality", "Effects", "Particles and other effects that change nothing about the game.",
 			[[0, "Off"], [1, "Low"], [2, "Medium"], [3, "High"]]))
+	p.section("Texture quality") \
+		.add(DotMenuRow.select(&"aniso", "Anisotropic filtering", "Keeps floors and walls sharp at a slant.",
+			[[-1, "Automatic"], [0, "Off"], [2, "2x"], [4, "4x"], [8, "8x"], [16, "16x"]])) \
+		.add(DotMenuRow.select(&"aa", "Anti-aliasing", "Smooths jagged edges. Automatic is MSAA 4x on a desktop, FXAA elsewhere.",
+			[[0, "Automatic"], [1, "Off"], [2, "FXAA"], [3, "MSAA 2x"], [4, "MSAA 4x"], [5, "MSAA 8x"], [6, "TAA"], [7, "TAA + FXAA"]])) \
+		.add(DotMenuRow.slider(&"mip_bias", "Texture detail", "Negative is sharper (and shimmers), positive is blurrier.")
+			.with_range(-2.0, 2.0, 0.25)) \
+		.add(DotMenuRow.slider(&"sharpness", "Upscale sharpening", "Only acts when render scale is under 100%. Lower is sharper.")
+			.with_range(0.0, 2.0, 0.1))
 	return p
 
 
