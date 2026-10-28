@@ -46,8 +46,6 @@ extends Control
 ## once a bucket, so redrawing every frame was twenty times the canvas work for the same
 ## picture — on a browser client, a measurable part of the frame it was measuring.
 
-const CHANNEL := "menu"
-
 enum Level { OFF = 0, NUMBERS = 1, GRAPH = 2, FULL = 3 }
 
 ## The first is the default: the corner the frame counter uses, which net_stat replaces
