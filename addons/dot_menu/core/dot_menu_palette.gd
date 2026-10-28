@@ -2,23 +2,9 @@
 class_name DotMenuPalette
 extends Resource
 
-## One theme: every colour a menu and a HUD are drawn in, under one id.
-##
-## [b]A whole palette, not an accent swap.[/b] A different accent on the same dark surface
-## is one theme in four colours. A light theme and a high-contrast theme — for a player who
-## cannot read grey on grey — need the surfaces and the text to move with the accent, so
-## every colour a screen uses is here and nothing a screen draws is a literal.
-##
-## [b]The HUD's half is here too[/b] ([member hud_plate] and the eleven after it), because a
-## player who picks a theme picks it for everything they look at. A light theme's HUD
-## should still usually draw on a dark plate: the HUD is over the world, and a plate the
-## colour of the sky is not a plate.
-##
-## [b]Data, so a theme can arrive from anywhere.[/b] [method from_dictionary] reads a
-## colour as `"#rrggbb"`, `"#rrggbbaa"`, `[r, g, b]` or `[r, g, b, a]`, so a game can ship a
-## theme as JSON, an operator can add one in a config file, and none of it needs code.
-## A key the dictionary leaves out keeps the value of [param base], which is how a theme
-## that only changes the accent stays three lines long.
+## One theme: every colour a menu and a HUD are drawn in, under one id. A whole palette, not an accent swap, so light and high-contrast themes can move surfaces and text; no screen draws a literal.
+## The HUD's half ([member hud_plate] and the eleven after it) is here too. [method from_dictionary] reads `"#rrggbb"`, `"#rrggbbaa"`, `[r, g, b]` or `[r, g, b, a]`;
+## a key left out keeps the value of [param base], so an accent-only theme stays three lines long.
 
 ## The id stored in the `ui_theme` setting. Unique within a [DotMenuThemes].
 @export var id: StringName = &"midnight"
@@ -52,8 +38,8 @@ extends Resource
 @export var keycap_edge := Color(0.27, 0.3, 0.37)
 
 @export_group("HUD")
-## The plate behind a HUD block drawn over the world. Deep and dark by default: the first
-## play test (2026-10-11) found the bright plates read as a toy over a pale map.
+## The plate behind a HUD block drawn over the world. Deep and dark by default: bright plates
+## read as a toy over a pale map.
 @export var hud_plate := Color(0.025, 0.03, 0.05, 0.74)
 @export var hud_text := Color(0.97, 0.98, 1.0)
 @export var hud_detail := Color(0.72, 0.76, 0.84)
@@ -101,15 +87,9 @@ func accent_wash() -> Color:
 	return Color(accent, 0.13)
 
 
-## The [Theme] a HUD drawn in this palette sets on its root: dot-ui's glance pieces
-## ([DotHudPiece]) and every plain Label under the root take their colours from it.
-## [param accent] is the game's own: a [Theme] whose [DotHudPiece] colours (usually
-## `highlight` and `plate_edge`, a game's identity) are laid over the palette's, so each game
-## keeps its accent in every theme. An accent theme should leave the plate, the text and the
-## ink alone, or a light or high-contrast theme cannot change them.
-##
-## A fresh [Theme] every call, for [DotUiTheme]'s reason. [DotMenu.follow_hud] sets it,
-## and sets it again on every theme change.
+## The [Theme] a HUD drawn in this palette sets on its root, so dot-ui's glance pieces and plain Labels take their colours from it.
+## [param accent] is the game's own [Theme] whose [DotHudPiece] colours (usually `highlight`, `plate_edge`) are laid over the palette's; leave plate, text and ink alone
+## or light themes cannot change them. A fresh [Theme] every call, for [DotUiTheme]'s reason.
 func hud_theme(accent: Theme = null) -> Theme:
 	var t := DotHudPiece.theme_from({
 		&"plate": hud_plate, &"plate_edge": hud_edge, &"text": hud_text, &"dim": hud_detail,
@@ -170,10 +150,8 @@ func to_dictionary() -> Dictionary:
 
 
 ## A palette from data, on top of [param base] (or the stock default when null).
-##
-## Returns a [DotResult] rather than a half-built palette: a theme file with a colour
-## nobody can read is a mistake its author wants to hear about, with the key named, and
-## a theme that quietly drew that one colour in magenta would be found by a player.
+## Returns a [DotResult] rather than a half-built palette: a colour nobody can read is a
+## mistake its author wants to hear about, with the key named.
 static func from_dictionary(data: Dictionary, base: DotMenuPalette = null) -> DotResult:
 	var p: DotMenuPalette = base.duplicate(true) if base != null else DotMenuPalette.new()
 

@@ -1,22 +1,9 @@
 class_name DotMenuPage
 extends RefCounted
 
-## One page of the menu: a tab in the sidebar, a title, a sentence, and cards of rows.
-##
-## [codeblock]
-## var page := DotMenuPage.make(&"gameplay", "Gameplay", "Your style and your view.")
-## page.section("View").add(DotMenuRow.toggle(&"show_own_body", "Your own body"))
-## menu.add_page(page, &"video")        # before Video
-## [/codeblock]
-##
-## [b]Data, drawn fresh every time it is shown.[/b] A page holds no Controls: the screen
-## builds them from this when the page opens and throws them away when it closes, so a row
-## whose words depend on a server ("This server has turned flashlights off") is right every
-## time, and a page added or changed while the menu is shut costs nothing.
-##
-## A page a game wants to draw entirely itself sets [member build] — `func(kit, body)` adds
-## whatever it likes to the scrolling column — and keeps the sidebar, the title and the
-## theme.
+## One page of the menu: a tab in the sidebar, a title, a sentence, and cards of rows. Example: docs/examples.md.
+## Data, drawn fresh every time it is shown, so a row whose words depend on a server is right every time.
+## A page a game draws itself sets [member build] (`func(kit, body)`) and keeps the sidebar, title and theme.
 
 var id: StringName = &""
 var title: String = ""

@@ -1,38 +1,9 @@
 class_name DotMenuLoadoutScreen
 extends Control
 
-## The loadout screen: the slots down the left (primary, sidearm, melee, grenades, whatever the
-## game's schema has), the slot's choices as cards with a picture, and the highlighted card's
-## statistics against what is equipped now.
-##
-## [codeblock]
-## screen.open({
-## 	"choose": true, "budget": 7, "note": "",
-## 	"slots": [{"id": "primary", "name": "Primary", "current": "rifle", "fixed": false,
-## 		"choices": [{"id": "rifle", "name": "Rifle", "cost": 2, "tags": ["automatic"],
-## 			"icon": rifle_texture, "detail": "Full auto, steady at range",
-## 			"stats": [{"label": "Damage", "value": 0.4, "text": "24"}, ...]}]}]})
-## screen.committed.connect(func(picks: Dictionary): send(picks))   # slot -> item, changed only
-## [/codeblock]
-##
-## [b]A draft, sent once, when the screen closes.[/b] Picking a card changes the draft and lights
-## it; closing (B, Escape, the Done button) sends the slots that changed, once. Sending per click
-## is a publish per click against a server that rate-limits publishes, and an Apply button is one
-## more thing to forget before the round starts. Backspace puts the draft back as it opened.
-##
-## [b]It shows only what the server will take.[/b] The offer is the server's
-## (`DotLoadoutManager.offer_for`): a slot's choices are what this player may put there tonight,
-## a fixed slot shows its one item locked, and a card that would put the loadout over the points
-## budget is drawn dimmed and says by how much. A screen that lets a player pick what is then
-## refused is a screen that lies.
-##
-## [b]Every input reaches everything[/b]: the mouse (hover to look, click to pick), the keyboard
-## (arrows, Enter, 1-9 or Q/E or Tab for the slot, Backspace, Escape or the menu key to close) and
-## a controller through the `ui_*` actions (d-pad, A, B) with the shoulders for the slot. Keys are
-## read in [method _input], ahead of the game and of [DotMenu]'s own handler.
-##
-## Drawn at a design size and scaled down whole below it, as the HUD is: re-laid out at 854x480
-## the cards would be too small to read their names.
+## The loadout screen: slots down the left, the slot's choices as cards with a picture, and the highlighted card's statistics against what is equipped. Example: docs/examples.md.
+## A draft sent once when the screen closes (B, Escape, Done): per-click sends would hit a rate-limited server. It shows only what the server will take: fixed slots are locked, over-budget cards are dimmed.
+## Mouse, keyboard (arrows, Enter, 1-9, Q/E, Tab, Backspace resets) and controller (`ui_*`); keys are read in [method _input]. Drawn at a design size and scaled down whole.
 
 signal closed()
 
@@ -236,8 +207,6 @@ func _fit() -> void:
 	_frame.position = ((view - DESIGN * k) * 0.5).floor()
 
 
-# --- Opening and closing -------------------------------------------------------
-
 func open(p_offer: Dictionary) -> void:
 	offer = p_offer
 	draft.clear()
@@ -306,8 +275,6 @@ func choices() -> Array:
 func slot_locked(slot: Dictionary) -> bool:
 	return not may_choose() or bool(slot.get("fixed", false))
 
-
-# --- Choosing -----------------------------------------------------------------
 
 ## Shows slot [param index] (wrapping), with the keys on its equipped card.
 func show_slot(index: int) -> void:
@@ -394,8 +361,6 @@ func move(by: Vector2i) -> void:
 	_rebuild()
 
 
-# --- Input ----------------------------------------------------------------------
-
 func _input(event: InputEvent) -> void:
 	if not visible or not is_visible_in_tree():
 		return
@@ -473,8 +438,6 @@ func revert() -> void:
 	_focus_equipped()
 	_rebuild()
 
-
-# --- Drawing ---------------------------------------------------------------------
 
 func _rebuild() -> void:
 	if not _built:

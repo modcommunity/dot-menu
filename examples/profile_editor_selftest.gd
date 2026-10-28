@@ -1,10 +1,6 @@
 extends Node
 
 ## Exercises [DotProfileEditorScreen]: listing, opening, applying to the user tier, reset, a custom target.
-##
-## [codeblock]
-## godot --headless --path . res://examples/profile_editor_selftest.tscn
-## [/codeblock]
 
 const SECTIONS := 5
 const CHECKS := 27

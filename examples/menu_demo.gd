@@ -1,14 +1,7 @@
 extends Node3D
 
-## dot-menu with a world behind it: the stock pages, a game's own page, a picker, and a HUD a
-## player can arrange. Escape opens the menu, H help, P the next theme, M the picker.
-##
-## [codeblock]
-## godot --path . res://examples/menu_demo.tscn
-## [/codeblock]
-##
-## Everything a game writes to use the addon is in [method _build_menu], and it is short on
-## purpose: that length is the claim this addon makes.
+## dot-menu with a world behind it: the stock pages, a game's own page, a picker, and a HUD a player can arrange. Escape opens the menu, H help, P the next theme, M the picker.
+## Everything a game writes to use the addon is in [method _build_menu], and it is short on purpose: that length is the claim this addon makes.
 
 var settings: DotSettingsManager = null
 var keys: DotMenuBindings = null

@@ -1,42 +1,9 @@
 class_name DotMenu
 extends CanvasLayer
 
-## A game's menus, in one node: the Escape menu, the help screen, a picker, the HUD layout
-## editor, a frame-rate counter, the connection overlay ([DotMenuNetStat], `net_stat`), and
-## the theme they are all drawn in.
-##
-## [codeblock]
-## var menu := DotMenu.new()
-## menu.settings = settings                       # a DotSettingsManager, set up
-## menu.bindings = keys                           # a DotMenuBindings
-## menu.config = config                           # a DotMenuConfig; null is the stock one
-## menu.help_action = &"mygame_help"              # optional: H is dot_menu_help already
-## menu.theme_action = &"mygame_theme_next"       # optional: a key that cycles themes
-## add_child(menu)
-## menu.setup()                                   # the stock pages, the themes, the screens
-## menu.page(&"general").section("HUD").add(DotMenuRow.toggle(&"show_speed", "Speed"))
-## menu.action_requested.connect(func(id): if id == &"leave": leave())
-## menu.overlays_changed.connect(func(open): sampler.suspended = open)
-## [/codeblock]
-##
-## [b]What it owns, and why those together.[/b] Which overlay is open, what Escape does, who
-## has the pointer, and what colour everything is are four questions that are easy alone and
-## are where menu bugs live together: a help screen that opens under the menu, an Escape that
-## closes two screens, a menu that closes and leaves the pointer free, a theme change that
-## restyles the menu and not the help. dot-ui answers the first three from one stack for its
-## screens; this answers them for these, the same way — from one list, in one place.
-##
-## [b]The pointer, in a browser.[/b] A browser exits pointer lock on Escape and may not
-## deliver the key at all, so a menu that opens only on the key does not open. With
-## [member DotMenuConfig.open_on_pointer_release] this watches the pointer instead: a lock it
-## had seen that is gone opens the menu. An Escape arriving within
-## [member DotMenuConfig.escape_grace_ms] of that is swallowed, or the menu would flash and
-## close. Closing by Resume (a click) recaptures; closing by Escape cannot (Escape grants no
-## user activation), so twelve frames later an uncaptured pointer emits [signal
-## click_to_play] for the game to say so.
-##
-## [b]Not a pause.[/b] See [DotMenuScreen]. [signal overlays_changed] is how a game stops its
-## input sampler instead.
+## A game's menus, in one node: the Escape menu, help, a picker, the HUD layout editor, a frame-rate counter, the [DotMenuNetStat] overlay, and the theme they are drawn in. Example: docs/examples.md.
+## It owns which overlay is open, what Escape does, who has the pointer and the theme, one list in one place. In a browser Escape exits pointer lock and may not arrive, so
+## [member DotMenuConfig.open_on_pointer_release] opens the menu on a lost lock. Not a pause (see [DotMenuScreen]); [signal overlays_changed] is how a game stops its sampler.
 
 const CHANNEL := "menu"
 
@@ -71,13 +38,8 @@ var pages: Array[DotMenuPage] = []
 var kit: DotMenuKit = null
 
 ## Actions that, pressed with nothing open, open help and cycle the theme. Empty is none.
-##
-## [b]Help is on H in every game unless the game says otherwise[/b] (API 4): the default is
-## [constant DotMenuBindings.HELP_ACTION], which [DotMenuSettings] and
-## [method DotMenuBindings.add_help] put in a game's key table, so it is rebindable and on the
-## help screen like any key. A game with no row for it still gets H: [method setup] puts the
-## action on the InputMap and the help screen lists it. Until 2026-10-11 this was empty and a
-## game got a help key only by setting it, which nine of thirteen had not.
+## Help is on H in every game unless it says otherwise ([constant DotMenuBindings.HELP_ACTION]); a game with no table row still gets H,
+## because [method setup] puts the action on the InputMap and the help screen lists it.
 var help_action: StringName = DotMenuBindings.HELP_ACTION
 var theme_action: StringName = &""
 
@@ -123,16 +85,14 @@ var manage_pointer: bool = true
 ## open the menu.
 var busy: Callable = Callable()
 
-## Leave does the stock thing itself (API 4): disconnects from the server when connected,
-## which hands the player back to whatever loaded the game, and quits a solo game on the
-## desktop. Off, Leave is only [signal action_requested] (a game that leaves its own way).
-## [DotMenuSettings] turns it on.
+## Leave does the stock thing itself: disconnects from the server when connected, and quits a
+## solo game on the desktop. Off, Leave is only [signal action_requested] (a game that leaves
+## its own way). [DotMenuSettings] turns it on.
 var leave_on_its_own: bool = false
 
 ## What Leave disconnects: anything with `disconnect_from_server(reason)` and
-## `is_connected_to_server()`. Null looks up [member leave_service] in [DotRegistry] when
-## Leave is pressed, which is where a client link publishes itself, so a link made after the
-## menu is still the one left.
+## `is_connected_to_server()`. Null looks up [member leave_service] in [DotRegistry] when Leave
+## is pressed, so a link made after the menu is still the one left.
 var leave_link: Object = null
 var leave_service: StringName = &"dot_client_link"
 
@@ -410,8 +370,6 @@ func _check_theme_setting() -> void:
 		})
 
 
-# --- Pages --------------------------------------------------------------------
-
 ## The page called [param id], or null.
 func page(id: StringName) -> DotMenuPage:
 	for p in pages:
@@ -451,8 +409,6 @@ func find_row(row_id: StringName) -> DotMenuRow:
 			return r
 	return null
 
-
-# --- Opening and closing ------------------------------------------------------
 
 func open(page_id: StringName = &"") -> void:
 	if screen == null:
@@ -511,13 +467,9 @@ func _on_picker_chosen(id: StringName) -> void:
 		picked.emit(id)
 
 
-# --- The map menu -------------------------------------------------------------
-
-## Turns the map menu on (API 5): M opens a picker of what [param rows_fn] returns
-## (`func() -> Array` of `{id, name, mode, detail, thumbnail, current, tags}`), and solo a
-## choice goes to [param change_fn] (`func(id) -> DotResult`). Connected to a server the server
-## is asked instead; see [DotMenuMaps]. Puts [member maps_action] on M when no table row did,
-## and then lists it on the help screen by hand, as for an off-table help key.
+## Turns the map menu on: M opens a picker of what [param rows_fn] returns (`func() -> Array` of `{id, name, mode, detail, thumbnail, current, tags}`),
+## and solo a choice goes to [param change_fn] (`func(id) -> DotResult`). Connected, the server is asked instead (see [DotMenuMaps]).
+## Puts [member maps_action] on M when no table row did, and lists it on the help screen by hand.
 func use_maps(rows_fn: Callable, change_fn: Callable) -> DotMenuMaps:
 	if maps == null:
 		maps = DotMenuMaps.new()
@@ -546,15 +498,9 @@ func open_maps() -> void:
 		maps.open()
 
 
-# --- The loadout menu ---------------------------------------------------------
-
-## Turns the loadout menu on (API 6): B opens [DotMenuLoadoutScreen] on what [param offer_fn]
-## returns (`func() -> Dictionary or DotResult`, may await: dot-loadout's
-## `DotLoadoutManager.offer_for` shape), and solo a choice goes to [param choose_fn]
-## (`func(picks: Dictionary) -> DotResult or {ok, text, now}`). [param decorate_fn]
-## (`func(slot_id, choice) -> Dictionary`) adds the icon and the statistics. Connected to a server
-## the server is asked instead; see [DotMenuLoadout]. Puts [member loadout_action] on B when no
-## table row did, and lists it on the help screen.
+## Turns the loadout menu on: B opens [DotMenuLoadoutScreen] on what [param offer_fn] returns (`func() -> Dictionary or DotResult`, may await);
+## solo a choice goes to [param choose_fn] (`func(picks: Dictionary) -> DotResult or {ok, text, now}`), and [param decorate_fn] (`func(slot_id, choice) -> Dictionary`) adds icon and stats.
+## Connected, the server is asked instead (see [DotMenuLoadout]). Puts [member loadout_action] on B when no table row did.
 func use_loadout(offer_fn: Callable, choose_fn: Callable, decorate_fn: Callable = Callable()) -> DotMenuLoadout:
 	if loadout == null:
 		loadout = DotMenuLoadout.new()
@@ -605,8 +551,6 @@ func open_loadout_screen(offer: Dictionary) -> void:
 	loadout_screen.open(offer)
 	_on_opened()
 
-
-# --- A line for the player ----------------------------------------------------
 
 ## A short line at the top of the screen for [param seconds]: the map menu's "Changing the map
 ## here needs …", "Nominated Atrium. Rocked: 1 of 3." A plate rather than chat, because the
@@ -768,12 +712,9 @@ func _on_action(id: StringName) -> void:
 		leave()
 
 
-# --- Leave --------------------------------------------------------------------
-
-## The stock Leave: off the server when connected (whatever loaded the game takes the player
-## back to its own menu on the disconnect), the whole program in a solo desktop game. A
-## browser tab cannot be closed by the page in it, and a quit there is a frozen canvas, so
-## offline in a browser it only closes the menu (and [method leave_label] hides the button).
+## The stock Leave: off the server when connected, the whole program in a solo desktop game.
+## A page cannot close a browser tab, and a quit there is a frozen canvas, so offline in a
+## browser it only closes the menu ([method leave_label] hides the button).
 func leave() -> void:
 	close_all()
 	var link := _leave_link()
@@ -815,21 +756,14 @@ static func _connected(link: Object) -> bool:
 	return not link.has_method(&"is_connected_to_server") or bool(link.call(&"is_connected_to_server"))
 
 
-# --- Input --------------------------------------------------------------------
-
 func _unhandled_input(event: InputEvent) -> void:
 	if handle_keys and handle_event(event):
 		get_viewport().set_input_as_handled()
 
 
-## Escape, help and the theme key, and the picker's number keys while it is open. True when
-## the event was the menu's. For a host that routes input itself; [member handle_keys] does
-## this on its own otherwise.
-##
-## [b]An open overlay owns the keyboard.[/b] Its own controls have already had the event;
-## what reaches here is a key to close it or a key that must not fall through to the game —
-## R behind a menu is a restart nobody asked for — so every key is the menu's while one is
-## open.
+## Escape, help and the theme key, and the picker's number keys while it is open. True when the event was the menu's.
+## For a host that routes input itself; [member handle_keys] does this otherwise.
+## An open overlay owns the keyboard: no key may fall through to the game (R behind a menu is a restart nobody asked for).
 func handle_event(event: InputEvent) -> bool:
 	# The scoreboard is HELD: it goes away on the release, whatever else is going on — a
 	# board left up because the release arrived while the chat line had the keyboard is a
@@ -947,8 +881,6 @@ func pointer_released_on_purpose() -> void:
 	_lock_seen = false
 
 
-# --- Themes -------------------------------------------------------------------
-
 ## The theme in use.
 func palette() -> DotMenuPalette:
 	return kit.palette if kit != null else themes.named(&"")
@@ -997,22 +929,9 @@ func use_theme(id: StringName) -> bool:
 	return true
 
 
-# --- The HUD ------------------------------------------------------------------
-
-## Keeps [param root], a game's HUD layer, in the theme and at the player's `hud_scale`:
-## its [Theme] is the palette's [method DotMenuPalette.hud_theme] with [param accent] (the
-## game's own colours) laid over it, set now and again on every theme change, so dot-ui's
-## glance pieces and every plain Label under it follow the menu live. Nothing is rebuilt:
-## a piece reads its colours when it draws.
-##
-## [b]Why the menu does this rather than each game connecting [signal theme_changed][/b]:
-## the first play test (2026-10-11) found every HUD but one ignoring the theme, because each
-## game had to wire it and none had. One call, made where the HUD is built.
-##
-## With [param scaled] the HUD is also drawn at the player's `hud_scale`: a [DotHud] through
-## its `user_scale` (inside its own fit), any other Control through
-## [method DotHud.fit_control] over the viewport, re-fitted when the window changes. A root a
-## game lays out by hand passes false.
+## Keeps [param root], a game's HUD layer, in the theme and at the player's `hud_scale`: its [Theme] is [method DotMenuPalette.hud_theme] with [param accent] laid over it,
+## set now and on every theme change, so no game has to wire [signal theme_changed] itself. Nothing is rebuilt: a piece reads its colours when it draws.
+## With [param scaled] the HUD is drawn at `hud_scale` ([DotHud] `user_scale`, or [method DotHud.fit_control]); a root laid out by hand passes false.
 func follow_hud(root: Control, accent: Theme = null, scaled: bool = true) -> void:
 	if root == null:
 		return
@@ -1138,9 +1057,8 @@ func _apply_net_stat() -> void:
 
 
 ## One switch per column the live scoreboard has and a player may hide, titled as the board
-## titles it. Built each time the page is drawn, because a game sets its columns after the
-## menu exists and may change them between rounds. Writes the `scoreboard_hidden` setting, so
-## the choice is saved like any other and [method _on_setting_changed] redraws an open board.
+## titles it. Built each time the page is drawn, since a game sets its columns after the menu
+## exists. Writes `scoreboard_hidden`, and [method _on_setting_changed] redraws an open board.
 func scoreboard_column_rows() -> Array[DotMenuRow]:
 	var out: Array[DotMenuRow] = []
 	if scoreboard == null or not _declared(DotMenuScoreboard.SETTING):
@@ -1166,23 +1084,9 @@ func _declared(key: StringName) -> bool:
 	return settings != null and settings.schema != null and settings.schema.has(key)
 
 
-# --- What a server may say ----------------------------------------------------
-
-## What a server may change about this client's menu, while it is connected:
-## [codeblock]
-## {
-##   "rows_hidden":  ["field_of_view"],        # left off every page
-##   "pages_hidden": ["audio"],
-##   "themes":       ["midnight", "contrast"], # offered; the player's own stays if allowed
-##   "clamps":       {"field_of_view": 100},   # through dot-settings' policy
-##   "leave_text":   "Disconnect"
-## }
-## [/codeblock]
-## [b]Narrower than the config, on purpose.[/b] A server may hide and clamp; it can never
-## set a player's stored value or read one (dot-settings' rule — a server that can read
-## settings can fingerprint a player). A clamp is a bound the player's own value stays
-## under, and every one of these is dropped by [method release_server_rules] on leaving.
-## Returns the clamps that were applied.
+## What a server may change about this client's menu while connected: `rows_hidden`, `pages_hidden`, `themes` (offered), `clamps` (`{setting: bound}` through dot-settings' policy) and `leave_text`.
+## Narrower than the config on purpose: a server may hide and clamp but never set or read a stored value (that would fingerprint a player).
+## Every rule is dropped by [method release_server_rules] on leaving. Returns the clamps applied.
 func apply_server_rules(rules: Dictionary) -> PackedStringArray:
 	_server_rules = rules.duplicate(true)
 	var applied := PackedStringArray()

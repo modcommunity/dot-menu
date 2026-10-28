@@ -1,22 +1,9 @@
 class_name DotMenuThemes
 extends RefCounted
 
-## Every theme a player can pick, in the order the menu offers them and a key cycles them.
-##
-## [codeblock]
-## var themes := DotMenuThemes.stock()          # the seven this addon ships
-## themes.add(my_palette)                       # a game's own
-## themes.load_json("res://ui/themes.json")     # or a file of them
-## themes.keep_only(["midnight", "paper"])      # an operator's choice of which to offer
-## [/codeblock]
-##
-## [b]The first theme is the default[/b], and an id nobody knows — a settings document from
-## a newer build, a theme a server no longer offers, one typed by hand — resolves to it
-## rather than to no palette. A menu that cannot draw is worse than one in the wrong colours.
-##
-## [b]An instance, not a static list.[/b] Two menus in one process — a server and a client
-## in one editor session, a launcher and the game it launched — may offer different themes,
-## and a static catalogue would make one of them wrong.
+## Every theme a player can pick, in the order the menu offers them and a key cycles them. Example: docs/examples.md.
+## The first theme is the default and an unknown id resolves to it: a menu that cannot draw is worse than one in the wrong colours.
+## An instance, not a static list, since two menus in one process may offer different themes.
 
 const CHANNEL := "menu.themes"
 
@@ -126,8 +113,8 @@ const STOCK: Array[Dictionary] = [
 		"warn": [0.75, 0.45, 0.0], "danger": [0.78, 0.15, 0.2],
 		"keycap": [1.0, 1.0, 1.0], "keycap_edge": [0.72, 0.73, 0.76],
 		# The menus are light; the HUD is not. It is drawn over the world, where a plate the
-		# colour of the sky is not a plate and a game's white names vanish on it (arena's
-		# kill feed, rendered 2026-10-12). Dark plates edged in the theme's blue, paper caps.
+		# colour of the sky is not a plate and a game's white names vanish on it. Dark plates
+		# edged in the theme's blue, paper caps.
 		"hud_plate": [0.05, 0.06, 0.09, 0.78], "hud_text": [0.98, 0.98, 1.0], "hud_detail": [0.78, 0.8, 0.86],
 		"hud_ahead": [0.35, 0.85, 0.45], "hud_behind": [1.0, 0.38, 0.38],
 		"hud_edge": [0.25, 0.55, 0.95, 0.4], "hud_ink": [0, 0, 0, 0.9], "hud_highlight": [1.0, 0.78, 0.25],
@@ -183,11 +170,9 @@ func add_dictionary(data: Dictionary) -> DotResult:
 	return res
 
 
-## Adds every theme in a JSON file: `{"themes": [ {...}, ... ]}` or a bare array.
-##
-## A missing file is not an error, for [DotConfig]'s reason: "no themes file" is the first
-## launch. A file that exists and does not parse is — somebody wrote it and meant it.
-## Returns the ids it added.
+## Adds every theme in a JSON file: `{"themes": [ {...}, ... ]}` or a bare array. Returns the ids added.
+## A missing file is not an error, for [DotConfig]'s reason ("no themes file" is the first
+## launch); a file that exists and does not parse is.
 func load_json(path: String) -> DotResult:
 	if path == "" or not FileAccess.file_exists(path):
 		return DotResult.success(PackedStringArray())

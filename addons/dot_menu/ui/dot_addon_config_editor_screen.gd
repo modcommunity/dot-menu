@@ -1,15 +1,7 @@
 class_name DotAddonConfigEditorScreen
 extends PanelContainer
 
-## Edits the player's own override of addon cfg files (`user://cfg/user/addons/`) in a [DotUiForm].
-##
-## [codeblock]
-## var ed := DotAddonConfigEditorScreen.new()
-## add_child(ed)
-## ed.add_file("dot-weapon", "tuning.yml", schema, "Weapon tuning")
-## ed.open("dot-weapon", "tuning.yml")   # Apply saves to the user tier; Reset deletes the file
-## [/codeblock]
-##
+## Edits the player's own override of addon cfg files (`user://cfg/user/addons/`) in a [DotUiForm]. Example: docs/examples.md.
 ## Only a solo or listen-host process has the tier ([method DotAddonConfig.set_user_tier]); elsewhere Apply
 ## reports why and writes nothing.
 

@@ -1,34 +1,9 @@
 class_name DotMenuLoadout
 extends RefCounted
 
-## The loadout menu: B opens [DotMenuLoadoutScreen] on what the player may carry, and closing it
-## with changes saves them. Solo the game is asked directly; on a server the SERVER decides.
-##
-## [codeblock]
-## var loadout := menu.use_loadout(
-## 	func() -> Variant: return await game.loadouts.offer_for(my_key),      # solo: the offer
-## 	func(picks: Dictionary) -> Variant: return await game.choose(picks),  # solo: save them
-## 	func(slot_id: String, choice: Dictionary) -> Dictionary:              # art and numbers
-## 		return {"icon": icons[choice.id], "stats": stats_for(choice.id)})
-## loadout.remember_as("arena", account_name)
-## loadout.restore()      # after joining: re-sends what this account chose last time
-## [/codeblock]
-##
-## [b]The offer is the server's, the pictures are the client's.[/b] Connected, B sends `/loadout`
-## through the client link's chat (a prefixed line is a command and never shown) and opens on the
-## `loadout_menu` notice dot-loadout's `DotLoadoutCommand` answers with: per slot, what this player
-## may put there under the owner's rules, as ids, names and costs. [member decorate_fn] adds what a
-## dedicated server does not have: the icon, a line, the statistics. Closing with changes sends
-## `/loadout slot=item ...`; the answer (`{result: {ok, text, now}}`) is a toast.
-##
-## [b]Remembered per account, on the client.[/b] A server keys loadouts by its own session ids and
-## forgets them when it restarts; the player's choice is theirs. So a choice that was saved is
-## written to `user://` under the account ([method remember_as]) and [method restore] sends it again
-## on the next join, to whatever server that is. A server whose rules refuse part of it says so and
-## the player keeps the rest.
-##
-## Nothing here names dot-loadout or dot-server: an offer is a dictionary, a notice is read by its
-## `topic` and `data`, and the link is `dot_client_link` in [DotRegistry], as for the map menu.
+## The loadout menu: B opens [DotMenuLoadoutScreen] on what the player may carry, and closing it with changes saves them. Solo the game is asked directly; on a server the SERVER decides. Example: docs/examples.md.
+## Connected, B sends `/loadout` through the client link's chat and opens on the `loadout_menu` notice; closing sends `/loadout slot=item ...` and the answer is a toast.
+## Remembered per account on the client ([method remember_as], [method restore]) because a server forgets loadouts on restart. Nothing here names dot-loadout or dot-server.
 
 const CHANNEL := "menu.loadout"
 
@@ -88,8 +63,6 @@ var _bound_link: Object = null
 var _quiet_until_msec: int = 0
 
 
-# --- Opening -------------------------------------------------------------------
-
 ## Opens the menu: the solo offer now, or asks the server and opens on its answer.
 func open() -> void:
 	if not enabled or menu == null:
@@ -138,8 +111,6 @@ func decorate(data: Dictionary) -> Dictionary:
 					choice[k] = (extra as Dictionary)[k]
 	return out
 
-
-# --- Saving ----------------------------------------------------------------------
 
 ## The screen closed with changes. Solo: [member choose_fn]; connected: the server.
 func commit(picks: Dictionary) -> void:
@@ -219,8 +190,6 @@ static func _failure_text(got: Variant, fallback: String) -> String:
 	return fallback
 
 
-# --- Remembering -------------------------------------------------------------------
-
 ## Files choices under [param game] and [param account] from now on. "" game turns it off.
 func remember_as(game: String, account: String = "local") -> void:
 	remember_game = game
@@ -286,8 +255,6 @@ static func _read_file() -> Dictionary:
 	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(REMEMBER_FILE))
 	return parsed as Dictionary if parsed is Dictionary else {}
 
-
-# --- The server ---------------------------------------------------------------------
 
 func _ask(l: Object, args: String) -> void:
 	_bind(l)

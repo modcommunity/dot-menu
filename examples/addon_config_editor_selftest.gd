@@ -1,10 +1,6 @@
 extends Node
 
 ## Exercises [DotAddonConfigEditorScreen]: open, apply to the user tier, reset, tier off, unknown file.
-##
-## [codeblock]
-## godot --headless --path . res://examples/addon_config_editor_selftest.tscn
-## [/codeblock]
 
 const SECTIONS := 6
 const CHECKS := 30

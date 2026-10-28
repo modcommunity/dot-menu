@@ -1,16 +1,7 @@
 extends Node
 
-## Exercises dot-menu with no game: the data model, the stock settings and what applies them,
-## the bindings table, the screens driven by their own controls, the facade's keys, and what a
-## server may and may not do.
-##
-## [codeblock]
-## godot --headless --path . res://examples/menu_selftest.tscn
-## [/codeblock]
-##
-## [b]CHECKS is the guard the section counter cannot be.[/b] A script error inside a test
-## aborts THAT TEST, not the run; the section counter is satisfied because the section had
-## already announced itself, and the total is what notices the checks that never ran.
+## Exercises dot-menu with no game: the data model, stock settings and what applies them, the bindings table, the screens, the facade's keys, and what a server may do.
+## CHECKS is the guard the section counter cannot be: a script error aborts that test, not the run, and only the total notices checks that never ran.
 const SECTIONS := 23
 const CHECKS := 368
 
@@ -68,8 +59,6 @@ func _run() -> void:
 
 	get_tree().quit(1 if _failed > 0 else 0)
 
-
-# --- Fixtures -------------------------------------------------------------------
 
 func _schema(groups: Array[StringName] = DotMenuStock.DEFAULT_GROUPS) -> DotSettingsSchema:
 	var s := DotSettingsSchema.new()
@@ -203,8 +192,6 @@ class FakeHud extends Control:
 		positions.erase(id)
 
 
-# --- 1 ----------------------------------------------------------------------------
-
 func _test_palette() -> void:
 	_section("A theme is data")
 
@@ -232,8 +219,6 @@ func _test_palette() -> void:
 	_check(DotMenuPalette.ink_on(Color(0.1, 0.2, 0.4)).r > 0.9, "and white ink on a dark one")
 	_check(Color(p.accent, 0.13).is_equal_approx(p.accent_wash()), "the wash follows the accent rather than being stored")
 
-
-# --- 2 ----------------------------------------------------------------------------
 
 func _test_themes() -> void:
 	_section("The catalogue")
@@ -275,8 +260,6 @@ func _test_themes() -> void:
 	f.close()
 	_check(not t2.load_json(path).ok, "while a file that does not parse is one")
 
-
-# --- 3 ----------------------------------------------------------------------------
 
 func _test_config() -> void:
 	_section("A developer changes values without code")
@@ -337,8 +320,6 @@ func _test_config() -> void:
 	_check(not broken.validate().ok, "and a value nobody can act on is refused")
 
 
-# --- 4 ----------------------------------------------------------------------------
-
 func _test_stock() -> void:
 	_section("The stock settings, and what applies each")
 
@@ -397,8 +378,6 @@ func _test_stock() -> void:
 		"General, Video, Audio, Controls, Advanced")
 
 
-# --- 5 ----------------------------------------------------------------------------
-
 func _test_bindings() -> void:
 	_section("Keys")
 
@@ -443,8 +422,6 @@ func _test_bindings() -> void:
 	k.reset_all(st)
 	st.queue_free()
 
-
-# --- 6 ----------------------------------------------------------------------------
 
 func _test_applier() -> void:
 	_section("Every value reaches what it controls")
@@ -515,8 +492,6 @@ func _test_applier() -> void:
 	st.queue_free()
 
 
-# --- 7 ----------------------------------------------------------------------------
-
 func _test_screen() -> void:
 	_section("The menu is a view of the settings")
 
@@ -586,8 +561,6 @@ func _test_screen() -> void:
 	_free_menu(narrow)
 
 
-# --- 8 ----------------------------------------------------------------------------
-
 func _test_rows() -> void:
 	_section("A game extends a page")
 
@@ -644,8 +617,6 @@ func _test_rows() -> void:
 	_check(_row_control(menu, "vsync") == null and _row_control(menu, "fps_max") != null, "a hidden row is gone and its neighbours are not")
 	_free_menu(menu)
 
-
-# --- 9 ----------------------------------------------------------------------------
 
 func _test_facade() -> void:
 	_section("Escape, help and the theme key")
@@ -714,8 +685,6 @@ func _test_facade() -> void:
 	await get_tree().process_frame
 
 
-# --- 10 ---------------------------------------------------------------------------
-
 func _test_server_rules() -> void:
 	_section("What a server may do")
 
@@ -755,8 +724,6 @@ func _test_server_rules() -> void:
 	_check(_row_control(menu, "render_scale") != null and leave.text == "Leave", "and everything it hid or reworded")
 	_free_menu(menu)
 
-
-# --- 11 ---------------------------------------------------------------------------
 
 func _test_help_and_picker() -> void:
 	_section("Help and the picker")
@@ -802,8 +769,6 @@ func _test_help_and_picker() -> void:
 	await get_tree().process_frame
 
 
-# --- 12 ---------------------------------------------------------------------------
-
 func _test_layout() -> void:
 	_section("Moving the HUD")
 	DotMenuKit._backdrop_shader()
@@ -834,8 +799,6 @@ func _test_layout() -> void:
 	editor.queue_free()
 	hud.queue_free()
 
-
-# --- 13 ---------------------------------------------------------------------------
 
 func _test_settings_node() -> void:
 	_section("One node for a game that has no presentation layer")
@@ -878,8 +841,6 @@ func _test_settings_node() -> void:
 	node.queue_free()
 	await get_tree().process_frame
 
-
-# --- 14 ---------------------------------------------------------------------------
 
 ## Anything shaped like dot-server's DotClientLink, for the board's feed.
 class FakeLink extends RefCounted:
@@ -1077,10 +1038,6 @@ func _test_scoreboard() -> void:
 	await get_tree().process_frame
 
 
-# --- Harness ----------------------------------------------------------------------
-
-# --- 15 ---------------------------------------------------------------------------
-
 ## net_stat is three settings, one overlay and a meter. What is asserted is the wiring and
 ## the arithmetic; how it LOOKS is tools/screenshot.sh's (shot net_stat_*).
 func _test_net_stat() -> void:
@@ -1217,8 +1174,6 @@ func _test_net_stat() -> void:
 	mine.queue_free()
 
 
-# --- 16 ---------------------------------------------------------------------------
-
 ## Anything shaped like dot-voice's DotVoiceManager, as far as the applier and the menu care.
 class FakeVoice extends Node:
 	signal server_enabled_changed(enabled: bool)
@@ -1264,8 +1219,7 @@ func _test_voice() -> void:
 	_check(talk_keys.size() == 1 and talk_keys[0] is InputEventKey and (talk_keys[0] as InputEventKey).physical_keycode == KEY_V,
 		"on V by default")
 
-	# Published after the menu: found by the registry, not handed over. Armed: nothing is
-	# called before it is published.
+	# Published after the menu: looked up in the registry, not handed over. Armed: nothing is called before it is published.
 	var voice := FakeVoice.new()
 	add_child(voice)
 	_check(voice.open_mic_calls.is_empty(), "an unpublished voice is told nothing")
@@ -1297,8 +1251,6 @@ func _test_voice() -> void:
 	node.queue_free()
 	await get_tree().process_frame
 
-
-# --- 17 ---------------------------------------------------------------------------
 
 ## A game's help: the goal and a modes card, which only the game can say.
 class FilledSettings extends DotMenuSettings:
@@ -1554,6 +1506,14 @@ func _test_map_menu() -> void:
 	_check(not node.menu.picker.is_open() and node.menu.toast_text().contains("'changemap'"),
 		"with no flag and no vote, the refusal is shown and nothing opens")
 
+	await _test_map_menu_without_table(rows)
+	link.queue_free()
+	node.queue_free()
+	await get_tree().process_frame
+
+
+## The map key on a menu with no key table, and on a table that already has M.
+func _test_map_menu_without_table(rows: Array) -> void:
 	# A menu built by hand with no table still gets M once the game hands it a list.
 	if InputMap.has_action(DotMenuBindings.MAPS_ACTION):
 		InputMap.erase_action(DotMenuBindings.MAPS_ACTION)
@@ -1581,12 +1541,7 @@ func _test_map_menu() -> void:
 		"a table that already has M gets the map key on F3 (each game's suite fails on that, so move the game's own)")
 	taken.queue_free()
 	bare.queue_free()
-	link.queue_free()
-	node.queue_free()
-	await get_tree().process_frame
 
-
-# --- 20 ---------------------------------------------------------------------------
 
 ## Contrast ratio of [param fg] over [param plate] laid on [param ground], in linear light.
 func _contrast(fg: Color, plate: Color, ground: Color) -> float:
@@ -1670,8 +1625,6 @@ func _test_hud_follows() -> void:
 	_free_menu(menu)
 	await get_tree().process_frame
 
-
-# --- Moved defaults ----------------------------------------------------------------
 
 func _old_document_manager(schema: DotSettingsSchema, values: Dictionary) -> DotSettingsManager:
 	# A document from before documents recorded their defaults: values only.
@@ -1965,8 +1918,6 @@ class FakeNetManager extends RefCounted:
 	func perf_counters() -> Dictionary:
 		return counters.duplicate()
 
-
-# --- 22 ---------------------------------------------------------------------------
 
 func _wheel(index: MouseButton) -> InputEventMouseButton:
 	var e := InputEventMouseButton.new()

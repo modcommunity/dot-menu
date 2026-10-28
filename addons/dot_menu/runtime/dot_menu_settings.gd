@@ -1,30 +1,9 @@
 class_name DotMenuSettings
 extends Node
 
-## A player's settings, what applies them, and the menu that changes them, as one node.
-##
-## [codeblock]
-## var settings := DotMenuSettings.new()
-## settings.directory = "user://my_game_settings"
-## settings.app_namespace = &"my_game"
-## settings.schema = my_schema()          # null is the stock set
-## add_child(settings)
-## settings.setup()                       # loads, applies everything, builds the menu
-## settings.bind_look(sampler.tunables)
-## settings.bind_camera(camera)
-## settings.bind_audio(audio)
-## settings.menu_state_changed.connect(func(open): sampler.suspended = open)
-## [/codeblock]
-##
-## [b]The shape six games had written by hand.[/b] Each minigame carried a two-hundred-and-
-## fifty-line file that was this node with its class renamed: a manager, a `match` that
-## pushed four keys at a sampler, a camera and a mixer, and a `DotSettingsScreen` on a
-## stack. A game now subclasses this for its schema and its defaults and keeps the API its
-## client already called, and the screen it opens is the full menu.
-##
-## [b]`setup` applies before it returns[/b] ([DotMenuApplier]'s reason: a stored value has not
-## changed, so a game that waits for `changed` ignores every saved one), and anything bound
-## after is applied as it is bound.
+## A player's settings, what applies them, and the menu that changes them, as one node. Example: docs/examples.md.
+## A game subclasses this for its schema and defaults and keeps the API its client already called.
+## `setup` applies before it returns ([DotMenuApplier]'s reason), and anything bound after is applied as it is bound.
 
 const CHANNEL := "menu.settings"
 
@@ -157,15 +136,12 @@ func setup(store: DotSettingsStore = null, with_menu: bool = true) -> DotResult:
 	return DotResult.success(self)
 
 
-## What only the game can say on its help screen: [member DotMenuHelp.about] (the goal),
-## and cards from [method DotMenuHelp.add_text] (modes, rules) and
-## [method DotMenuHelp.add_section]. The keys are drawn from the table and need nothing here.
+## What only the game can say on its help screen: [member DotMenuHelp.about] (the goal), and cards from
+## [method DotMenuHelp.add_text] and [method DotMenuHelp.add_section]. The keys are drawn from the table.
 ## Called once, after the menu is built; a game overrides it.
 func _fill_help(_help: DotMenuHelp) -> void:
 	pass
 
-
-# --- What reads them ----------------------------------------------------------
 
 ## The map menu: M opens [param rows_fn]'s list and solo [param change_fn] changes to the
 ## choice; on a server the server decides. See [method DotMenu.use_maps]. Null without a menu.
@@ -219,8 +195,6 @@ func apply_all() -> void:
 	if applier != null:
 		applier.apply_all()
 
-
-# --- The menu -----------------------------------------------------------------
 
 func is_open() -> bool:
 	return menu != null and menu.any_open()

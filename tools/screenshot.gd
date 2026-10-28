@@ -1,11 +1,7 @@
 extends SceneTree
 
-## Renders the demo's every screen to screenshots/, in several themes.
-##
-##   tools/screenshot.sh
-##
-## Run under xvfb-run, not --headless: a headless run has a null renderer and every frame it
-## saves is empty, which is worse than no picture because it looks like one.
+## Renders the demo's every screen to screenshots/, in several themes (tools/screenshot.sh).
+## Run under xvfb-run, not --headless: a headless run has a null renderer and every frame it saves is empty, which looks like a picture.
 
 const OUT := "res://screenshots"
 
@@ -142,10 +138,8 @@ func _run() -> void:
 	quit(0)
 
 
-## net_stat over three seconds of made-up traffic shaped like a real client's: a snapshot
-## on the state channel every other frame, the odd control and event packet, a content
-## burst, and a ping that wanders and spikes once. Real time, because the overlay buckets
-## by the clock.
+## net_stat over three seconds of made-up traffic shaped like a real client's (state snapshots, a content burst, a ping that spikes once).
+## Real time, because the overlay buckets by the clock.
 func _net_stat_shots(menu: DotMenu, settings: DotSettingsManager) -> void:
 	var meter := ShotMeter.new()
 	menu.net_stat.source = func() -> Object: return meter

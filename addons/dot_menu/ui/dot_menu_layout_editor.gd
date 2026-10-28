@@ -1,26 +1,9 @@
 class_name DotMenuLayoutEditor
 extends Control
 
-## Moving the HUD: every piece a player can place is drawn with a frame round it, and is
-## dragged where they want it. Right-click puts one back.
-##
-## [codeblock]
-## editor.target = hud
-## editor.pieces = {&"timer": "Timer", &"keys": "Keys"}
-## editor.saved.connect(func(text): settings.set_value(&"hud_positions", text))
-## editor.open()
-## [/codeblock]
-##
-## [b]A drag, not a form.[/b] Plugins in the genres these games come from offer a handful of
-## fixed layouts because the engines they live in cannot draw anything else; here a HUD is
-## Controls, so where a piece goes is wherever a player puts it, and the honest way to ask
-## "where" is to let them point. What is stored is each piece's CENTRE as a fraction of the
-## window ([method encode]), so a layout made on a laptop lands in the same place on a 4K
-## screen.
-##
-## [b]The target is duck-typed[/b], so any HUD can be arranged: `element_rect(id) -> Rect2`
-## (where the piece is drawn now, in the target's coordinates), `move_element(id, centre)`,
-## `reset_element(id)`, and a `positions` dictionary of `id -> Vector2` fractions.
+## Moving the HUD: every piece a player can place is drawn with a frame round it and dragged where they want it. Right-click puts one back. Example: docs/examples.md.
+## What is stored is each piece's CENTRE as a fraction of the window ([method encode]), so a layout lands in the same place on a 4K screen.
+## The target is duck-typed: `element_rect(id) -> Rect2`, `move_element(id, centre)`, `reset_element(id)`, and a `positions` dictionary of `id -> Vector2`.
 
 signal closed()
 
@@ -243,10 +226,8 @@ static func encode(value: Dictionary) -> String:
 
 
 ## [method encode]'s text back into `{id: Vector2}`, keeping only ids in [param known].
-##
-## Anything that is not a known piece with two finite numbers is dropped, and each number is
-## held to 0..1: the setting is a file a player can edit by hand, and a piece put off-screen
-## by a typo is a piece they cannot find again to drag back.
+## Anything that is not a known piece with two finite numbers is dropped and each number is held to 0..1:
+## the setting is hand-editable, and an off-screen piece cannot be found to drag back.
 static func decode(text: String, known: Array = []) -> Dictionary:
 	var out := {}
 	if text.strip_edges() == "":

@@ -1,29 +1,9 @@
 class_name DotMenuPicker
 extends Control
 
-## A numbered list to pick one thing from, a page at a time: maps, a team, a class, a vote.
-##
-## [codeblock]
-## picker.title_text = "Change map — this server"
-## picker.open([{"id": "surf_intro", "name": "Surf Intro", "tags": ["tier 1"], "current": true}])
-## picker.chosen.connect(func(id): change_map(id))
-## # in the host's input handler, while it is open:
-## if picker.key(event.keycode): get_viewport().set_input_as_handled()
-## [/codeblock]
-##
-## [b]The number keys are the community-server menu keys[/b], because that is what the
-## players these games are for already have in their fingers: 1-7 pick a row, 8 is the
-## previous page, 9 the next, 0 closes. The mouse works as well, and a row says its number,
-## so the two never disagree. Seven rows a page is what keeps 8 and 9 free for turning.
-##
-## An item is `{id, name, tags, current, warn, detail, thumbnail}`: `tags` is a list of short
-## words drawn on the right, `current` lights the row in the accent (and opens on its page, so
-## "what is on now" is the first thing seen), `warn` draws the tags in the warning colour.
-## `detail` is a quiet second line under the name (a map's mode, a one-line blurb), and
-## `thumbnail` a picture drawn before it: a [Texture2D], or a `res://` path loaded if it exists.
-## On a page where some rows have a picture, a row without one keeps an empty frame of the same
-## size so the names line up; a page where none has one draws no frames at all (a column of
-## empty boxes reads as broken art).
+## A numbered list to pick one thing from, a page at a time: maps, a team, a class, a vote. Example: docs/examples.md.
+## Keys are the community-server menu keys: 1-7 pick a row, 8 previous page, 9 next, 0 closes; the mouse works too and a row says its number.
+## An item is `{id, name, tags, current, warn, detail, thumbnail}`; `current` lights the row and opens on its page; a page with no thumbnails draws no frames.
 
 signal closed()
 

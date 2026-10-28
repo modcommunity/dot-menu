@@ -2,17 +2,8 @@ class_name DotMenuKeyButton
 extends Button
 
 ## One key binding as a button: shows the key, and on a click listens for the next one.
-##
-## [b]Listens in [method Node._input], ahead of everything else.[/b] A key pressed to bind
-## must not ALSO do what it currently does — R restarting a run, F toggling a light — and a
-## game's handlers run from `_unhandled_input`, after this has marked it handled.
-##
-## Three things a rebinder has to get right, and dot-ui's `DotBindingsPanel` names them:
-## [b]Escape cancels[/b] (a player who opened the capture by accident must be able to back
-## out, and binding Escape would leave them unable to leave any menu); [b]keys are stored by
-## physical position[/b], through `DotInputBinding`, so a binding survives a layout change;
-## and [b]the left mouse button is refused[/b], because it is how the player clicks on this
-## button, and every other button, to begin with.
+## Listens in [method Node._input] so the key pressed to bind does not also do what it currently does. Escape cancels, keys are stored by physical position
+## (`DotInputBinding`), and the left mouse button is refused because it is how the player clicked this button.
 
 ## The binding a player chose, as `DotInputBinding` text.
 signal captured(text: String)

@@ -1,20 +1,9 @@
 class_name DotMenuHelp
 extends Control
 
-## The help screen: every key as it is bound now, the server's commands, and — in a browser —
-## what the browser does with keys the game never sees.
-##
-## [b]Nothing on it is written down here.[/b] The keys come from [DotMenuBindings] and show
-## the player's own bindings, not the defaults; the commands come from whatever the server
-## said when this client joined. A key rebound a minute ago and a command added to the server
-## last week are both on it, and neither needed this file edited. A help screen that is a
-## list somebody typed is wrong the first time anybody changes anything, and nothing says so.
-##
-## [b]What is written down is the game's, and only what no table can say:[/b] the goal
-## ([member about], the first card on the right), and cards of its own with
-## [method add_text] (a paragraph: the modes, the rules) or [method add_section] (lines: the
-## glyphs on the HUD, a mode's own keys), which go in the right-hand column above the
-## commands. [DotMenuSettings] asks a game for them in `_fill_help`.
+## The help screen: every key as it is bound now, the server's commands, and in a browser what the browser does with keys the game never sees.
+## Nothing on it is written down here: keys come from [DotMenuBindings] (the player's own), commands from what the server said on join.
+## The game adds only what no table can say: [member about], [method add_text] and [method add_section] ([DotMenuSettings] asks in `_fill_help`).
 
 signal closed()
 
@@ -335,8 +324,6 @@ func _commands(card: VBoxContainer) -> void:
 		line.add_child(kit.paragraph(str(row[1]) if row.size() > 1 else "", kit.size_small, p.muted))
 		_line(card, line)
 
-
-# --- Pieces -------------------------------------------------------------------
 
 func _card(column: VBoxContainer, title: String) -> VBoxContainer:
 	var head := MarginContainer.new()

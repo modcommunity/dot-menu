@@ -1,10 +1,6 @@
 extends Node
 
 ## The yml layout of dot-menu's admin_menu.yml: new path, flat shim, operator layer.
-##
-## [codeblock]
-## timeout 120 godot --headless --path . res://examples/cfg_selftest.tscn
-## [/codeblock]
 
 const FOLDER := "dot_menu"
 const LEGACY := "user://dot_menu_cfg_selftest_legacy"

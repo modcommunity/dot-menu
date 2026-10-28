@@ -1,17 +1,16 @@
 # size
 # Baselines only shrink: scripts/<gate> --update lowers or drops entries and refuses to add.
 addons/dot_menu/core/dot_menu_kit.gd::theme	88
-addons/dot_menu/runtime/dot_menu.gd	1285
-addons/dot_menu/runtime/dot_menu_settings.gd::setup	81
+addons/dot_menu/runtime/dot_menu.gd	1192
 addons/dot_menu/stock/dot_menu_stock.gd::_declare	103
 addons/dot_menu/ui/dot_menu_loadout_screen.gd::_build	112
-addons/dot_menu/ui/dot_menu_net_stat.gd	893
+addons/dot_menu/ui/dot_menu_net_stat.gd	830
 examples/menu_demo.gd::_build_menu	94
-examples/menu_selftest.gd	2077
+examples/menu_selftest.gd	2037
 examples/menu_selftest.gd::_test_help_key_and_leave	110
 examples/menu_selftest.gd::_test_loadout_menu	121
-examples/menu_selftest.gd::_test_map_menu	128
-examples/menu_selftest.gd::_test_net_stat	137
-examples/menu_selftest.gd::_test_scoreboard	171
+examples/menu_selftest.gd::_test_map_menu	109
+examples/menu_selftest.gd::_test_net_stat	135
+examples/menu_selftest.gd::_test_scoreboard	167
 examples/menu_selftest.gd::_test_wheel	101
-tools/screenshot.gd::_run	129
+tools/screenshot.gd::_run	127

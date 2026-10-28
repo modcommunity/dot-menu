@@ -3,8 +3,7 @@ extends EditorPlugin
 
 ## Editor entry point for dot-menu. Registers inspector types only.
 ##
-## No autoloads: a server and a client in one editor session are two menus, with two themes
-## and two sets of settings, and a global would make them one.
+## No autoloads: a server and a client in one editor session are two menus.
 
 const _TYPES := [
 	["DotMenu", "CanvasLayer", "res://addons/dot_menu/runtime/dot_menu.gd"],

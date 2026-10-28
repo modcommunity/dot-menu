@@ -1,38 +1,9 @@
 class_name DotMenuFrameClock
 extends RefCounted
 
-## Wall-clock frame times, split into where each frame went: physics, script, render, and
-## the wait before the next frame began.
-##
-## [codeblock]
-## var clock := DotMenuFrameClock.new()
-## clock.start(get_tree())
-## # ... later, any number of frames on:
-## var s := clock.summary(1.0)   # {fps, mean_ms, worst_ms, physics_ms, steps, ...}
-## [/codeblock]
-##
-## [b]Why not the process delta.[/b] The delta [method Node._process] is handed is smoothed
-## ([member ProjectSettings.application/run/delta_smoothing]) and clamped, so a 120 ms hitch
-## arrives as a few frames of 30 and a steady 37 ms frame can read as 33. A frame graph built
-## on it draws what the engine wished had happened. This reads [method Time.get_ticks_usec]
-## at four points the engine already signals in every iteration of its main loop:
-##
-## - the first [signal SceneTree.physics_frame] of an iteration (the start of physics);
-## - [signal SceneTree.process_frame] (physics over, scripts' [code]_process[/code] next);
-## - [signal RenderingServer.frame_pre_draw] (scripts over, rendering next);
-## - [signal RenderingServer.frame_post_draw] (the CPU side of rendering over).
-##
-## A frame's wall time is the gap between two iteration starts, which is what the player
-## waits; [code]wait[/code] is what is left after the three measured parts: the frame cap,
-## vsync, and in a browser the wait for the next animation frame and for the GPU. A browser
-## frame that needs 17 ms of work waits for the second vsync, so a frame whose parts add up
-## to 18 ms and whose wall time is 33 ms is not mysterious: it is the wait column.
-##
-## [b]Engine.get_monitor's TIME_PROCESS and TIME_PHYSICS_PROCESS are not per-frame
-## figures.[/b] They are the slowest frame of the last second, refreshed once a second, so
-## a benchmark that averaged them reported each second's worst frame as its typical one.
-##
-## Headless there is no draw, so the script part runs to the next iteration and render is 0.
+## Wall-clock frame times split into physics, script, render and the wait before the next frame. Example: docs/examples.md.
+## Not the process delta, which is smoothed and clamped; this reads the clock at the first physics_frame, process_frame, frame_pre_draw and frame_post_draw of each iteration, and `wait` is what is left (frame cap, vsync, a browser's wait).
+## Engine.get_monitor's TIME_PROCESS is the slowest frame of the last second, not a per-frame figure. Headless there is no draw, so render is 0.
 
 ## Frames kept, at the frame rate: four seconds at 240 fps, sixteen at 60.
 const KEPT := 960
@@ -208,11 +179,9 @@ func total_frames() -> int:
 	return _total_frames
 
 
-## The frames of the last [param seconds]: [code]frames, fps, mean_ms, worst_ms, p50_ms,
-## p95_ms[/code], the mean parts [code]physics_ms, script_ms, render_ms, wait_ms[/code],
-## [code]steps[/code] (physics steps a frame), and [code]hitches[/code] (frames of
-## [constant HITCH_MS] or more in the last [constant HITCH_WINDOW_SEC]) with
-## [code]worst_hitch_ms[/code] since the last [method reset].
+## The frames of the last [param seconds]: `frames, fps, mean_ms, worst_ms, p50_ms, p95_ms`, the mean parts
+## `physics_ms, script_ms, render_ms, wait_ms`, `steps` (physics steps a frame), and `hitches` (frames of
+## [constant HITCH_MS] or more in the last [constant HITCH_WINDOW_SEC]) with `worst_hitch_ms` since [method reset].
 func summary(seconds: float = 1.0) -> Dictionary:
 	var since := Time.get_ticks_usec() - int(seconds * 1e6)
 	var n := 0

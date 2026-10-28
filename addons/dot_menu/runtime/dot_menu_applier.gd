@@ -1,46 +1,14 @@
 class_name DotMenuApplier
 extends Node
 
-## Pushes every setting at whatever it controls, once after load and on every change after.
-##
-## [codeblock]
-## var applier := DotMenuApplier.new()
-## applier.settings = settings
-## applier.bindings = keys
-## add_child(applier)
-## applier.bind_audio(audio)                  # a DotAudioManager, or its mixer
-## applier.bind_fx(fx)                        # a DotFxManager, or its config
-## applier.bind_look(sampler.tunables)        # sensitivity and invert
-## applier.bind_camera(camera)                # field of view
-## applier.on(&"show_own_body", func(v, _why): player.show_own_body = v)
-## applier.setup()                            # connects, and applies everything now
-## [/codeblock]
-##
-## [b]`apply_all()` on load, and it is the line this family keeps losing.[/b] A value read
-## from disk has not CHANGED, so a game that applies settings only from `changed` ignores
-## every saved one until the player touches it — their saved sensitivity does nothing and
-## the slider shows the number they chose. Every value is pushed once at [method setup] and
-## again whenever something new is bound, then `changed` keeps them current.
-##
-## [b]Duck-typed, so dot-menu depends on none of what it drives.[/b] An audio target is
-## anything with `master`/`sfx`/`ui`/`music`/`voice`/`ambience` (dot-audio's mixer) or a `mixer` that
-## has them; with none bound the volumes go straight onto the [AudioServer]'s buses of those
-## names, so a game with no dot-audio still has working sliders. An fx target is anything
-## with `shake_scale`, `allow_flashes` and `quality`. A look target is anything with
-## `mouse_sensitivity` and `invert_look_y` ([DotFpsTunables] — neither is in its movement
-## fingerprint, so a client writing them can never disagree with its server).
-##
-## [b]Two stock settings need the game[/b] and are left to [method on]: `chat_window` (only
-## the game knows whether its server carries chat elsewhere) and `ui_theme`/`hud_scale`/`show_fps`/`net_stat*`, which
-## [DotMenu] applies itself because it owns what they change.
+## Pushes every setting at whatever it controls, once after load and on every change after. Example: docs/examples.md.
+## Everything is pushed at [method setup] and when something new is bound: a value read from disk has not CHANGED, so applying only from `changed` would ignore every saved setting.
+## Duck-typed so dot-menu depends on none of what it drives; `chat_window` is left to [method on], and `ui_theme`, `hud_scale`, `show_fps`, `net_stat*` to [DotMenu].
 
 const CHANNEL := "menu.apply"
 
 ## Degrees of view per unit of mouse motion at a sensitivity of 1.
-##
-## [b]The family's constant, so a player's one number means one turning speed in every game
-## that reads it.[/b] It is the genre's own `m_yaw`; a game that converted differently would
-## turn a player's sensitivity into two speeds.
+## The family's constant, so one sensitivity number means one turning speed in every game.
 const DEGREES_PER_COUNT := 0.022
 
 ## A settings key, the dot-audio mixer field it sets, and the [AudioServer] bus it falls back to.
@@ -55,8 +23,7 @@ const VOLUMES := {
 
 ## Every stock key this applies, and which of them [DotMenu] applies instead. The suite holds
 ## [constant DotMenuStock.KEYS] to these two lists and [constant LEFT_TO_THE_GAME], so a stock
-## setting nothing applies — this family's most repeated bug — fails a check rather than
-## shipping as a switch that does nothing.
+## setting nothing applies fails a check instead of shipping as a switch that does nothing.
 const APPLIES: Array[StringName] = [
 	&"master_volume", &"sfx_volume", &"ui_volume", &"music_volume", &"voice_volume", &"ambience_volume",
 	&"voice_mode", &"voice_input_device",
@@ -192,8 +159,6 @@ func on_any(handler: Callable) -> DotMenuApplier:
 	return self
 
 
-# --- What reads them ----------------------------------------------------------
-
 func bind_audio(target: Object) -> void:
 	_bind(_audio, target)
 	_apply_volumes()
@@ -221,9 +186,8 @@ func bind_camera(camera: Object, property: StringName = &"fov") -> void:
 	_apply_fov()
 
 
-## A player's own voice: anything with `set_open_mic(bool)`, `set_input_device(String)` and
-## `set_volume(float)` (dot-voice's `DotVoiceManager`), and optionally `server_enabled` and a
-## `server_enabled_changed(bool)` signal, which [signal voice_available_changed] passes on.
+## A player's own voice: anything with `set_open_mic(bool)`, `set_input_device(String)` and `set_volume(float)`,
+## optionally `server_enabled` and a `server_enabled_changed(bool)` signal, which [signal voice_available_changed] passes on.
 ## Bound automatically when one is published as `dot_voice_client`.
 func bind_voice(target: Object) -> void:
 	if target == null or _voice.has(target):
@@ -255,8 +219,6 @@ func _bind(list: Array[Object], target: Object) -> void:
 	if target != null and not list.has(target):
 		list.append(target)
 
-
-# --- Applying -----------------------------------------------------------------
 
 func _on_changed(key: StringName, value: Variant, why: StringName) -> void:
 	_apply(key, value, why)
@@ -437,19 +399,9 @@ func _apply_vsync(on: bool) -> void:
 	)
 
 
-## Windowed, borderless or fullscreen.
-##
-## [b]In a browser, only when the player just asked.[/b] A page may go fullscreen only inside
-## a user gesture, so the stored value is NOT applied at boot there — it would be refused,
-## and the refusal reads as a setting that does not work. Chosen from the menu, the choice
-## arrives inside the click that made it.
-##
-## [b]And it asks the browser for the keyboard.[/b] Ctrl+W, Ctrl+T and Ctrl+N are the
-## browser's and no page can cancel them — and Ctrl is Duck in the genre's bindings, so a
-## player holding duck and pressing forward closes the tab. In fullscreen, browsers that
-## have it let a page lock the keyboard (`navigator.keyboard.lock()`), after which those keys
-## reach the game and Escape has to be HELD to leave. Elsewhere the call does not exist and
-## nothing happens.
+## Windowed, borderless or fullscreen. In a browser only when the player just asked: fullscreen needs a user gesture, so applying the stored value at boot would be refused.
+## It also asks the browser for the keyboard (`navigator.keyboard.lock()` in fullscreen), because Ctrl is Duck and Ctrl+W/T/N close the tab.
+## Elsewhere the call does not exist and nothing happens.
 func _apply_window_mode(mode: StringName, why: StringName) -> void:
 	if DisplayServer.get_name() == "headless":
 		return

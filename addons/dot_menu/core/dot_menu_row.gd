@@ -1,33 +1,9 @@
 class_name DotMenuRow
 extends RefCounted
 
-## One line of a menu page: a title, a sentence under it, and the control on the right.
-##
-## [codeblock]
-## DotMenuRow.toggle(&"show_fps", "Frame rate counter", "In the top-right corner.")
-## DotMenuRow.slider(&"master_volume", "Master").formatted(DotMenuRow.FORMAT_PERCENT)
-## DotMenuRow.select(&"window_mode", "Window")          # options from the setting itself
-## DotMenuRow.live_toggle("Flashlight", "", is_on, set_on).enabled_when(server_allows)
-## DotMenuRow.button("Arrange", "Drag the HUD around.", "Move HUD elements", open_editor)
-## DotMenuRow.custom("Name", "", func(kit): return LineEdit.new())
-## [/codeblock]
-##
-## [b]A setting row is a view of the setting, never a copy of it.[/b] It reads
-## [DotSettingsManager] when its page is drawn and writes it when it is changed, so a value
-## changed from a console is what the menu shows next time, and there is no Apply button
-## because there is nothing left to apply. Its range and its options come from the
-## setting's own [DotSettingsDef] unless the row narrows them — the declaration is the
-## interface, which is dot-settings' rule, and a slider with a second copy of the range is
-## a slider that will one day let a player pick a value the setting refuses.
-##
-## [b]A row whose setting the schema does not declare is not drawn.[/b] That is what lets
-## the stock pages carry every stock row and a game declare only the settings it uses: the
-## rows for the others simply are not there, rather than being switches that do nothing —
-## this family's most repeated bug.
-##
-## A "live" row is not a setting: it is state somebody else owns — a server's rule, a
-## flashlight the next server may refuse — read through [member getter] and written through
-## [member setter]. Storing it would be a promise the next server is free to break.
+## One line of a menu page: a title, a sentence under it, and the control on the right. Example: docs/examples.md.
+## A setting row is a view of the setting, never a copy (no Apply button); range and options come from its [DotSettingsDef]. A row whose setting the schema does not declare is not drawn.
+## A "live" row is state somebody else owns (a server's rule), read through [member getter] and written through [member setter].
 
 enum Kind {
 	## On or off. A setting row reads a BOOL; a live row a getter returning bool.
@@ -111,8 +87,6 @@ var platform: StringName = &""
 var danger: bool = false
 
 
-# --- Setting rows -------------------------------------------------------------
-
 static func toggle(p_key: StringName, p_title: String, p_description: String = "") -> DotMenuRow:
 	return _make(Kind.TOGGLE, p_key, p_title, p_description)
 
@@ -128,8 +102,6 @@ static func select(
 	r.options = p_options
 	return r
 
-
-# --- Rows that are not settings ----------------------------------------------
 
 static func live_toggle(
 	p_title: String, p_description: String, p_getter: Callable, p_setter: Callable
@@ -197,8 +169,6 @@ static func _make(k: Kind, p_key: StringName, p_title: String, p_description: St
 	return r
 
 
-# --- Builders -----------------------------------------------------------------
-
 func named(p_id: StringName) -> DotMenuRow:
 	id = p_id
 	return self
@@ -255,8 +225,6 @@ func dangerous() -> DotMenuRow:
 	danger = true
 	return self
 
-
-# --- Reading ------------------------------------------------------------------
 
 ## What a page, a config and [method DotMenuPage.find_row] call this row.
 func row_id() -> StringName:

@@ -1,38 +1,8 @@
 class_name DotMenuBindings
 extends RefCounted
 
-## Every key a client reads, as one table: the action, the setting that stores it, the words
-## a player sees, the default, and the card it goes on.
-##
-## [codeblock]
-## var keys := DotMenuBindings.new()
-## keys.add_movement()                                   # dot_fps_* — WASD, Space, Ctrl
-## keys.add(&"mygame_reload", &"bind_reload", "Reload", "R", "Combat")
-## keys.add_to_schema(schema)                            # one binding setting per row
-## keys.apply_all(settings)                              # onto the InputMap, at boot
-## [/codeblock]
-##
-## [b]Data, because four things read it and they must never disagree.[/b] The client matches
-## events against the actions, the settings schema declares one binding per row, the Controls
-## page draws a key button per row, and the help screen lists each with the key it is on
-## NOW. In the game this came from the keys had been a `match` on keycodes and a sentence in
-## a doc comment, and the sentence had already drifted once.
-##
-## [b]Stored per DEVICE by default.[/b] A key is a fact about a keyboard: a laptop and a
-## desktop are laid out differently, and a binding synchronised between them breaks one of
-## the two. A row may say otherwise (`scope`), which is for a key that was stored per account
-## before it was in a table: changing a stored setting's scope resets somebody's key.
-##
-## [b]An action may have extra keys[/b] ([method add_extra]): a row of its own that ADDS one
-## event to the action instead of replacing what is there, stored in a setting of its own,
-## and the one kind of row that may be set to nothing ([constant NONE]). The mouse wheel is
-## the reason: "jump" on Space and on both wheel directions is three keys on one action, and
-## the action, the setting and the Controls row are each still one fact. See
-## [method add_wheel_jump] and [method add_wheel_weapons].
-##
-## [b]Escape is in no row and cannot be bound.[/b] It is the menu, it is how a browser
-## releases the pointer, and a player who bound it to something else could never leave.
-## [method add] refuses it.
+## Every key a client reads, as one table (action, setting, label, default, card), so the client, schema, Controls page and help screen never disagree. Stored per device by default.
+## Escape is in no row and cannot be bound: it is the menu. [method add_extra] adds a key to an action as a row of its own. Example: docs/examples.md.
 
 const CHANNEL := "menu.bindings"
 
@@ -84,12 +54,8 @@ const NONE := "None"
 ## [method add_extra].
 var rows: Array[Dictionary] = []
 
-## What a row's default USED to be: `{setting: ["old key", ...]}`, from [method renamed].
-##
-## A settings document from before documents recorded their defaults cannot tell a key the
-## player chose from the default they never touched. A stored key equal to one of these is
-## the latter and moves to the row's current default, once ([member
-## DotSettingsDef.previous_defaults], which [method add_to_schema] fills from this).
+## What a row's default was, `{setting: ["old key", ...]}` from [method renamed]. A stored key equal to one of
+## these cannot be told from a chosen one in old documents, so it moves to the current default, once.
 var renamed_defaults: Dictionary = {}
 
 # What each extra row put on its action: {setting: InputEvent}. A primary row's apply erases
@@ -99,10 +65,8 @@ var _extra_events: Dictionary = {}
 
 
 ## Adds a row. [param scope] is a [enum DotSettingsDef.Scope]. Returns this, to chain.
-##
-## A second row for the same action or the same setting replaces the first in place, so a
-## game can rename a stock row ("Duck" for "Crouch") without moving it. Extra rows
-## ([method add_extra]) are not the action's row and are never replaced by one.
+## A second row for the same action or setting replaces the first in place, so a game can
+## rename a stock row without moving it. Extra rows ([method add_extra]) are never replaced.
 func add(
 	action: StringName, setting: StringName, label: String, default_key: String,
 	group: String = "General", scope: int = DotSettingsDef.Scope.DEVICE
@@ -124,16 +88,9 @@ func add(
 	return self
 
 
-## Adds an EXTRA key for [param action]: a row of its own, stored in [param setting], that
-## adds its event to the action beside the action's own row instead of replacing it.
-## Rebinding swaps with any other row as usual; unlike an action's own row it can be set to
-## nothing ([constant NONE]; Delete on the Controls page). [param group] empty is the group of
-## the action's own row. Drawn right after the action's last row. Returns this, to chain.
-##
-## [b]A row, not a second column.[/b] Every reader of the table (schema, Controls page,
-## help screen, settle, the swap) already understands a row; a second column would be a
-## second kind of binding each of them had to learn, and a table of one key per row is what
-## lets "is this key taken" have one answer.
+## Adds an EXTRA key for [param action]: a row of its own, stored in [param setting], that adds its event instead of replacing it.
+## Unlike an action's own row it can be set to [constant NONE]. [param group] empty is the action's group. Returns this.
+## A row, not a second column: every reader of the table already understands a row.
 func add_extra(
 	action: StringName, setting: StringName, label: String, default_key: String,
 	group: String = "", scope: int = DotSettingsDef.Scope.DEVICE
@@ -174,11 +131,8 @@ func remove_setting(setting: StringName) -> bool:
 	return false
 
 
-## Declares that [param setting]'s default used to be each of [param old_keys] (as typed:
-## "H", "C"). For a row whose default moved to make room for a key the family shares (help on
-## H, the map menu on M, loadout on B, the view on F5): a returning player who never touched
-## the row gets the new default instead of keeping the old one on two actions. Call before
-## [method add_to_schema]. Returns this, to chain.
+## Declares that [param setting]'s default was each of [param old_keys] (as typed), for a default moved to make room for a family-shared key.
+## A returning player who never touched the row gets the new default. Call before [method add_to_schema]. Returns this.
 func renamed(setting: StringName, old_keys: Array) -> DotMenuBindings:
 	var list: Array = renamed_defaults.get(setting, [])
 	for k in old_keys:
@@ -189,10 +143,8 @@ func renamed(setting: StringName, old_keys: Array) -> DotMenuBindings:
 
 
 ## dot-player-controller's movement actions, by their own names. `DotFpsSampler` polls
-## `dot_fps_*` and `register_default_actions` only creates what is missing, so a binding
-## applied here first is the one it reads — there is no second copy of the movement keys.
-##
-## Duck is Ctrl, which is the genre's; a game that wants Shift passes it.
+## `dot_fps_*` and only creates actions that are missing, so a binding applied here first is
+## the one it reads. Duck is Ctrl; a game that wants Shift passes it.
 func add_movement(group: String = "Movement", crouch_key: String = "Ctrl", crouch_label: String = "Duck") -> DotMenuBindings:
 	add(&"dot_fps_forward", &"bind_forward", "Forward", "W", group)
 	add(&"dot_fps_back", &"bind_back", "Back", "S", group)
@@ -203,20 +155,9 @@ func add_movement(group: String = "Movement", crouch_key: String = "Ctrl", crouc
 	return self
 
 
-## The mouse wheel also jumps, both ways (`bind_jump_wheel_up`, `bind_jump_wheel_down`): two
-## extra rows on `dot_fps_jump` beside Space. For every game where the wheel has nothing else
-## to do; a game that cycles weapons calls [method add_wheel_weapons] instead, which takes
-## these off again. Each is rebindable and may be set to nothing.
-##
-## [b]Not part of [method add_movement].[/b] Half the family's games put the wheel on their
-## weapons, and in those a default wheel jump would be the wheel on two actions in every
-## table that forgot to say otherwise, which [method settle] leaves alone (both rows default
-## to it) and the player meets as a jump on every weapon change. Opting in is one call; a
-## forgotten one is a wheel that does nothing, which is visible, not one that does two things.
-##
-## [b]A wheel tick is a press and a release in one event pair[/b], so it is never "held" when
-## anything polls; dot-player-controller's `DotFpsSampler` latches presses between samples
-## (its API 5) so each tick reaches the command as one press of jump.
+## The mouse wheel also jumps (`bind_jump_wheel_up`, `bind_jump_wheel_down`): two extra rows on `dot_fps_jump`. A game that cycles weapons calls [method add_wheel_weapons] instead.
+## Not part of [method add_movement]: half the family puts the wheel on weapons, and a forgotten opt-in is a wheel that does nothing, which is visible.
+## A wheel tick is a press and release in one event pair; `DotFpsSampler` latches presses so each tick reaches jump once.
 func add_wheel_jump(group: String = "") -> DotMenuBindings:
 	add_extra(JUMP_ACTION, WHEEL_JUMP_UP_SETTING, "Jump (wheel up)", "Wheel up", group)
 	add_extra(JUMP_ACTION, WHEEL_JUMP_DOWN_SETTING, "Jump (wheel down)", "Wheel down", group)
@@ -230,13 +171,8 @@ func remove_wheel_jump() -> bool:
 	return a or b
 
 
-## The wheel goes through the weapons: "Previous weapon" on Wheel up and "Next weapon" on
-## Wheel down, as the action's own rows, and the wheel's jump rows (if any) are taken off.
-## For every game with weapons or items to switch between. The defaults are the stock
-## actions ([constant WEAPON_PREVIOUS_ACTION], [constant WEAPON_NEXT_ACTION]); a game with
-## actions of its own passes them. The game still does the cycling: it reads the actions
-## from its own input handler (`event.is_action_pressed(WEAPON_NEXT_ACTION)`), because only
-## it knows what a slot is.
+## The wheel goes through the weapons ("Previous weapon" up, "Next weapon" down) as the action's own rows, and the wheel's jump rows are taken off.
+## The defaults are [constant WEAPON_PREVIOUS_ACTION] and [constant WEAPON_NEXT_ACTION]; the game still does the cycling from its own input handler.
 func add_wheel_weapons(
 	previous_action: StringName = WEAPON_PREVIOUS_ACTION, next_action: StringName = WEAPON_NEXT_ACTION,
 	group: String = "Weapons",
@@ -380,14 +316,8 @@ func rows_in(group: String) -> Array[Dictionary]:
 
 
 ## Puts one stored binding on its action. Returns what ended up bound.
-##
-## [b]Empty falls back to the default rather than unbinding.[/b] A settings file somebody
-## cleared by hand would otherwise leave Forward bound to nothing, and the menu that could
-## put it back is reached with a key the same file may have broken. Unbinding on purpose is
-## binding the key to something else, which swaps (see [method rebind]).
-##
-## An extra row ([method add_extra]) adds its one event instead, and [constant NONE] takes it
-## off; what it returns then is [constant NONE].
+## Empty falls back to the default rather than unbinding: a settings file cleared by hand must not leave Forward on nothing.
+## An extra row adds its one event instead, and [constant NONE] takes it off.
 func apply_row(row: Dictionary, text: String) -> String:
 	if is_extra(row):
 		return _apply_extra(row, text)
@@ -465,18 +395,9 @@ func apply_all(settings: DotSettingsManager) -> void:
 		apply_row(row, stored(row, settings))
 
 
-## Puts right any key two rows are stored on: the row whose default it is keeps it, every
-## other goes back to its own default, and each move is logged. Returns `"label: old -> new"`
-## for each row moved. [method apply_all] and [DotMenuApplier]'s run it at boot.
-##
-## [b]Why a document can hold a conflict at all.[/b] Rebinding swaps, so a player can never
-## make one; a moved default can. A medkit saved on H by a build where H was its default,
-## loaded by one where H is help, is two actions on one key: one of them never fires. The
-## saved defaults ([DotSettingsManager]) and [method renamed] catch the moves somebody
-## declared; this catches the rest, and a file edited by hand.
-##
-## Rows that all DEFAULT to the key are left alone: a table that ships a shared key meant it.
-## Where no row's default is the key (two choices, by hand), the first row in the table keeps it.
+## Puts right any key two rows are stored on: the row whose default it is keeps it, others go back to their default (logged). Returns `"label: old -> new"` per move.
+## Rebinding swaps so a player cannot make a conflict, but a moved default can; [method renamed] catches declared moves, this the rest.
+## Rows that all default to the key are left alone; where none does, the first row keeps it.
 func settle(settings: DotSettingsManager) -> PackedStringArray:
 	var moved := PackedStringArray()
 	if settings == null:
@@ -561,19 +482,9 @@ func apply_setting(key: StringName, value: Variant) -> bool:
 	return true
 
 
-## The binding a row is on: the stored one, or the default where the stored one names
-## nothing — which is what [method apply_row] put on the InputMap.
-##
-## [b]The effective binding, not the stored text.[/b] A document cleared by hand stores ""
-## for a key that is really on its default; comparing the text, binding that default key to
-## something else found no conflict, swapped nothing, and left one key on two actions.
-##
-## [b]In dot-ui's current spelling, not the stored one.[/b] A document written before dot-ui
-## named the wheel says "Mouse 4" for it; the Controls page draws this text, and "Mouse 4"
-## sends a player to their thumb button. On a dot-ui that has no names the round trip
-## gives back the same text.
-##
-## An extra row set to nothing is [constant NONE].
+## The binding a row is on: the stored one, or the default where the stored one names nothing. An extra row set to nothing is [constant NONE].
+## The effective binding, not the stored text (a document cleared by hand stores "" for a default key), in dot-ui's current spelling
+## ("Mouse 4" in an old document must read as the wheel).
 func stored(row: Dictionary, settings: DotSettingsManager) -> String:
 	var text := settings.get_string(row["setting"], str(row["default"])) if settings != null else str(row["default"])
 	if is_extra(row) and is_none(text):
@@ -614,13 +525,8 @@ func row_using(text: String, except: StringName, settings: DotSettingsManager) -
 	return {}
 
 
-## Puts [param text] on [param row]; whatever already had that key gets this row's old one.
-## Returns what to tell the player, or a [DotResult] failure when the setting refused it.
-##
-## [b]A swap, not a refusal and not a steal.[/b] Refusing ("F is already the flashlight")
-## makes a player unbind one thing to bind another, and stealing leaves the other action on
-## nothing — which for a movement key is a control they cannot use. Swapping is the one of
-## the three that never leaves anything unbound.
+## Puts [param text] on [param row]; whatever already had that key gets this row's old one. Returns what to tell the player, or a [DotResult] failure.
+## A swap, not a refusal and not a steal: refusing makes a player unbind one thing to bind another, and stealing leaves a control on nothing.
 func rebind(row: Dictionary, text: String, settings: DotSettingsManager) -> DotResult:
 	if settings == null:
 		return DotResult.fail(DotError.CODE_STATE, "No settings to store the key in.")

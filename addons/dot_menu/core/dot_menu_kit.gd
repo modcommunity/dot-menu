@@ -1,28 +1,9 @@
 class_name DotMenuKit
 extends RefCounted
 
-## How a menu looks: one palette, one [Theme], and the handful of pieces every screen here is
-## assembled from.
-##
-## [b]Everything is a StyleBoxFlat and a colour.[/b] No texture and, by default, no font
-## file: a game delivered as a pack stays small, and the menus look the same in a browser
-## as on a desktop. That is dot-ui's own rule — ship no art — and this keeps it: what this
-## adds over [DotUiTheme] is a designed default and the pieces to build screens from it, not
-## a picture anybody has to replace.
-##
-## [b]An instance, rebuilt on a theme change, rather than static colours.[/b] The game this
-## was extracted from kept its palette in static vars so a switch changed every call site at
-## once; in an addon that is one palette per PROCESS, and a server and a client in one
-## editor session, or two split-screen menus, would share it. A screen holds the kit it was
-## built with and is rebuilt with the next — see [method DotMenuScreen.restyle] for why
-## rebuilt rather than recoloured.
-##
-## A game that wants other sizes or a font of its own sets them here before building:
-## [codeblock]
-## var kit := DotMenuKit.new(themes.named(&"ember"))
-## kit.font = preload("res://ui/my_font.ttf")
-## kit.size_body = 16
-## [/codeblock]
+## How a menu looks: one palette, one [Theme], and the pieces every screen is assembled from. Example: docs/examples.md.
+## Everything is a StyleBoxFlat and a colour (no texture, no font file) so a pack stays small. An instance rebuilt on a theme change, not static colours,
+## because static palettes would be shared by a server and a client in one process. See [method DotMenuScreen.restyle].
 
 var palette: DotMenuPalette = null
 
@@ -81,8 +62,6 @@ func bold() -> Font:
 	return _bold
 
 
-# --- Boxes ------------------------------------------------------------------
-
 func box(
 	fill: Color, p_radius: int = -1, border: Color = Color(0, 0, 0, 0), border_width: int = 0,
 	pad: Vector4 = Vector4(0, 0, 0, 0)
@@ -111,8 +90,6 @@ func surface_box() -> StyleBoxFlat:
 	s.shadow_offset = Vector2(0, 10)
 	return s
 
-
-# --- The theme --------------------------------------------------------------
 
 ## A fresh [Theme] every call, for dot-ui's reason: a Theme is mutable and shared.
 func theme() -> Theme:
@@ -213,8 +190,6 @@ static func dot(diameter: int, colour: Color) -> ImageTexture:
 			img.set_pixel(x, y, Color(colour.r, colour.g, colour.b, colour.a * a))
 	return ImageTexture.create_from_image(img)
 
-
-# --- Pieces -----------------------------------------------------------------
 
 ## A label. [param size] 0 is the body size; [param colour] transparent black is the text
 ## colour — sentinels rather than defaults, because a default argument cannot read the kit.
@@ -321,9 +296,8 @@ static func gap(height: int) -> Control:
 
 
 ## The game behind an open menu, softened and dimmed. [param strength] scales the dim.
-##
-## A blur where the renderer has screen mipmaps and a plain dim where it does not — which
-## is what the shader falls back to on its own, so there is one code path.
+## A blur where the renderer has screen mipmaps and a plain dim where it does not (the shader
+## falls back on its own, so there is one code path).
 func backdrop(strength: float = 1.0) -> ColorRect:
 	var tint := Color(palette.backdrop, clampf(palette.backdrop.a * strength, 0.0, 1.0))
 	var back := ColorRect.new()
@@ -369,11 +343,8 @@ static func fill_parent(c: Control) -> void:
 	c.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 
 
-## Takes every child off [param node] now, and frees them later.
-##
-## [b]Removed, then freed.[/b] `queue_free` alone leaves the old children in the tree until
-## the end of the frame, so a page rebuilt in the same frame is drawn — and measured — with
-## both sets in it.
+## Takes every child off [param node] now, and frees them later: `queue_free` alone leaves them in
+## the tree until frame end, so a page rebuilt in the same frame is drawn and measured with both sets.
 static func clear(node: Node) -> void:
 	for child in node.get_children():
 		node.remove_child(child)

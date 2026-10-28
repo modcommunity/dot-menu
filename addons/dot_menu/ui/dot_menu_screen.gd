@@ -1,33 +1,9 @@
 class_name DotMenuScreen
 extends Control
 
-## The Escape menu: a sidebar of pages and actions, and the page on the right as cards of rows.
-##
-## Built by [DotMenu], which is what a game usually talks to; usable alone by a host that
-## manages its own overlays:
-## [codeblock]
-## var screen := DotMenuScreen.new()
-## screen.kit = DotMenuKit.new(themes.named(&"midnight"))
-## screen.settings = settings
-## screen.bindings = keys
-## screen.pages = DotMenuStock.pages()
-## add_child(screen)
-## screen.open()
-## [/codeblock]
-##
-## [b]Every control is a view of a setting, never a second copy of one.[/b] See [DotMenuRow].
-## A page is drawn from its data each time it is shown and thrown away when another is, so
-## nothing here can hold a stale value.
-##
-## [b]It does not pause.[/b] dot-ui's `allow_pause` reason: pausing the tree pauses only the
-## local simulation, which drifts from a server that carried on. A game suspends its input
-## sampler while the menu is open instead, so a player who opens it stands still rather than
-## walking off a ledge with the key they were holding.
-##
-## [b]A setting a server has clamped says so.[/b] dot-settings keeps the player's own value
-## and applies the server's bound over it; the row shows the player's value (what they
-## chose, and what they get back on leaving) and a line underneath saying what this server
-## caps it at. Showing the clamped value instead would quietly replace what they chose.
+## The Escape menu: a sidebar of pages and actions, and the page on the right as cards of rows. Built by [DotMenu]; usable alone. Example: docs/examples.md.
+## Every control is a view of a setting (see [DotMenuRow]); a page is drawn from data each time it is shown. It does not pause: pausing drifts from a server that carried on, so a game suspends its sampler instead.
+## A setting a server has clamped shows the player's own value and a line saying what this server caps it at.
 
 const CHANNEL := "menu.screen"
 
@@ -94,10 +70,7 @@ func _ready() -> void:
 
 
 ## Rebuilds this screen in [param new_kit]. What a theme change calls.
-##
-## [b]Rebuilt, not recoloured.[/b] Every box and colour here is set once, as an override,
-## when the screen is built; walking the tree to find each one again is a second copy of the
-## build that drifts from the first. Building again is the one that cannot.
+## Rebuilt, not recoloured: walking the tree to find every override again would be a second copy of the build that drifts from the first.
 func restyle(new_kit: DotMenuKit) -> void:
 	kit = new_kit
 	if not _built:
@@ -200,8 +173,6 @@ func set_action_text(id: StringName, text: String) -> void:
 		b.text = text
 		b.visible = text != ""
 
-
-# --- Layout -----------------------------------------------------------------
 
 ## Sized to the window, within limits, so a laptop and a 4K screen both get a menu that fits
 ## rather than one that is either cramped or lost in the middle.
@@ -350,8 +321,6 @@ func _content() -> Control:
 	return wrap
 
 
-# --- Pages ------------------------------------------------------------------
-
 ## The pages the sidebar shows, in the config's order, without the hidden ones.
 func visible_pages() -> Array[DotMenuPage]:
 	var shown: Array[DotMenuPage] = []
@@ -467,8 +436,6 @@ func _draw_bindings() -> void:
 	footer.add_child(reset)
 	_body.add_child(footer)
 
-
-# --- Rows -------------------------------------------------------------------
 
 func _draw_row(card: VBoxContainer, row: DotMenuRow) -> void:
 	var rid := row.row_id()

@@ -1,49 +1,9 @@
 class_name DotMenuScoreboard
 extends Control
 
-## The scoreboard a player holds Tab for: the server, the teams, and a row per player with
-## their name, score, time connected and ping, plus whatever columns the game adds.
-##
-## [codeblock]
-## var board := menu.scoreboard                      # DotMenu builds one; Tab holds it open
-## board.columns = DotMenuScoreboard.default_columns()
-## board.add_column({"key": &"kills", "title": "K"}, &"score")   # before Score
-## board.feed_from(link)                             # the server's roster, while held
-## # or, offline / for a game's own numbers:
-## board.source = func() -> Dictionary: return {"server": {...}, "players": [...]}
-## board.decorate = func(row): row["avatar"] = faces.get(row["id"])
-## [/codeblock]
-##
-## [b]A snapshot in, a picture out.[/b] Everything it draws is one dictionary, the shape
-## dot-server's `scoreboard_snapshot` sends:
-## [codeblock]
-## {"server": {"name", "game", "map", "players", "max"}, "you": <id>,
-##  "players": [{"id", "name", "score", "ping", "seconds", "bot", "team", ...}],
-##  "teams": [{"id", "name", "color", "score"}], "header": {"Time left": "4:12", ...}}
-## [/codeblock]
-## so the server's numbers (which only the server has for everybody), a game's own numbers
-## and an offline game's local ones are drawn by the same code. dot-menu does not depend on
-## dot-server: [method feed_from] takes anything with `want_scoreboard(open)` and a
-## `scoreboard_received` signal.
-##
-## [b]Customising it, from a column to the whole thing.[/b] [member columns] are data —
-## `{key, title, kind, width, align, format, build, required, hidden}` — and a `kind` is text,
-## number, ping, duration, avatar or custom. [member decorate] edits each row before it is drawn (a face
-## from a client-side cache, a colour). [member group_by] and [member sort_by] decide teams
-## and order. And [member build_header], [member build_team_header] and [member build_row]
-## replace the default pieces outright, each given the kit, so a game whose board looks
-## nothing like this one still gets the feed, the hold key and the theme.
-##
-## [b]A player picks their columns.[/b] The `scoreboard_hidden` setting ([method read_settings])
-## hides columns by key, in Settings > General > Scoreboard, for every game with no game code.
-## A column with `"required": true` (the `name` column unless it says otherwise) cannot be
-## hidden; one with `"hidden": true` starts hidden and the player may turn it on. See
-## [method column_hidden].
-##
-## [b]Held, not opened.[/b] It never takes the mouse or the keyboard and never stops the
-## player moving — a scoreboard is glanced at mid-round — so it is not one of [DotMenu]'s
-## overlays: it does not free the pointer or suspend a sampler, and Escape still opens the
-## menu over it.
+## The scoreboard a player holds Tab for: the server, the teams, and a row per player (name, score, time, ping) plus the game's columns. Example: docs/examples.md.
+## A snapshot in, a picture out: one dictionary (dot-server's `scoreboard_snapshot` shape) feeds server, game and offline numbers through the same code. [member columns], [member decorate], [member group_by], [member sort_by] and the `build_*` callables customise it; `scoreboard_hidden` lets a player hide columns.
+## Held, not opened: it never takes the mouse or keyboard, so it is not one of [DotMenu]'s overlays. [method feed_from] takes anything with `want_scoreboard(open)` and a `scoreboard_received` signal.
 
 const CHANNEL := "menu.scoreboard"
 
@@ -116,10 +76,8 @@ var spectators_title: String = "Spectating"
 
 var snapshot: Dictionary = {}
 
-## What the player chose, by column key: true hides it, false shows it even when the game's
-## column says `"hidden": true`. A key with no entry is the game's default. Keyed by column
-## key rather than position or title so a game that reorders or retitles its columns keeps
-## every player's choice, and a key no column has is simply never asked about.
+## What the player chose, by column key: true hides it, false shows it even when the game's column says `"hidden": true`.
+## Keyed by column key, not position or title, so a game that reorders or retitles columns keeps every choice.
 var player_hidden: Dictionary = {}
 
 var _feed: Object = null
@@ -196,8 +154,6 @@ func _fit() -> void:
 	var view := get_viewport_rect().size
 	_window.custom_minimum_size = Vector2(clampf(view.x - 80.0, 360.0, 1080.0), 0)
 
-
-# --- Columns ----------------------------------------------------------------------
 
 ## Adds [param column] before the column keyed [param before], or at the end. A column with
 ## the same key is replaced in place.
@@ -314,8 +270,6 @@ func hidden_keys() -> PackedStringArray:
 	return out
 
 
-# --- The feed ---------------------------------------------------------------------
-
 ## Draws the server's roster: [param link] is told when the board opens and closes and its
 ## `scoreboard_received` is drawn. dot-server's `DotClientLink`, or anything shaped like it.
 func feed_from(link: Object) -> void:
@@ -388,8 +342,6 @@ func drawn_snapshot() -> Dictionary:
 	prepare.call(copy)
 	return copy
 
-
-# --- Drawing ----------------------------------------------------------------------
 
 ## The rows, decorated and sorted, as they will be drawn. Public so a suite can read them.
 func rows(snap: Variant = null) -> Array:

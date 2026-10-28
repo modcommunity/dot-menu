@@ -1,15 +1,7 @@
 class_name DotProfileEditorScreen
 extends PanelContainer
 
-## Lists profile kinds and ids and edits one in a [DotUiForm] with Apply, Revert and Reset.
-##
-## [codeblock]
-## var ed := DotProfileEditorScreen.new()
-## add_child(ed)
-## ed.add_set(npc_set, "NPCs")
-## ed.open("npc", "zombie")   # Apply saves to the player's user tier by default
-## [/codeblock]
-##
+## Lists profile kinds and ids and edits one in a [DotUiForm] with Apply, Revert and Reset. Example: docs/examples.md.
 ## The save and reset targets are callables, so the same screen can edit the runtime layer for an admin.
 
 signal profile_opened(kind: String, id: String)

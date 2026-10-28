@@ -1,32 +1,9 @@
 class_name DotMenuStock
 extends RefCounted
 
-## The settings every game here has, declared once, and the pages that show them.
-##
-## [codeblock]
-## var schema := DotSettingsSchema.new()
-## DotMenuStock.declare(schema)                 # audio, video, controls, comfort, interface
-## # ... the game's own settings ...
-## config.apply_to_schema(schema)               # the developer's defaults and ranges
-##
-## var pages := DotMenuStock.pages()            # General, Video, Audio, Controls
-## [/codeblock]
-##
-## [b]The keys are the family's, and they are a contract.[/b] `master_volume`,
-## `sensitivity`, `field_of_view` and the rest are the names six games were already storing
-## under, with the scopes they were stored in. A different key or scope here would reset
-## every player's choice the day a game moved onto this — and `sensitivity` under the
-## shared account namespace is the same number in every game, on purpose.
-##
-## [b]A game declares only what it applies.[/b] [method declare] takes the groups it wants,
-## skips any key the schema already has (so a game's own version of a stock setting wins),
-## and a page row whose setting is not declared is not drawn. What must not happen is a
-## setting declared and applied by nothing: the game this came from had five, and the menu
-## would have been five switches that did nothing. [DotMenuApplier] applies every stock key
-## that has an obvious target; see it for the two that need the game.
-##
-## Defaults are the family's common ones — a game whose genre wants different ones
-## (a timer server wants no camera shake) says so in its [DotMenuConfig], not here.
+## The settings every game here has, declared once, and the pages that show them. Example: docs/examples.md.
+## The keys are the family's and a contract: another key or scope would reset every player's choice, and `sensitivity` under the account namespace is one number in every game on purpose.
+## A game declares only what it applies: [method declare] skips keys the schema has, and a row whose setting is not declared is not drawn. Defaults that differ per genre go in [DotMenuConfig].
 
 const GROUP_AUDIO := &"audio"
 const GROUP_VIDEO := &"video"
@@ -81,11 +58,9 @@ const KEYS := {
 }
 
 
-## Declares the stock settings in [param groups] (by default [constant DEFAULT_GROUPS]) that [param schema] does not have yet.
-## [param themes] supplies the `ui_theme` options; null is the stock seven. [param except] is
-## stock keys this game has nothing to apply to — a game with no interface sounds leaves out
-## `ui_volume`, one with no effects `shake_scale` — because a declared setting nothing
-## applies is a switch that does nothing.
+## Declares the stock settings in [param groups] (default [constant DEFAULT_GROUPS]) that [param schema] does not have yet.
+## [param themes] supplies the `ui_theme` options; null is the stock seven. [param except] is stock keys this game has nothing
+## to apply to, because a declared setting nothing applies is a switch that does nothing.
 static func declare(
 	schema: DotSettingsSchema, groups: Array[StringName] = DEFAULT_GROUPS, themes: DotMenuThemes = null,
 	except: Array[StringName] = []
@@ -204,13 +179,8 @@ static func _declare(schema: DotSettingsSchema, groups: Array[StringName], theme
 	return schema
 
 
-## `net_stat`, `net_stat_height` and `net_stat_position` alone, for a game with its own
-## settings and no [DotMenu] (it draws them with [method DotMenuNetStat.follow]).
-## [method declare] adds them with the interface group.
-##
-## net_stat is the console command too: every console here binds the schema's keys, so
-## `net_stat 2` and the Advanced page are one value. An integer for that reason — the
-## level a person types. DEVICE: it is a diagnosis of this machine's connection.
+## `net_stat`, `net_stat_height` and `net_stat_position` alone, for a game with its own settings and no [DotMenu]
+## (drawn with [method DotMenuNetStat.follow]). net_stat is also the console command, so it is an integer level; DEVICE scope.
 ## [param corner] is the default corner, for a game whose HUD already holds the top right.
 static func declare_net_stat(schema: DotSettingsSchema, corner: StringName = &"") -> DotSettingsSchema:
 	var default_corner: StringName = corner if DotMenuNetStat.POSITIONS.has(corner) else DotMenuNetStat.POSITIONS[0]
@@ -236,12 +206,8 @@ static func _add(schema: DotSettingsSchema, def: DotSettingsDef) -> void:
 		schema.add(def)
 
 
-## A settings manager over [param schema], stored under [param directory], namespaced as
-## [param app] with ACCOUNT settings shared under the family's `tmc_account`. Not set up:
-## the caller adds it to the tree and calls `setup()`.
-##
-## [b]Not registered as a service[/b]: a server and a client in one editor session, and a
-## suite, hold two of these, and a registry name would be the last one's.
+## A settings manager over [param schema], stored under [param directory], namespaced as [param app] with ACCOUNT settings under `tmc_account`.
+## Not set up: the caller adds it to the tree and calls `setup()`. Not registered as a service, since a server and a client in one process hold two.
 static func manager(
 	schema: DotSettingsSchema, directory: String, app: StringName,
 	shared: StringName = &"tmc_account", store: DotSettingsStore = null
@@ -255,8 +221,6 @@ static func manager(
 	m.register_as_service = false
 	return m
 
-
-# --- Pages ------------------------------------------------------------------------
 
 ## General, Video, Audio, Controls and Advanced, with a row for every stock setting.
 ## [param config] supplies the frame-rate list; null is the stock one.

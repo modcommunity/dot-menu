@@ -1,34 +1,9 @@
 class_name DotMenuMaps
 extends RefCounted
 
-## The map menu: M opens a picker of the game's maps (or courses, layouts, routes, modes), and
-## choosing one changes to it. Solo it changes directly; on a server the SERVER decides.
-##
-## [codeblock]
-## var maps := menu.use_maps(
-## 	func() -> Array: return [{"id": "dm_atrium", "name": "Atrium", "mode": "Deathmatch",
-## 		"thumbnail": "res://maps/atrium.png", "current": true}, ...],
-## 	func(id: StringName) -> DotResult: return world.change_map_now(id))
-## [/codeblock]
-##
-## [b]Why solo and online are one key with two halves.[/b] Christian's first play test: games
-## booted solo had no way to change the map at all, and the ones that had one (a map list on
-## M in one game, "vote for another map" in another) said different things. Solo there is
-## nobody to ask, so the player's choice is the change. On a server the change is everybody's,
-## so it is the server's to allow: this sends `/mapmenu` through the client link's chat (a
-## prefixed line is a command and is never shown to anyone), and dot-vote's [code]DotVoteMapMenu[/code]
-## answers with a notice on the `map_menu` topic carrying the list, whether this player may
-## change it directly (the flag the owner named in `sv_map_menu_flag`, staff by default) and
-## whether a vote can be started instead. Choosing sends `/mapmenu <id>`; the server changes
-## the map (every peer follows through the game's own change path), or nominates the map and
-## rocks the vote for a player without the flag, and says which in a `map_menu` result.
-##
-## [b]Nothing here names dot-server or dot-vote.[/b] The link is found as `dot_client_link`
-## in [DotRegistry] when M is pressed (a link made after the menu is still the one asked, as
-## for Leave), and a notice is read by its `topic` and `data`, duck-typed.
-##
-## A row is `{id, name, mode, detail, thumbnail, current, tags}`. `mode` is drawn as the second
-## line (or `detail` when there is no mode); `tags` as on any picker row.
+## The map menu: M opens a picker of the game's maps (or courses, layouts, modes) and choosing one changes to it. Solo directly; on a server the SERVER decides. Example: docs/examples.md.
+## Connected, this sends `/mapmenu` through the client link's chat and reads the `map_menu` notice (list, whether this player may change directly via `sv_map_menu_flag`, whether a vote can start); choosing sends `/mapmenu <id>`.
+## Nothing here names dot-server or dot-vote; a row is `{id, name, mode, detail, thumbnail, current, tags}`.
 
 const CHANNEL := "menu.maps"
 

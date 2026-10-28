@@ -1,50 +1,9 @@
 class_name DotMenuNetStat
 extends Control
 
-## `net_stat`: what the connection is doing, drawn over the game in a corner.
-##
-## [codeblock]
-## net_stat 1    # numbers: frame rate, ping and jitter, in and out, loss
-## net_stat 2    # and a graph of what arrives, by channel, with ping drawn across it
-## net_stat 3    # and what leaves, where each frame went, prediction, the server's frame
-## net_stat 0    # off
-## [/codeblock]
-##
-## [DotMenu] builds one and drives it from three settings — `net_stat`, `net_stat_height`
-## and `net_stat_position` — so the console command and the Advanced page are one value.
-##
-## [b]Where the numbers come from.[/b] [method sample_source] returns a [DotMeteredPeer]:
-## by default the one this node's own [member Node.multiplayer] runs through, which is the
-## client link's (dot-server wraps its peer in one). Nothing here names dot-server; a
-## game with its own link assigns [member source]. With no meter the panel still shows
-## the frame, and says it is not connected rather than drawing a flat line that looks like
-## a connection carrying nothing.
-##
-## [b]Rates are drawn as rates.[/b] A bar is one [member bucket_sec] of arrivals, scaled to
-## bytes a second, so the scale label means the same thing at every bucket length and
-## matches the "in" figure under it. A bar per FRAME (which is what the classic graphs
-## draw) changes width with the frame rate: the same connection is a different picture at
-## 60 and at 240 fps.
-##
-## [b]A browser's arrivals have no channels.[/b] Godot's WebSocket peer is one stream and
-## reports every packet on channel 0 (dot-core's dual_transport_selftest pins that down), so
-## over WebSocket the incoming bars are one colour and the legend says why. What a client
-## SENDS is split on both, because the channel is known at the send.
-##
-## [b]Frame times are wall-clock times.[/b] [DotMenuFrameClock] reads the clock at four
-## points of every engine iteration, so the frame strip shows what the player waited and
-## where it went (physics, script, render, and the wait for the next frame), and fps is the
-## frames actually drawn in the last second. The process delta it used before is smoothed
-## and clamped, and drew a steadier game than the one being played.
-##
-## [b]Prediction, read duck-typed.[/b] Where a client's dot-net manager is published in
-## [DotRegistry] (as [code]dot_net_manager[/code], any scope), the FULL level shows what its
-## [code]perf_counters()[/code] say the last second cost: snapshots applied, ticks
-## re-simulated, and the lead those replays run over. Nothing here names dot-net.
-##
-## [b]One draw call, no child nodes, redrawn when a bar closes.[/b] Everything drawn changes
-## once a bucket, so redrawing every frame was twenty times the canvas work for the same
-## picture — on a browser client, a measurable part of the frame it was measuring.
+## `net_stat`: what the connection is doing, drawn over the game in a corner. Levels 0 (off) to 3; [DotMenu] drives it from `net_stat`, `net_stat_height` and `net_stat_position`. Example: docs/examples.md.
+## Numbers come from [method sample_source], a [DotMeteredPeer] (this node's own multiplayer peer, or [member source]); a browser's WebSocket reports every arrival on channel 0, so those bars are one colour. Rates are drawn as rates, per [member bucket_sec], so the scale means the same at every frame rate.
+## Frame times are wall-clock ([DotMenuFrameClock]); prediction is read duck-typed from `dot_net_manager`. One draw call, no children, redrawn when a bar closes, so the overlay is not a cost of its own.
 
 enum Level { OFF = 0, NUMBERS = 1, GRAPH = 2, FULL = 3 }
 
@@ -183,12 +142,9 @@ func _on_frame(wall_us: int, physics_us: int, script_us: int, render_us: int, _s
 		_bucket_worst = PackedInt32Array([wall_us, physics_us, script_us, render_us])
 
 
-## The overlay on a layer of its own under [param host], following the three `net_stat*`
-## settings of [param settings] — for a game with its own settings and no [DotMenu] (which
-## builds and drives one itself). Declare the settings with
-## [method DotMenuStock.declare_net_stat] first. Layer 120 by default: over a HUD and the
-## menu (110), under the console (128) — a diagnostic is read over everything but the line
-## that set it.
+## The overlay on a layer of its own under [param host], following the three `net_stat*` settings of [param settings], for a game with no [DotMenu].
+## Declare the settings with [method DotMenuStock.declare_net_stat] first. Layer 120: over a HUD and the menu (110),
+## under the console (128).
 static func follow(host: Node, settings: DotSettingsManager, layer: int = 120, p_kit: DotMenuKit = null) -> DotMenuNetStat:
 	var canvas := CanvasLayer.new()
 	canvas.name = "NetStatLayer"
@@ -270,8 +226,6 @@ func net_manager() -> Object:
 			return m
 	return null
 
-
-# --- Sampling ------------------------------------------------------------------
 
 func _process(_delta: float) -> void:
 	if level == Level.OFF:
@@ -392,11 +346,8 @@ func _refigure(m: Object) -> void:
 	if was_connected != (m != null):
 		_relayout()
 
-	# The scale is set by the 90th percentile, not the peak, with headroom: a content
-	# download or a map change is one tall bar, and scaling to it flattens every ordinary
-	# bar for as long as it stays on the graph. Taller bars are clipped and capped in a
-	# brighter colour, which says "more than this" without spending the graph on it.
-	# Up at once, down slowly, so the scale does not breathe with every packet.
+	# The scale is the 90th percentile with headroom, not the peak: one content download is one tall bar and would flatten every other.
+	# Taller bars are clipped and capped brighter ("more than this"). Up at once, down slowly, so the scale does not breathe.
 	var ins := PackedFloat32Array()
 	var outs := PackedFloat32Array()
 	var peak_rtt := 0.0
@@ -459,8 +410,6 @@ static func _nice(v: float) -> float:
 	return 10.0 * p
 
 
-# --- Layout --------------------------------------------------------------------
-
 func _line_h() -> float:
 	return float(_font_size()) + 6.0
 
@@ -512,8 +461,6 @@ func _relayout() -> void:
 	_capacity = maxi(8, int((w - PAD * 2.0 - GUTTER) / (BAR_W + BAR_GAP)))
 	queue_redraw()
 
-
-# --- Drawing -------------------------------------------------------------------
 
 func _palette() -> DotMenuPalette:
 	return kit.palette if kit != null else DotMenuPalette.new()
@@ -628,12 +575,8 @@ func _draw_arrivals(rect: Rect2) -> void:
 
 
 ## Ping across the arrivals graph, on its own scale, labelled in the gutter in its colour.
-##
-## The gutter's bottom row is the [i]current[/i] ping, the number the line ends on, and the
-## scale is written on the dashed midline as half of it. The first draw wrote the scale's top
-## at the bottom of the gutter, right beside a line that sits low on its own scale (the scale
-## is at least 1.2x the window's peak), so "200 ms" next to a flat line read as a 200 ms ping
-## while the readout said far less.
+## The gutter's bottom row is the current ping and the scale is written on the dashed midline as half of it; labelling the scale's top
+## next to a low line read as a 200 ms ping while the readout said far less.
 func _draw_ping(rect: Rect2) -> void:
 	var points := PackedVector2Array()
 	var samples := PackedVector2Array()
@@ -676,10 +619,8 @@ func _draw_departures(rect: Rect2) -> void:
 const PART_COLOURS: Array[Color] = [Color("#c58af9"), Color("#6ea8fe"), Color("#5fd38d")]
 
 
-## Each bucket's slowest frame on the wall clock, stacked by where it went: physics
-## (violet), script (blue), render (green), and the wait to the next frame on top in the
-## frame's own grade (green to 60 fps, amber to 30, red beyond). Guides at 16.7 and 33.3 ms,
-## the two vsync steps a browser frame lands on; a frame past the top is capped bright.
+## Each bucket's slowest frame on the wall clock, stacked by where it went (physics violet, script blue, render green, the wait on top
+## in the frame's grade). Guides at 16.7 and 33.3 ms, the two vsync steps a browser frame lands on; a frame past the top is capped bright.
 func _draw_frames(rect: Rect2) -> void:
 	var p := _palette()
 	var top_ms := 50.0
@@ -785,10 +726,8 @@ func _draw_text(rect: Rect2) -> void:
 	_legend(Vector2(x, y), rect.size.x, transport == "websocket")
 
 
-## Pixels the 3D world is drawn at: the window in device pixels (a browser on a high-density
-## screen draws its canvas at the device's pixels, not the page's) times the 3D scale. A
-## frame whose time is in the wait column with few draws is usually this: the GPU filling
-## four times the pixels anybody expected.
+## Pixels the 3D world is drawn at: the window in device pixels (a high-density browser canvas is drawn at the device's)
+## times the 3D scale. A frame whose time is in the wait column with few draws is usually this.
 func _pixels_3d() -> int:
 	var vp := get_viewport()
 	if vp == null:

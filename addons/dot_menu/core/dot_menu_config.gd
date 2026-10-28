@@ -2,41 +2,9 @@
 class_name DotMenuConfig
 extends DotConfig
 
-## What a game developer, and then a server operator, may change about a menu without
-## writing code.
-##
-## [codeblock]
-## {
-##   "brand_mark": "g2g", "brand_name": "fast",
-##   "theme": "ember", "themes_allowed": ["ember", "paper", "contrast"],
-##   "themes_file": "res://ui/themes.json",
-##   "pages_hidden": ["audio"], "rows_hidden": ["render_scale", "raw_input"],
-##   "settings": {
-##     "field_of_view": {"default": 90, "min": 75, "max": 120},
-##     "shake_scale":   {"default": 0.0},
-##     "window_mode":   {"options": ["windowed", "fullscreen"]}
-##   },
-##   "rows": {"fx_quality": {"title": "Particles", "description": "At the gates."}},
-##   "fps_choices": [0, 60, 144, 240]
-## }
-## [/codeblock]
-##
-## Layered like every [DotConfig] — exported defaults < JSON file < environment < command
-## line — so `DOT_MENU_THEME=paper` tries a theme for one run without editing anything.
-##
-## [b]Two times it is read, and they differ on purpose.[/b] [member settings] changes the
-## SCHEMA — a default, a range, the options — so it has to be in place before the settings
-## document is loaded, which makes it the game developer's: a JSON file in the game. What a
-## SERVER may change arrives later, over the wire, into a document already loaded, and is
-## narrower — see [method DotMenu.apply_server_rules]: it may hide rows and pages, offer
-## fewer themes, and clamp what dot-settings lets it clamp. It can never change a player's
-## stored value or read one.
-##
-## [b]A default is a first-run value, not a reset.[/b] dot-settings stores every value,
-## defaults included, so a default changed here reaches a player who has never run the game
-## and nobody else. That is correct — a player who has been playing at 90 should not wake
-## up at 100 because an operator changed a file — and it is the reason a server clamps
-## rather than sets.
+## What a game developer, and then a server operator, may change about a menu without writing code; layered like every [DotConfig]. Example: docs/examples.md.
+## [member settings] changes the SCHEMA so it is read before the settings document loads. What a server may change arrives later and is narrower (see [method DotMenu.apply_server_rules]).
+## A default is a first-run value, not a reset, which is why a server clamps rather than sets.
 
 ## The small filled mark at the top of the sidebar ("g2g"). Empty draws none.
 @export var brand_mark: String = ""
@@ -108,10 +76,9 @@ extends DotConfig
 ## Show a frame-rate counter when the `show_fps` setting is on.
 @export var fps_counter: bool = true
 
-## Where the HUD's small "H  Help" hint sits, so a player who has never opened the menu
-## learns the key: top_right (under the frame counter), top_left, bottom_right, bottom_left,
-## or off for a game that lists the help key in its own key hints. [member DotMenu.help_hint]
-## is the Control, for a game that wants it somewhere else exactly.
+## Where the HUD's small "H  Help" hint sits: top_right (under the frame counter), top_left,
+## bottom_right, bottom_left, or off for a game that lists the help key itself.
+## [member DotMenu.help_hint] is the Control, for a game that wants it somewhere exact.
 @export var help_hint: StringName = &"top_right"
 
 ## Draw the connection overlay when the `net_stat` setting asks for it. Off for a host that
@@ -167,21 +134,9 @@ func make_themes(base: DotMenuThemes = null) -> DotMenuThemes:
 	return t
 
 
-## Applies [member settings] to [param schema], and the theme catalogue to its `ui_theme`.
-## Returns what it could not: a key the schema does not have, a field no setting has, a value
-## the setting's kind cannot hold.
-##
-## [b]The themes go into the schema here, before the document is loaded, or they are lost.[/b]
-## `ui_theme` is a choice over theme ids, and dot-settings corrects a stored value that is
-## not one of the options when it LOADS. A theme that arrived from a file after that would be
-## a value the setting refuses, and a player who chose it would be put back on the default
-## at every start. Pass the catalogue the menu will use as [param themes] when a game adds
-## themes in code; null builds it from this config.
-##
-## [b]Reported, not fatal[/b], for [DotConfig]'s reason: a menu that refuses to open because
-## a config file mentions a setting from a newer build is worse than one that ignores it.
-## A default outside a narrowed range is pulled inside it, because a default the setting
-## would refuse is a document that cannot be loaded.
+## Applies [member settings] to [param schema], and the theme catalogue to its `ui_theme`. Returns what it could not (unknown key, unknown field, a value the kind cannot hold).
+## The themes go into the schema before the document loads: dot-settings resets a stored value that is not an option, so a late theme would be lost at every start.
+## Reported, not fatal, for [DotConfig]'s reason. Pass [param themes] when a game adds themes in code.
 func apply_to_schema(schema: DotSettingsSchema, themes: DotMenuThemes = null) -> PackedStringArray:
 	var problems := PackedStringArray()
 	if schema == null:

@@ -2,11 +2,8 @@ class_name DotMenuSwitch
 extends Button
 
 ## An on/off switch: a rounded track and a knob that slides across it.
-##
-## A [Button] in toggle mode underneath, so focus, keyboard activation, `toggled` and
-## `disabled` are the engine's own and nothing here reimplements them; only the drawing is
-## this file's. The knob eases toward its side rather than jumping, which is the one bit of
-## motion in these menus, and it settles in about a tenth of a second.
+## A [Button] in toggle mode underneath, so focus, keyboard activation, `toggled` and `disabled` are the engine's own.
+## The knob eases toward its side (about a tenth of a second), the one bit of motion in these menus.
 
 const TRACK := Vector2(44, 24)
 

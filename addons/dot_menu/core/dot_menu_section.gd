@@ -1,11 +1,8 @@
 class_name DotMenuSection
 extends RefCounted
 
-## A titled card of rows on a page: "Display", "Volume", "Movement".
-##
-## A section with nothing drawable in it is not drawn — no bare heading over an empty card
-## when every row in it names a setting this game did not declare. dot-ui's settings panel
-## learned that one first ("Group headings are added lazily").
+## A titled card of rows on a page: "Display", "Volume", "Movement". A section with nothing drawable in it is not drawn, so no bare heading sits over an empty
+## card when every row names a setting this game did not declare.
 
 ## What [method DotMenuPage.section] finds it by. Defaults to the title, lowercased.
 var id: StringName = &""
