@@ -29,6 +29,9 @@ const KIND_CUSTOM := &"custom"
 ## right otherwise touches.
 const ROW_PAD := 8
 
+## The most of the view's height the panel takes; past it the rows scroll.
+const MAX_HEIGHT_FRACTION := 0.8
+
 var kit: DotMenuKit = null
 
 var columns: Array[Dictionary] = default_columns()
@@ -82,6 +85,8 @@ var player_hidden: Dictionary = {}
 
 var _feed: Object = null
 var _window: PanelContainer = null
+var _head: VBoxContainer = null
+var _scroll: ScrollContainer = null
 var _body: VBoxContainer = null
 var _since := 0.0
 var _built := false
@@ -137,11 +142,29 @@ func _build() -> void:
 	_window.add_theme_stylebox_override(&"panel", s)
 	centre.add_child(_window)
 
+	var stack := VBoxContainer.new()
+	stack.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	stack.add_theme_constant_override(&"separation", 12)
+	_window.add_child(stack)
+	_head = VBoxContainer.new()
+	_head.name = "Head"
+	_head.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	stack.add_child(_head)
+	# PASS, not STOP: the wheel scrolls it, a click still reaches the game.
+	_scroll = ScrollContainer.new()
+	_scroll.name = "Scroll"
+	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_scroll.mouse_filter = Control.MOUSE_FILTER_PASS
+	_scroll.focus_mode = Control.FOCUS_NONE
+	stack.add_child(_scroll)
 	_body = VBoxContainer.new()
 	_body.name = "Body"
 	_body.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_body.add_theme_constant_override(&"separation", 12)
-	_window.add_child(_body)
+	_scroll.add_child(_body)
+	_body.minimum_size_changed.connect(_fit_scroll)
+	_head.minimum_size_changed.connect(_fit_scroll)
 	_built = true
 	_fit()
 	if not get_viewport().size_changed.is_connected(_fit):
@@ -153,6 +176,17 @@ func _fit() -> void:
 		return
 	var view := get_viewport_rect().size
 	_window.custom_minimum_size = Vector2(clampf(view.x - 80.0, 360.0, 1080.0), 0)
+	_fit_scroll()
+
+
+## The panel stops at [constant MAX_HEIGHT_FRACTION] of the view; the rows scroll, the header stays.
+func _fit_scroll() -> void:
+	if _scroll == null or _head == null:
+		return
+	var room := get_viewport_rect().size.y * MAX_HEIGHT_FRACTION - 40.0 - 12.0 - _head.get_combined_minimum_size().y
+	var want := minf(_body.get_combined_minimum_size().y, maxf(room, 80.0))
+	if not is_equal_approx(_scroll.custom_minimum_size.y, want):
+		_scroll.custom_minimum_size.y = want
 
 
 ## Adds [param column] before the column keyed [param before], or at the end. A column with
@@ -387,8 +421,9 @@ func redraw() -> void:
 	var snap := drawn_snapshot()
 
 	var header: Control = build_header.call(kit, snap) if build_header.is_valid() else _header(snap)
+	DotMenuKit.clear(_head)
 	if header != null:
-		_body.add_child(header)
+		_head.add_child(header)
 
 	var all := rows(snap)
 	var team_list := teams(snap)
