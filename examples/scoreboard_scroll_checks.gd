@@ -25,9 +25,24 @@ static func run(host: Node) -> void:
 		"the rows sit in a vertical-only scroll container")
 	host._check(window != null and window.size.y <= cap + 1.0, "15 rows at 720 high: panel %.0f <= cap %.0f" % [window.size.y, cap])
 	host._check(scroll != null and scroll.get_child(0).get_combined_minimum_size().y > scroll.size.y + 1.0, "and the rows past it scroll")
+	var head := board.find_child("HeadMargin", true, false) as Control
+	var body := board.find_child("Body", true, false) as Control
+	host._check(scroll.mouse_filter == Control.MOUSE_FILTER_IGNORE, "the scroll container does not swallow clicks")
+	host._check(scroll.get_v_scroll_bar().visible and absf(head.get_child(0).size.x - body.size.x) < 0.5,
+		"with the scrollbar showing the header is as wide as the rows (%.0f vs %.0f)" % [head.get_child(0).size.x, body.size.x])
 	rows.resize(4)
 	board.redraw()
 	for i in 3:
 		await host.get_tree().process_frame
 	host._check(scroll.size.y >= scroll.get_child(0).get_combined_minimum_size().y - 1.0, "rows that fit are not clipped")
+	host._check(absf(head.get_child(0).size.x - body.size.x) < 0.5 and head.get_theme_constant(&"margin_right") == 0,
+		"with no scrollbar the header takes the full width")
+	var fit := Callable(board, "_fit")
+	vp.remove_child(board)
+	host._check(not vp.size_changed.is_connected(fit), "leaving the tree disconnects size_changed")
+	var vp2 := SubViewport.new()
+	host.add_child(vp2)
+	vp2.add_child(board)
+	host._check(vp2.size_changed.is_connected(fit) and not vp.size_changed.is_connected(fit), "joining another viewport connects to that one")
+	vp2.queue_free()
 	vp.queue_free()

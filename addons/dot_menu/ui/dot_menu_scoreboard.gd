@@ -86,6 +86,8 @@ var player_hidden: Dictionary = {}
 var _feed: Object = null
 var _window: PanelContainer = null
 var _head: VBoxContainer = null
+var _head_margin: MarginContainer = null
+var _viewport: Viewport = null
 var _scroll: ScrollContainer = null
 var _body: VBoxContainer = null
 var _since := 0.0
@@ -149,12 +151,16 @@ func _build() -> void:
 	_head = VBoxContainer.new()
 	_head.name = "Head"
 	_head.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	stack.add_child(_head)
-	# PASS, not STOP: the wheel scrolls it, a click still reaches the game.
+	_head_margin = MarginContainer.new()
+	_head_margin.name = "HeadMargin"
+	_head_margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	stack.add_child(_head_margin)
+	_head_margin.add_child(_head)
+	# IGNORE: PASS still swallows clicks on HUD controls behind; the cost is no wheel scrolling.
 	_scroll = ScrollContainer.new()
 	_scroll.name = "Scroll"
 	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	_scroll.mouse_filter = Control.MOUSE_FILTER_PASS
+	_scroll.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_scroll.focus_mode = Control.FOCUS_NONE
 	stack.add_child(_scroll)
 	_body = VBoxContainer.new()
@@ -165,10 +171,40 @@ func _build() -> void:
 	_scroll.add_child(_body)
 	_body.minimum_size_changed.connect(_fit_scroll)
 	_head.minimum_size_changed.connect(_fit_scroll)
+	_scroll.get_v_scroll_bar().visibility_changed.connect(_fit_bar)
 	_built = true
 	_fit()
-	if not get_viewport().size_changed.is_connected(_fit):
-		get_viewport().size_changed.connect(_fit)
+	_connect_viewport()
+
+
+func _enter_tree() -> void:
+	if _built:
+		_connect_viewport()
+
+
+func _exit_tree() -> void:
+	if _viewport != null and _viewport.size_changed.is_connected(_fit):
+		_viewport.size_changed.disconnect(_fit)
+	_viewport = null
+
+
+func _connect_viewport() -> void:
+	var vp := get_viewport()
+	if vp == _viewport or vp == null:
+		return
+	if _viewport != null and _viewport.size_changed.is_connected(_fit):
+		_viewport.size_changed.disconnect(_fit)
+	_viewport = vp
+	if not vp.size_changed.is_connected(_fit):
+		vp.size_changed.connect(_fit)
+
+
+## The header takes the scrollbar's width as a right margin so its columns meet the rows'.
+func _fit_bar() -> void:
+	if _scroll == null or _head_margin == null:
+		return
+	var bar := _scroll.get_v_scroll_bar()
+	_head_margin.add_theme_constant_override(&"margin_right", int(bar.get_combined_minimum_size().x) if bar.visible else 0)
 
 
 func _fit() -> void:
