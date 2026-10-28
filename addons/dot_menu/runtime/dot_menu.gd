@@ -638,9 +638,12 @@ func toast(text: String, seconds: float = 3.5) -> void:
 	_toast_serial += 1
 	var serial := _toast_serial
 	if is_inside_tree() and seconds > 0.0:
-		get_tree().create_timer(seconds).timeout.connect(func() -> void:
-			if serial == _toast_serial and toast_plate != null:
-				toast_plate.visible = false)
+		get_tree().create_timer(seconds).timeout.connect(_expire_toast.bind(serial))
+
+
+func _expire_toast(serial: int) -> void:
+	if serial == _toast_serial and toast_plate != null:
+		toast_plate.visible = false
 
 
 ## What the toast says now; empty when none is up.

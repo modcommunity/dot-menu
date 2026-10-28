@@ -12,7 +12,7 @@ extends Node
 ## aborts THAT TEST, not the run; the section counter is satisfied because the section had
 ## already announced itself, and the total is what notices the checks that never ran.
 const SECTIONS := 23
-const CHECKS := 365
+const CHECKS := 368
 
 var _passed := 0
 var _failed := 0
@@ -1507,6 +1507,15 @@ func _test_map_menu() -> void:
 	var _k4 := node.menu.handle_event(_key(KEY_1))
 	await get_tree().process_frame
 	_check(node.menu.toast_text() == "A round is being decided.", "a change the game refuses is said on screen")
+
+	node.menu.toast("short", 0.05)
+	_check(node.menu.toast_text() == "short", "a toast with a lifetime shows")
+	await get_tree().create_timer(0.3).timeout
+	_check(node.menu.toast_text() == "", "and expires when its time is up")
+	node.menu.toast("first", 0.1)
+	node.menu.toast("second", 5.0)
+	await get_tree().create_timer(0.3).timeout
+	_check(node.menu.toast_text() == "second", "an older toast's timer does not hide a newer one")
 
 	# Connected: the server is asked, and its answer decides.
 	var link := FakeMapLink.new()
