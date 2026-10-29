@@ -78,6 +78,20 @@ func restyle(new_kit: DotMenuKit) -> void:
 		_rebuild()
 
 
+## Random (when the server offers it) and Done, under the slot tabs.
+func _side_buttons(side_col: VBoxContainer) -> void:
+	_random_button = kit.secondary_button("Random")
+	_random_button.name = "Random"
+	_random_button.focus_mode = Control.FOCUS_NONE
+	_random_button.pressed.connect(request_random)
+	side_col.add_child(_random_button)
+	var done := kit.primary_button("Done")
+	done.name = "Done"
+	done.focus_mode = Control.FOCUS_NONE
+	done.pressed.connect(close)
+	side_col.add_child(done)
+
+
 func _build() -> void:
 	var p := kit.palette
 	theme = kit.theme()
@@ -127,16 +141,7 @@ func _build() -> void:
 	_tabs.add_theme_constant_override(&"separation", 6)
 	_tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	side_col.add_child(_tabs)
-	_random_button = kit.nav_button("Random")
-	_random_button.name = "Random"
-	_random_button.focus_mode = Control.FOCUS_NONE
-	_random_button.pressed.connect(request_random)
-	side_col.add_child(_random_button)
-	var done := kit.primary_button("Done")
-	done.name = "Done"
-	done.focus_mode = Control.FOCUS_NONE
-	done.pressed.connect(close)
-	side_col.add_child(done)
+	_side_buttons(side_col)
 
 	# The cards, the detail and the key line.
 	var main := MarginContainer.new()

@@ -524,9 +524,8 @@ func use_loadout(offer_fn: Callable, choose_fn: Callable, decorate_fn: Callable 
 		var extra: Dictionary = help.extra_keys
 		var group := _last_group()
 		var lines: Array = extra.get(group, [])
-		var shown := DotInputBinding.describe_action(loadout_action)
 		if not lines.any(func(l: Variant) -> bool: return l is Array and (l as Array).size() > 1 and str((l as Array)[1]) == "Loadout"):
-			lines.push_front([shown, "Loadout"])
+			lines.push_front([DotInputBinding.describe_action(loadout_action), "Loadout"])
 		extra[group] = lines
 		help.extra_keys = extra
 	return loadout

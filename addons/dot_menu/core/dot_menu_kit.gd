@@ -259,6 +259,23 @@ func primary_button(text: String) -> Button:
 	return b
 
 
+## The outlined button beside a filled one: Random next to Done.
+func secondary_button(text: String) -> Button:
+	var p := palette
+	var b := Button.new()
+	b.text = text
+	b.custom_minimum_size = Vector2(0, 42)
+	var pad := Vector4(16, 10, 16, 10)
+	b.add_theme_stylebox_override(&"normal", box(p.card, radius_small, p.line, 1, pad))
+	b.add_theme_stylebox_override(&"hover", box(p.card_hover, radius_small, p.accent, 1, pad))
+	b.add_theme_stylebox_override(&"pressed", box(p.accent_wash(), radius_small, p.accent, 1, pad))
+	b.add_theme_stylebox_override(&"focus", box(Color(0, 0, 0, 0), radius_small, Color(p.accent, 0.8), 2))
+	for c in [&"font_color", &"font_hover_color", &"font_pressed_color", &"font_focus_color"]:
+		b.add_theme_color_override(c, p.text)
+	b.add_theme_font_override(&"font", bold())
+	return b
+
+
 ## A sidebar entry. With a [param group] it is a page tab that stays lit; without, an
 ## action (Help, Leave).
 func nav_button(text: String, group: ButtonGroup = null) -> Button:
