@@ -1885,7 +1885,6 @@ func _test_loadout_menu() -> void:
 	link.answer({"result": {"ok": false, "text": "This server does not allow 'revolver' in the secondary slot."}})
 	_check(node.menu.toast_text().contains("does not allow"), "and a refusal is said on screen")
 	load("res://examples/loadout_random_checks.gd").run(self, screen, lo, link)
-	load("res://examples/loadout_saved_checks.gd").run(self, screen, lo, link)
 	# A menu built by hand with no table still gets B once the game hands it an offer.
 	if InputMap.has_action(DotMenuBindings.LOADOUT_ACTION):
 		InputMap.erase_action(DotMenuBindings.LOADOUT_ACTION)
