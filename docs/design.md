@@ -115,6 +115,8 @@ A rebind can never make a conflict (it swaps), so the third layer only ever fire
 - **Remembered per account, on the client** (`remember_as(game, account)`, `user://dot_menu/loadouts.json`): a server keys loadouts by session and forgets them on a restart, and the choice is the player's. `restore()` re-sends it on the next join, quietly unless refused.
 - **Drawn at a design size (1160x660) and scaled down whole**, as the HUD is, so the cards stay readable at 854x480. The icon frame is a dark case in every theme, because weapon art is usually light on transparent.
 
+Saved loadouts: when the offer carries `saved` (dot-loadout's `saved_list`), the screen shows a chip per loadout and a name field with Save new, Rename and Delete (`DotMenuLoadoutSaved`). Each only emits `save NAME`, `use N`, `rename N NAME` or `delete N`, which `DotMenuLoadout.manage` sends to the server's `/loadout`; the menu reopens on an accepted answer. A save carries the draft's picks. Solo has no saved loadouts.
+
 ## `DotMenuSettings`
 
 Each `mg-*` game carried a ~250-line `<Prefix>Settings` that was the same node renamed: a manager, a `match` pushing four keys at a sampler, a camera and a mixer, and a bare settings screen. `DotMenuSettings` is that node (manager + `DotMenuApplier` + `DotMenu`) with the API those clients already called: `setup(store, with_menu)`, `bind_look/camera/audio/fx`, `open/close/is_open`, `describe()` with `look_bound`/`camera_bound`, and `menu_state_changed`. A game subclasses it for its schema and keeps its call sites. `manage_pointer` is off there because those clients own the pointer and capture on `menu_state_changed`.

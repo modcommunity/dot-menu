@@ -174,7 +174,10 @@ static func loadout_offer() -> Dictionary:
 					{"label": "Range", "value": spec[5], "text": "%d m" % int(spec[5] * 200)},
 					{"label": "Magazine", "value": 0.5, "text": "30"}]})
 		slots.append({"id": slot_id, "name": names[slot_id], "current": current[slot_id], "fixed": false, "choices": choices})
-	return {"choose": true, "budget": 7, "note": "", "slots": slots}
+	return {"choose": true, "budget": 7, "note": "", "slots": slots,
+		"saved": [{"index": 0, "name": "Assault", "selected": true, "saved": true},
+			{"index": 1, "name": "Long range", "selected": false, "saved": true},
+			{"index": 2, "name": "Close quarters", "selected": false, "saved": true}]}
 
 
 ## A flat gun-ish shape, as a stand-in for a game's rendered weapon icon.

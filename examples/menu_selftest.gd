@@ -3,7 +3,7 @@ extends Node
 ## Exercises dot-menu with no game: the data model, stock settings and what applies them, the bindings table, the screens, the facade's keys, and what a server may do.
 ## CHECKS is the guard the section counter cannot be: a script error aborts that test, not the run, and only the total notices checks that never ran.
 const SECTIONS := 24
-const CHECKS := 381
+const CHECKS := 391
 
 var _passed := 0
 var _failed := 0
@@ -1885,6 +1885,7 @@ func _test_loadout_menu() -> void:
 	link.answer({"result": {"ok": false, "text": "This server does not allow 'revolver' in the secondary slot."}})
 	_check(node.menu.toast_text().contains("does not allow"), "and a refusal is said on screen")
 	load("res://examples/loadout_random_checks.gd").run(self, screen, lo, link)
+	load("res://examples/loadout_saved_checks.gd").run(self, screen, lo, link)
 	# A menu built by hand with no table still gets B once the game hands it an offer.
 	if InputMap.has_action(DotMenuBindings.LOADOUT_ACTION):
 		InputMap.erase_action(DotMenuBindings.LOADOUT_ACTION)

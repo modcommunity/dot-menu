@@ -13,6 +13,9 @@ signal committed(picks: Dictionary)
 ## The player pressed Random (the screen closes without its draft; the server rolls).
 signal random_requested()
 
+## A saved-loadout action (`save NAME`, `use N`, `rename N NAME`, `delete N`) for the server's /loadout.
+signal manage_requested(args: String)
+
 ## Design size of the window. Scaled down, never up.
 const DESIGN := Vector2(1160, 660)
 
@@ -30,6 +33,7 @@ var offer: Dictionary = {}
 
 ## Slot id to item id: what closing will send.
 var draft: Dictionary = {}
+var _saved: DotMenuLoadoutSaved
 
 ## The slot shown (index into the offer's slots) and the card the keys are on.
 var slot_index: int = 0
@@ -157,6 +161,10 @@ func _build() -> void:
 	_sub = kit.paragraph("", kit.size_small, p.muted)
 	_sub.name = "Subtitle"
 	col.add_child(_sub)
+	_saved = DotMenuLoadoutSaved.new()
+	_saved.setup(kit)
+	_saved.requested.connect(manage)
+	col.add_child(_saved)
 
 	var scroll := ScrollContainer.new()
 	scroll.name = "Scroll"
@@ -172,6 +180,14 @@ func _build() -> void:
 	_grid.add_theme_constant_override(&"v_separation", 12)
 	scroll.add_child(_grid)
 
+	_build_foot(col)
+	_built = true
+	_fit()
+
+
+## The detail card and the status and key line, under the cards.
+func _build_foot(col: VBoxContainer) -> void:
+	var p := kit.palette
 	var detail_card := PanelContainer.new()
 	detail_card.add_theme_stylebox_override(&"panel", kit.box(p.card, kit.radius, p.line, 1, Vector4(18, 14, 18, 14)))
 	detail_card.custom_minimum_size = Vector2(0, 172)
@@ -195,8 +211,6 @@ func _build() -> void:
 	_keys = HBoxContainer.new()
 	_keys.name = "Keys"
 	foot.add_child(_keys)
-	_built = true
-	_fit()
 
 
 ## The key line, with the close key as it is bound now.
@@ -265,6 +279,19 @@ func request_random() -> void:
 
 
 ## Closes without sending anything.
+## Sends a saved-loadout action and closes without the draft: the menu reopens on the answer.
+## A save carries the draft, so the picks made so far are kept in the new loadout.
+func manage(args: String) -> void:
+	if not visible:
+		return
+	var line := args
+	if args.begins_with("save"):
+		for k: Variant in changes().keys():
+			line += " %s=%s" % [k, changes()[k]]
+	manage_requested.emit(line)
+	cancel()
+
+
 func cancel() -> void:
 	draft = _original.duplicate()
 	close()
@@ -486,6 +513,9 @@ func _rebuild() -> void:
 	_sub.text = note
 	var budget := int(offer.get("budget", 0))
 	_points.text = ("%d / %d points" % [points_with(), budget]) if budget > 0 else ""
+	_saved.visible = offer.get("saved") is Array and not (offer["saved"] as Array).is_empty() and may_choose()
+	if _saved.visible:
+		_saved.show_list(offer["saved"] as Array)
 	_points.add_theme_color_override(&"font_color", p.danger if budget > 0 and points_with() > budget else p.muted)
 	_status.text = _status_text
 	_fill_keys(_keys)
@@ -740,51 +770,8 @@ func _draw_detail() -> void:
 	for st: Variant in item.get("stats", []):
 		var stat := st as Dictionary
 		var label := str(stat.get("label", ""))
-		bars.add_child(_stat_row(label, clampf(float(stat.get("value", 0.0)), 0.0, 1.0),
+		bars.add_child(DotMenuStatBar.build(kit, label, clampf(float(stat.get("value", 0.0)), 0.0, 1.0),
 			str(stat.get("text", "")), float(held_stats.get(label, -1.0)), str(held.get("id", "")) == str(item.get("id", ""))))
-
-
-func _stat_row(label: String, value: float, text: String, held: float, same: bool) -> Control:
-	var p := kit.palette
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override(&"separation", 10)
-	var name := kit.label(label, kit.size_small, p.muted)
-	name.custom_minimum_size = Vector2(92, 0)
-	row.add_child(name)
-	var track := PanelContainer.new()
-	track.custom_minimum_size = Vector2(0, 10)
-	track.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	track.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	track.add_theme_stylebox_override(&"panel", kit.box(Color(p.text, 0.08), 5))
-	row.add_child(track)
-	var holder := Control.new()
-	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	track.add_child(holder)
-	var better := held < 0.0 or same or value >= held - 0.001
-	var fill := Panel.new()
-	fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	fill.add_theme_stylebox_override(&"panel", kit.box(p.accent if better else p.warn, 5))
-	fill.anchor_bottom = 1.0
-	fill.anchor_right = maxf(value, 0.02)
-	holder.add_child(fill)
-	if held >= 0.0 and not same:
-		# What is equipped now: a tick on the track, so a shorter bar reads as a step down.
-		var tick := ColorRect.new()
-		tick.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		tick.color = p.text
-		tick.anchor_left = clampf(held, 0.0, 1.0)
-		tick.anchor_right = clampf(held, 0.0, 1.0)
-		tick.anchor_bottom = 1.0
-		tick.offset_left = -1.0
-		tick.offset_right = 1.0
-		tick.offset_top = -3.0
-		tick.offset_bottom = 3.0
-		holder.add_child(tick)
-	var v := kit.label(text, kit.size_small, p.text, true)
-	v.custom_minimum_size = Vector2(64, 0)
-	v.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	row.add_child(v)
-	return row
 
 
 func describe() -> Dictionary:

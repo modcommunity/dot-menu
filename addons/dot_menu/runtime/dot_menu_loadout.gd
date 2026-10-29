@@ -61,6 +61,7 @@ var last_said: String = ""
 var _waiting_since_msec: int = -1
 var _bound_link: Object = null
 var _quiet_until_msec: int = 0
+var _reopen: bool = false
 
 
 ## Opens the menu: the solo offer now, or asks the server and opens on its answer.
@@ -92,6 +93,8 @@ func open_offer(data: Dictionary) -> void:
 	if screen == null:
 		return
 	screen.title_text = title
+	if not screen.manage_requested.is_connected(manage):
+		screen.manage_requested.connect(manage)
 	screen.toggle_action = menu.loadout_action
 	menu.open_loadout_screen(last_offer)
 
@@ -133,6 +136,16 @@ func request_random() -> void:
 	_say(str(result.get("text", "")))
 	if bool(result.get("ok", false)):
 		open()
+
+
+## A saved-loadout action from the screen, sent to the server, which answers; the menu then reopens.
+func manage(args: String) -> void:
+	var l := _link()
+	if not _connected(l):
+		_say("Saved loadouts need a server.")
+		return
+	_reopen = true
+	_ask(l, args)
 
 
 ## The screen closed with changes. Solo: [member choose_fn]; connected: the server.
@@ -323,7 +336,9 @@ func receive(data: Dictionary) -> void:
 		saved.emit({}, result)
 		if not quiet or not bool(result.get("ok", false)):
 			_say(str(result.get("text", "")))
-		if bool(result.get("random", false)) and bool(result.get("ok", false)):
+		var again := _reopen or bool(result.get("random", false))
+		_reopen = false
+		if again and bool(result.get("ok", false)):
 			open()
 
 
