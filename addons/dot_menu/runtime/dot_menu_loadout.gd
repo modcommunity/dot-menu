@@ -112,6 +112,29 @@ func decorate(data: Dictionary) -> Dictionary:
 	return out
 
 
+## `func() -> Variant` (may await): roll a random loadout, solo. Like [member choose_fn]'s answer.
+var random_fn: Callable = Callable()
+
+
+## Random was pressed. Connected: asks the server, which refuses when it is off. Solo: [member random_fn].
+## Either way the menu opens again on the new loadout.
+func request_random() -> void:
+	var l := _link()
+	if _connected(l):
+		_ask(l, "random")
+		return
+	if not random_fn.is_valid():
+		_say("This game has no random loadout.")
+		return
+	var got: Variant = await random_fn.call()
+	var result := _result_of(got)
+	last_result = result
+	saved.emit({}, result)
+	_say(str(result.get("text", "")))
+	if bool(result.get("ok", false)):
+		open()
+
+
 ## The screen closed with changes. Solo: [member choose_fn]; connected: the server.
 func commit(picks: Dictionary) -> void:
 	if picks.is_empty():
@@ -300,6 +323,8 @@ func receive(data: Dictionary) -> void:
 		saved.emit({}, result)
 		if not quiet or not bool(result.get("ok", false)):
 			_say(str(result.get("text", "")))
+		if bool(result.get("random", false)) and bool(result.get("ok", false)):
+			open()
 
 
 func _say(text: String) -> void:

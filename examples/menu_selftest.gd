@@ -3,7 +3,7 @@ extends Node
 ## Exercises dot-menu with no game: the data model, stock settings and what applies them, the bindings table, the screens, the facade's keys, and what a server may do.
 ## CHECKS is the guard the section counter cannot be: a script error aborts that test, not the run, and only the total notices checks that never ran.
 const SECTIONS := 24
-const CHECKS := 377
+const CHECKS := 381
 
 var _passed := 0
 var _failed := 0
@@ -1884,6 +1884,25 @@ func _test_loadout_menu() -> void:
 	_check(link.sent.back() == "/loadout secondary=revolver" and saved.is_empty(), "a choice is the server's to take, not this client's")
 	link.answer({"result": {"ok": false, "text": "This server does not allow 'revolver' in the secondary slot."}})
 	_check(node.menu.toast_text().contains("does not allow"), "and a refusal is said on screen")
+
+	# Random: offered by the server, asked for on R, never when the server did not offer it.
+	var with_random := _loadout_offer()
+	with_random["random"] = {"enabled": true, "price": "50", "count": 0}
+	lo.open_offer(with_random)
+	var rbtn := screen.find_child("Random", true, false) as Button
+	_check(rbtn != null and rbtn.visible and rbtn.text == "Random (50)", "an offer with Random shows the button and its price")
+	link.sent.clear()
+	_one = screen.handle_key(_key(KEY_R))
+	_check(link.sent == ["/loadout random"] and not screen.is_open(), "R asks the server for a random loadout and closes without the draft")
+	link.answer({"result": {"ok": true, "text": "Loadout saved.", "random": true}})
+	_check(link.sent.back() == "/loadout", "and a rolled loadout reopens the menu on the new one")
+	var off := _loadout_offer()
+	off["random"] = {"enabled": false, "price": "", "count": 0}
+	lo.open_offer(off)
+	link.sent.clear()
+	_one = screen.handle_key(_key(KEY_R))
+	_check(not rbtn.visible and link.sent.is_empty() and screen.is_open(), "switched off, the button is hidden and R does nothing")
+	screen.cancel()
 
 	# A menu built by hand with no table still gets B once the game hands it an offer.
 	if InputMap.has_action(DotMenuBindings.LOADOUT_ACTION):

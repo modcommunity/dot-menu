@@ -10,6 +10,9 @@ signal closed()
 ## The player closed the screen with changes: slot id to item id, the changed slots only.
 signal committed(picks: Dictionary)
 
+## The player pressed Random (the screen closes without its draft; the server rolls).
+signal random_requested()
+
 ## Design size of the window. Scaled down, never up.
 const DESIGN := Vector2(1160, 660)
 
@@ -17,6 +20,7 @@ const DESIGN := Vector2(1160, 660)
 const COLUMNS := 4
 
 var kit: DotMenuKit = null
+var _random_button: Button = null
 
 ## The action that opened this (B), which also closes it.
 var toggle_action: StringName = &""
@@ -123,6 +127,11 @@ func _build() -> void:
 	_tabs.add_theme_constant_override(&"separation", 6)
 	_tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	side_col.add_child(_tabs)
+	_random_button = kit.nav_button("Random")
+	_random_button.name = "Random"
+	_random_button.focus_mode = Control.FOCUS_NONE
+	_random_button.pressed.connect(request_random)
+	side_col.add_child(_random_button)
 	var done := kit.primary_button("Done")
 	done.name = "Done"
 	done.focus_mode = Control.FOCUS_NONE
@@ -191,6 +200,7 @@ func _fill_keys(line: HBoxContainer) -> void:
 	line.add_theme_constant_override(&"separation", 6)
 	var close_key := DotInputBinding.describe_action(toggle_action) if toggle_action != &"" and InputMap.has_action(toggle_action) else ""
 	for pair: Array in [["↑↓←→", "choose"], ["Enter", "equip"], ["Q E", "slot"], ["Backspace", "undo"],
+			["R", "random"],
 			[("%s / Esc" % close_key) if close_key != "" else "Esc", "done"]]:
 		line.add_child(kit.keycap(str(pair[0]), kit.size_small - 2))
 		line.add_child(kit.label(str(pair[1]), kit.size_small - 1, kit.palette.dim))
@@ -233,6 +243,20 @@ func close() -> void:
 	if not changed.is_empty() and may_choose():
 		committed.emit(changed)
 	closed.emit()
+
+
+## Whether the server offers Random to this player.
+func random_offered() -> bool:
+	var r: Variant = offer.get("random", {})
+	return r is Dictionary and bool((r as Dictionary).get("enabled", false)) and may_choose()
+
+
+## Asks for a random loadout: closes without the draft and says so. Does nothing when not offered.
+func request_random() -> void:
+	if not visible or not random_offered():
+		return
+	random_requested.emit()
+	cancel()
 
 
 ## Closes without sending anything.
@@ -407,6 +431,9 @@ func handle_key(event: InputEvent) -> bool:
 			KEY_BACKSPACE:
 				revert()
 				return true
+			KEY_R:
+				request_random()
+				return true
 		if code >= KEY_1 and code <= KEY_9:
 			var n := code - KEY_1
 			if n < slots().size():
@@ -444,6 +471,10 @@ func _rebuild() -> void:
 		return
 	var p := kit.palette
 	_title.text = title_text
+	if _random_button != null:
+		_random_button.visible = random_offered()
+		var price := str((offer.get("random", {}) as Dictionary).get("price", "")) if offer.get("random") is Dictionary else ""
+		_random_button.text = "Random" if price == "" else "Random (%s)" % price
 	var note := subtitle if subtitle != "" else str(offer.get("note", ""))
 	if note == "":
 		note = "Pick a card for each slot. Changes are sent when you close this, and apply when you next spawn."

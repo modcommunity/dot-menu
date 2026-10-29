@@ -515,6 +515,7 @@ func use_loadout(offer_fn: Callable, choose_fn: Callable, decorate_fn: Callable 
 		loadout_screen.kit = kit if kit != null else DotMenuKit.new()
 		loadout_screen.closed.connect(_on_closed)
 		loadout_screen.committed.connect(func(picks: Dictionary) -> void: loadout.commit(picks))
+		loadout_screen.random_requested.connect(func() -> void: loadout.request_random())
 		add_child(loadout_screen)
 	if loadout_action != &"" and not InputMap.has_action(loadout_action):
 		InputMap.add_action(loadout_action)
