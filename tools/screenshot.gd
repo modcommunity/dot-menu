@@ -125,6 +125,43 @@ func _run() -> void:
 	menu.scoreboard.close()
 	var _show := settings.set_value(&"scoreboard_hidden", "")
 
+	var stat_cols := [
+		{"key": "kills", "title": "Kills", "column": "default"},
+		{"key": "headshots", "title": "Headshots", "column": "default"},
+		{"key": "accuracy", "title": "Accuracy", "column": "optional"},
+		{"key": "best_streak", "title": "Best streak", "column": "default"},
+	]
+	menu.scoreboard.source = func() -> Dictionary:
+		var r: Dictionary = _demo.call("roster")
+		r["stat_columns"] = stat_cols
+		r["you"] = r["players"][0].get("id", 1)
+		for row: Dictionary in r["players"]:
+			var n := int(row.get("score", 0))
+			row["st_kills"] = str(n)
+			row["lt_kills"] = str(1200 + n * 7)
+			row["st_headshots"] = str(n / 3)
+			row["lt_headshots"] = str(310 + n)
+			row["st_accuracy"] = "%d%%" % (30 + n % 40)
+			row["lt_accuracy"] = "41%"
+			row["st_best_streak"] = str(n / 2)
+			row["lt_best_streak"] = str(9 + n / 5)
+		return r
+	var stats := DotMenuStats.install(menu.scoreboard)
+	menu.scoreboard.open()
+	await _frames(3)
+	await _shot("scoreboard_stats")
+	menu.scoreboard.close()
+	var card := DotMenuStatsPanel.new()
+	card.kit = menu.scoreboard.kit
+	menu.add_child(card)
+	card.show_snapshot(menu.scoreboard.source.call())
+	card.show_for(0.0)
+	await _frames(3)
+	await _shot("stats_card")
+	card.queue_free()
+	stats.queue_free()
+	menu.scoreboard.source = Callable(_demo.get_script(), &"roster")
+
 	var hud: Control = _demo.get("hud")
 	menu.open_layout_editor(hud, {&"clock": "Clock", &"speed": "Speed"})
 	menu.layout_editor.drag(&"clock", hud.call("element_rect", &"clock").get_center(), Vector2(260, 140))

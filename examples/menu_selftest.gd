@@ -2,8 +2,8 @@ extends Node
 
 ## Exercises dot-menu with no game: the data model, stock settings and what applies them, the bindings table, the screens, the facade's keys, and what a server may do.
 ## CHECKS is the guard the section counter cannot be: a script error aborts that test, not the run, and only the total notices checks that never ran.
-const SECTIONS := 24
-const CHECKS := 401
+const SECTIONS := 25
+const CHECKS := 410
 
 var _passed := 0
 var _failed := 0
@@ -44,6 +44,7 @@ func _run() -> void:
 	_test_moved_defaults()
 	_test_wheel()
 	await load("res://examples/scoreboard_scroll_checks.gd").run(self)
+	await load("res://examples/stats_checks.gd").run(self)
 	_line("")
 	_line("%d sections, %d passed, %d failed" % [_section_count, _passed, _failed])
 
