@@ -3,7 +3,7 @@ extends Node
 ## Exercises dot-menu with no game: the data model, stock settings and what applies them, the bindings table, the screens, the facade's keys, and what a server may do.
 ## CHECKS is the guard the section counter cannot be: a script error aborts that test, not the run, and only the total notices checks that never ran.
 const SECTIONS := 25
-const CHECKS := 410
+const CHECKS := 416
 
 var _passed := 0
 var _failed := 0
@@ -1875,7 +1875,7 @@ func _test_loadout_menu() -> void:
 	var link := FakeLoadoutLink.new()
 	add_child(link)
 	lo.link = link
-	_check(node.menu.handle_event(_key(KEY_B)) and link.sent == ["/loadout"] and not screen.is_open(), "online, B asks the server")
+	_check(node.menu.handle_event(_key(KEY_B)) and link.sent == ["/loadout locked"] and not screen.is_open(), "online, B asks the server, locked items included")
 	link.answer(_loadout_offer())
 	await get_tree().process_frame
 	_check(screen.is_open() and lo.last_offer["slots"][0]["choices"][0].has("stats"), "and opens on its offer, with this client's art and numbers")
@@ -1885,6 +1885,7 @@ func _test_loadout_menu() -> void:
 	_check(link.sent.back() == "/loadout secondary=revolver" and saved.is_empty(), "a choice is the server's to take, not this client's")
 	link.answer({"result": {"ok": false, "text": "This server does not allow 'revolver' in the secondary slot."}})
 	_check(node.menu.toast_text().contains("does not allow"), "and a refusal is said on screen")
+	load("res://examples/loadout_locked_checks.gd").run(self, screen, lo, link)
 	load("res://examples/loadout_random_checks.gd").run(self, screen, lo, link)
 	# A menu built by hand with no table still gets B once the game hands it an offer.
 	if InputMap.has_action(DotMenuBindings.LOADOUT_ACTION):

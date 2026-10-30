@@ -19,7 +19,7 @@ static func run(host: Node, screen: DotMenuLoadoutScreen, lo: DotMenuLoadout, li
 	(screen.find_child("Chip2", true, false) as Button).pressed.emit()
 	host._check(link.sent == ["/loadout use 2"] and not screen.is_open(), "a chip asks the server to use that loadout and closes")
 	link.answer({"result": {"ok": true, "text": "Loadout selected."}})
-	host._check(link.sent.back() == "/loadout", "and the menu reopens on the server's answer")
+	host._check(link.sent.back() == "/loadout locked", "and the menu reopens on the server's answer")
 	lo.open_offer(off)
 	link.sent.clear()
 	(screen.find_child("Chip1", true, false) as Button).pressed.emit()

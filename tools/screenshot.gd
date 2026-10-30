@@ -82,6 +82,9 @@ func _run() -> void:
 		return {"ok": true, "text": "Loadout saved: you get it when you next spawn."})
 	menu.open_loadout()
 	await _shot("loadout")
+	menu.loadout_screen.card_index = 7
+	menu.loadout_screen.pick(7)
+	await _shot("loadout_locked")
 	menu.loadout_screen.card_index = 5
 	var _over := menu.loadout_screen.pick(7)
 	await _shot("loadout_budget")

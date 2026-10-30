@@ -18,6 +18,9 @@ signal random_spawn_requested(on: bool)
 ## A saved-loadout action (`save NAME`, `use N`, `rename N NAME`, `delete N`) for the server's /loadout.
 signal manage_requested(args: String)
 
+## "Get in store" on a locked item; [param url] is the offer's `store` hint, "" when unset.
+signal store_requested(item_id: StringName, url: String)
+
 ## Design size of the window. Scaled down, never up.
 const DESIGN := Vector2(1160, 660)
 
@@ -404,6 +407,10 @@ func pick(index: int) -> bool:
 		_status_text = "The server sets this slot." if bool(slot.get("fixed", false)) else "The server sets every loadout here."
 		_rebuild()
 		return false
+	if bool(item.get("locked", false)):
+		_status_text = "Locked: get it in the store."
+		_rebuild()
+		return false
 	var over := over_budget_by(str(slot["id"]), item)
 	if over > 0:
 		_status_text = "%s is %d point%s over the budget." % [
@@ -697,7 +704,8 @@ func _card(index: int, item: Dictionary) -> Control:
 			card_index = index
 			_rebuild())
 	b.pressed.connect(func() -> void: var _p := pick(index))
-	b.modulate = Color(1, 1, 1, 0.45) if (over > 0 or (locked and not equipped)) else Color.WHITE
+	var unowned := bool(item.get("locked", false))
+	b.modulate = Color(1, 1, 1, 0.45) if (over > 0 or unowned or (locked and not equipped)) else Color.WHITE
 
 	var col := VBoxContainer.new()
 	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -729,6 +737,9 @@ func _card(index: int, item: Dictionary) -> Control:
 	if equipped:
 		under = "EQUIPPED"
 		under_colour = p.accent
+	elif unowned:
+		under = "LOCKED  ·  store"
+		under_colour = p.muted
 	elif over > 0:
 		under = "%d over budget" % over
 		under_colour = p.danger
@@ -824,6 +835,13 @@ func _draw_detail() -> void:
 	var tags := _shown_tags(item, 8)
 	if not tags.is_empty():
 		words.add_child(kit.label("  ·  ".join(tags), kit.size_small - 1, p.dim))
+	if bool(item.get("locked", false)):
+		words.add_child(kit.label("Not unlocked", kit.size_small, p.danger, true))
+		var get_it := kit.primary_button("Get in store")
+		get_it.name = "GetInStore"
+		get_it.focus_mode = Control.FOCUS_NONE
+		get_it.pressed.connect(func() -> void: store_requested.emit(StringName(str(item.get("id", ""))), str(item.get("store", ""))))
+		words.add_child(get_it)
 
 	var bars := VBoxContainer.new()
 	bars.name = "Stats"

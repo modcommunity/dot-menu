@@ -18,6 +18,8 @@ signal saved(picks: Dictionary, result: Dictionary)
 
 ## A line for the player, also shown as [method DotMenu.toast] unless [member toast] is off.
 signal said(text: String)
+## "Get in store" was pressed on a locked item. When nobody is connected, [param url] is opened.
+signal store_requested(item_id: StringName, url: String)
 
 ## `func() -> Variant` (may await): the offer, solo. A [Dictionary], or a DotResult holding one.
 var offer_fn: Callable = Callable()
@@ -29,6 +31,14 @@ var choose_fn: Callable = Callable()
 ## `func(slot_id: String, choice: Dictionary) -> Dictionary`: what to add to a choice: `icon` (a
 ## texture or a `res://` path), `detail`, `kind`, `stats` (`[{label, value 0..1, text}]`), `tags`.
 var decorate_fn: Callable = Callable()
+
+## Ask for items the player does not own too (shown greyed with a store button). Connected this
+## sends `/loadout locked`; solo the game's [member offer_fn] decides what it returns.
+var include_locked: bool = true
+
+## `func(item_id: StringName) -> String` (optional): the game's store hook, solo typically
+## `manager.request_store`; it returns the store address, which is opened when nothing else is.
+var store_fn: Callable = Callable()
 
 ## Whether B opens anything. A game whose mode hands out the weapons (gun game) turns it off.
 var enabled: bool = true
@@ -70,7 +80,7 @@ func open() -> void:
 		return
 	var l := _link()
 	if _connected(l):
-		_ask(l, "")
+		_ask(l, "locked" if include_locked else "")
 		return
 	if not offer_fn.is_valid():
 		_say("This game has no loadouts.")
@@ -95,6 +105,8 @@ func open_offer(data: Dictionary) -> void:
 	screen.title_text = title
 	if not screen.manage_requested.is_connected(manage):
 		screen.manage_requested.connect(manage)
+	if not screen.store_requested.is_connected(request_store):
+		screen.store_requested.connect(request_store)
 	screen.toggle_action = menu.loadout_action
 	menu.open_loadout_screen(last_offer)
 
@@ -155,6 +167,19 @@ func request_random_spawn(on: bool) -> void:
 	var result := _result_of(await random_spawn_fn.call(on))
 	last_result = result
 	_say(str(result.get("text", "")))
+
+
+## The "Get in store" button: tells [member store_fn] and [signal store_requested], and opens the
+## address (the item's, else the hook's) when nothing is connected to the signal.
+func request_store(item_id: StringName, url: String = "") -> void:
+	var address := url
+	if store_fn.is_valid():
+		var got: Variant = store_fn.call(item_id)
+		if address == "" and got is String:
+			address = got
+	store_requested.emit(item_id, address)
+	if store_requested.get_connections().is_empty() and address != "":
+		OS.shell_open(address)
 
 
 ## A saved-loadout action from the screen, sent to the server, which answers; the menu then reopens.

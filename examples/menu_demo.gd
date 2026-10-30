@@ -168,6 +168,7 @@ static func loadout_offer() -> Dictionary:
 		for spec: Array in specs[slot_id]:
 			shade += 1
 			choices.append({"id": spec[0], "name": spec[1], "cost": spec[2], "tags": ["automatic"] if spec[4] > 0.7 else [],
+				"locked": spec[0] in ["minigun", "sniper"], "store": "https://example.com/store" if spec[0] in ["minigun", "sniper"] else "",
 				"icon": _silhouette(shade, slot_id), "detail": "A stand-in description of the %s." % str(spec[1]).to_lower(),
 				"stats": [{"label": "Damage", "value": spec[3], "text": str(int(spec[3] * 120))},
 					{"label": "Fire rate", "value": spec[4], "text": "%d/min" % int(spec[4] * 900)},

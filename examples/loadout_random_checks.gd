@@ -14,7 +14,7 @@ static func run(host: Node, screen: DotMenuLoadoutScreen, lo: DotMenuLoadout, li
 	var _one := screen.handle_key(host._key(KEY_R))
 	host._check(link.sent == ["/loadout random"] and not screen.is_open(), "R asks the server for a random loadout and closes without the draft")
 	link.answer({"result": {"ok": true, "text": "Loadout saved.", "random": true}})
-	host._check(link.sent.back() == "/loadout", "and a rolled loadout reopens the menu on the new one")
+	host._check(link.sent.back() == "/loadout locked", "and a rolled loadout reopens the menu on the new one")
 	var off: Dictionary = host._loadout_offer()
 	off["random"] = {"enabled": false, "price": "", "count": 0}
 	lo.open_offer(off)
