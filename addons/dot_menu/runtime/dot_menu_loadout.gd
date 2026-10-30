@@ -138,6 +138,25 @@ func request_random() -> void:
 		open()
 
 
+## `func(on: bool) -> Variant` (may await): store the "random every spawn" toggle, solo.
+var random_spawn_fn: Callable = Callable()
+
+
+## The toggle next to Random changed. Connected: `/loadout randomspawn on|off`. Solo: [member random_spawn_fn].
+## The screen stays open on the draft; a refusal is said and the next opening shows the real state.
+func request_random_spawn(on: bool) -> void:
+	var l := _link()
+	if _connected(l):
+		_ask(l, "randomspawn " + ("on" if on else "off"))
+		return
+	if not random_spawn_fn.is_valid():
+		_say("This game has no random loadout.")
+		return
+	var result := _result_of(await random_spawn_fn.call(on))
+	last_result = result
+	_say(str(result.get("text", "")))
+
+
 ## A saved-loadout action from the screen, sent to the server, which answers; the menu then reopens.
 func manage(args: String) -> void:
 	var l := _link()

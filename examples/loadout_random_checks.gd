@@ -22,4 +22,5 @@ static func run(host: Node, screen: DotMenuLoadoutScreen, lo: DotMenuLoadout, li
 	_one = screen.handle_key(host._key(KEY_R))
 	host._check(not rbtn.visible and link.sent.is_empty() and screen.is_open(), "switched off, the button is hidden and R does nothing")
 	screen.cancel()
+	load("res://examples/loadout_spawn_checks.gd").run(host, screen, lo, link)
 	load("res://examples/loadout_saved_checks.gd").run(host, screen, lo, link)

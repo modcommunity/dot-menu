@@ -12,6 +12,8 @@ signal committed(picks: Dictionary)
 
 ## The player pressed Random (the screen closes without its draft; the server rolls).
 signal random_requested()
+## The "random every spawn" toggle was switched to [param on]; the screen stays open.
+signal random_spawn_requested(on: bool)
 
 ## A saved-loadout action (`save NAME`, `use N`, `rename N NAME`, `delete N`) for the server's /loadout.
 signal manage_requested(args: String)
@@ -24,6 +26,7 @@ const COLUMNS := 4
 
 var kit: DotMenuKit = null
 var _random_button: Button = null
+var _spawn_toggle: Button = null
 
 ## The action that opened this (B), which also closes it.
 var toggle_action: StringName = &""
@@ -88,7 +91,19 @@ func _side_buttons(side_col: VBoxContainer) -> void:
 	_random_button.name = "Random"
 	_random_button.focus_mode = Control.FOCUS_NONE
 	_random_button.pressed.connect(request_random)
-	side_col.add_child(_random_button)
+	_random_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var row := HBoxContainer.new()
+	row.name = "RandomRow"
+	row.add_theme_constant_override(&"separation", 6)
+	side_col.add_child(row)
+	row.add_child(_random_button)
+	_spawn_toggle = kit.secondary_button("Every spawn")
+	_spawn_toggle.name = "RandomSpawn"
+	_spawn_toggle.toggle_mode = true
+	_spawn_toggle.focus_mode = Control.FOCUS_ALL
+	_spawn_toggle.tooltip_text = "Roll a new random loadout every time you spawn"
+	_spawn_toggle.toggled.connect(_on_spawn_toggled)
+	row.add_child(_spawn_toggle)
 	var done := kit.primary_button("Done")
 	done.name = "Done"
 	done.focus_mode = Control.FOCUS_NONE
@@ -219,7 +234,7 @@ func _fill_keys(line: HBoxContainer) -> void:
 	line.add_theme_constant_override(&"separation", 6)
 	var close_key := DotInputBinding.describe_action(toggle_action) if toggle_action != &"" and InputMap.has_action(toggle_action) else ""
 	for pair: Array in [["↑↓←→", "choose"], ["Enter", "equip"], ["Q E", "slot"], ["Backspace", "undo"],
-			["R", "random"],
+			["R", "random"], ["T", "every spawn"],
 			[("%s / Esc" % close_key) if close_key != "" else "Esc", "done"]]:
 		line.add_child(kit.keycap(str(pair[0]), kit.size_small - 2))
 		line.add_child(kit.label(str(pair[1]), kit.size_small - 1, kit.palette.dim))
@@ -268,6 +283,38 @@ func close() -> void:
 func random_offered() -> bool:
 	var r: Variant = offer.get("random", {})
 	return r is Dictionary and bool((r as Dictionary).get("enabled", false)) and may_choose()
+
+
+## Whether the server lets this player roll a random loadout at every spawn (its rule is 1 or 2).
+func random_spawn_offered() -> bool:
+	return random_offered() and random_spawn_rule() > 0
+
+
+## The server's `mp_loadout_random_on_spawn` for this player's class: 0 off, 1 their choice, 2 forced.
+func random_spawn_rule() -> int:
+	var r: Variant = offer.get("random", {})
+	return int((r as Dictionary).get("spawn", 0)) if r is Dictionary else 0
+
+
+## Whether random-every-spawn applies to this player now: forced by the server, or their toggle.
+func random_spawn_on() -> bool:
+	var r: Variant = offer.get("random", {})
+	return random_spawn_rule() == 2 or (r is Dictionary and bool((r as Dictionary).get("spawn_on", false)))
+
+
+## Flips the toggle (the T key, the right stick click, a click); a forced rule cannot be flipped.
+func toggle_random_spawn() -> void:
+	if visible and random_spawn_offered() and random_spawn_rule() == 1:
+		_spawn_toggle.button_pressed = not _spawn_toggle.button_pressed
+
+
+func _on_spawn_toggled(on: bool) -> void:
+	var r: Variant = offer.get("random", {})
+	if not (r is Dictionary) or random_spawn_rule() != 1 or on == bool((r as Dictionary).get("spawn_on", false)):
+		return
+	(r as Dictionary)["spawn_on"] = on
+	_rebuild()
+	random_spawn_requested.emit(on)
 
 
 ## Asks for a random loadout: closes without the draft and says so. Does nothing when not offered.
@@ -369,6 +416,11 @@ func pick(index: int) -> bool:
 	return true
 
 
+## Whether cards show their cost: only when the server prices something (a budget, or a weapon with a cost).
+func costs_shown() -> bool:
+	return int(offer.get("budget", 0)) > 0 or bool(offer.get("priced", false))
+
+
 ## Points the draft would be over the budget with [param item] in [param slot_id]; 0 within it.
 func over_budget_by(slot_id: String, item: Dictionary) -> int:
 	var budget := int(offer.get("budget", 0))
@@ -444,6 +496,12 @@ func handle_key(event: InputEvent) -> bool:
 			JOY_BUTTON_Y:
 				revert()
 				return true
+			JOY_BUTTON_X:
+				request_random()
+				return true
+			JOY_BUTTON_RIGHT_STICK:
+				toggle_random_spawn()
+				return true
 	if event is InputEventKey:
 		var key := event as InputEventKey
 		var code := key.physical_keycode if key.physical_keycode != KEY_NONE else key.keycode
@@ -465,6 +523,9 @@ func handle_key(event: InputEvent) -> bool:
 				return true
 			KEY_R:
 				request_random()
+				return true
+			KEY_T:
+				toggle_random_spawn()
 				return true
 		if code >= KEY_1 and code <= KEY_9:
 			var n := code - KEY_1
@@ -507,12 +568,18 @@ func _rebuild() -> void:
 		_random_button.visible = random_offered()
 		var price := str((offer.get("random", {}) as Dictionary).get("price", "")) if offer.get("random") is Dictionary else ""
 		_random_button.text = "Random" if price == "" else "Random (%s)" % price
+		_spawn_toggle.visible = random_spawn_offered()
+		var forced := random_spawn_rule() == 2
+		_spawn_toggle.set_pressed_no_signal(random_spawn_on())
+		_spawn_toggle.disabled = forced
+		_spawn_toggle.text = ("%s Every spawn" % ("☑" if random_spawn_on() else "☐")) if not forced else "Every spawn (server)"
 	var note := subtitle if subtitle != "" else str(offer.get("note", ""))
 	if note == "":
 		note = "Pick a card for each slot. Changes are sent when you close this, and apply when you next spawn."
 	_sub.text = note
 	var budget := int(offer.get("budget", 0))
 	_points.text = ("%d / %d points" % [points_with(), budget]) if budget > 0 else ""
+	_points.visible = budget > 0
 	_saved.visible = offer.get("saved") is Array and not (offer["saved"] as Array).is_empty() and may_choose()
 	if _saved.visible:
 		_saved.show_list(offer["saved"] as Array)
@@ -653,7 +720,7 @@ func _card(index: int, item: Dictionary) -> Control:
 	name.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	name.custom_minimum_size = Vector2(1, 0)
 	line.add_child(name)
-	if int(offer.get("budget", 0)) > 0:
+	if costs_shown() and int(item.get("cost", 0)) > 0:
 		var cost := kit.label("%d pt" % int(item.get("cost", 0)), kit.size_small - 1, p.muted, true)
 		cost.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		line.add_child(cost)
