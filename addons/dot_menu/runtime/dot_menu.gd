@@ -576,8 +576,13 @@ func toast(text: String, seconds: float = 3.5) -> void:
 	var label := toast_plate.get_node("Text") as Label
 	label.add_theme_color_override(&"font_color", p.text)
 	label.text = text
-	toast_plate.offset_top = toast_top
-	toast_plate.offset_bottom = toast_top
+	# Over an open loadout panel the top of the screen is its intro text: drop below the panel.
+	var low := loadout_screen != null and loadout_screen.is_open()
+	toast_plate.set_anchors_preset(Control.PRESET_CENTER_BOTTOM if low else Control.PRESET_CENTER_TOP)
+	toast_plate.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	toast_plate.grow_vertical = Control.GROW_DIRECTION_BEGIN if low else Control.GROW_DIRECTION_END
+	toast_plate.offset_top = -48.0 if low else toast_top
+	toast_plate.offset_bottom = -48.0 if low else toast_top
 	toast_plate.visible = true
 	move_child(toast_plate, get_child_count() - 1)
 	_toast_serial += 1
