@@ -68,6 +68,11 @@ var loadout_action: StringName = DotMenuBindings.LOADOUT_ACTION
 var loadout: DotMenuLoadout = null
 var loadout_screen: DotMenuLoadoutScreen = null
 
+## The team menu's key (API 17): the period, [constant DotMenuBindings.TEAMS_ACTION]. Nothing happens on it until [method use_teams].
+var teams_action: StringName = DotMenuBindings.TEAMS_ACTION
+var teams: DotMenuTeams = null
+var team_screen: DotMenuTeamScreen = null
+
 ## Handle Escape and the actions above from [method Node._unhandled_input]. Off for a host
 ## that routes input itself through [method handle_event].
 var handle_keys: bool = true
@@ -532,6 +537,49 @@ func use_loadout(offer_fn: Callable, choose_fn: Callable, decorate_fn: Callable 
 	return loadout
 
 
+## Turns the team menu on: the period opens [DotMenuTeamScreen]. Solo, [param offer_fn] (`func() -> Dictionary`) lists the cards and [param choose_fn] (`func(id: String) -> DotResult`) switches; connected, the server is asked (see [DotMenuTeams]).
+func use_teams(offer_fn: Callable = Callable(), choose_fn: Callable = Callable()) -> DotMenuTeams:
+	if teams == null:
+		teams = DotMenuTeams.new()
+	teams.menu = self
+	teams.offer_fn = offer_fn
+	teams.choose_fn = choose_fn
+	teams.enabled = true
+	if team_screen == null:
+		team_screen = DotMenuTeamScreen.new()
+		team_screen.name = "Teams"
+		team_screen.kit = kit if kit != null else DotMenuKit.new()
+		team_screen.closed.connect(_on_closed)
+		team_screen.chosen.connect(func(id: String) -> void: teams.choose(id))
+		team_screen.refresh_requested.connect(func() -> void: teams.refresh())
+		add_child(team_screen)
+	if teams_action != &"" and not InputMap.has_action(teams_action):
+		InputMap.add_action(teams_action)
+		var _bound := DotInputBinding.apply(teams_action, DotMenuBindings.TEAMS_KEY)
+	return teams
+
+
+## Opens the team menu, as the period does. Nothing without [method use_teams].
+func open_teams() -> void:
+	if teams != null and teams.enabled:
+		teams.open()
+
+
+## Shows the team screen on [param data], over anything else this owns.
+func show_teams(data: Dictionary) -> void:
+	if team_screen == null:
+		return
+	for o in [picker, help, layout_editor, loadout_screen]:
+		if o != null and o.is_open():
+			o.close()
+	if screen != null and screen.is_open():
+		screen.close()
+	team_screen.toggle_action = teams_action
+	team_screen.refresh_sec = teams.refresh_sec if teams != null else 0.0
+	team_screen.open(data)
+	_on_opened()
+
+
 ## Opens the loadout menu, as B does. Nothing without [method use_loadout].
 func open_loadout() -> void:
 	if loadout != null and loadout.enabled:
@@ -675,6 +723,8 @@ func _overlays() -> Array[Control]:
 	var out: Array[Control] = [layout_editor, picker, help, screen]
 	if loadout_screen != null:
 		out.push_front(loadout_screen)
+	if team_screen != null:
+		out.push_front(team_screen)
 	out.append_array(_extra)
 	return out
 
@@ -809,11 +859,20 @@ func handle_event(event: InputEvent) -> bool:
 				and event.is_action_pressed(loadout_action):
 			loadout.open()
 			return true
+		if teams != null and teams.enabled and teams_action != &"" and InputMap.has_action(teams_action) \
+				and event.is_action_pressed(teams_action):
+			teams.open()
+			return true
 		return false
 
 	# The same Escape that took the pointer away in a browser can arrive a moment after the
 	# menu it opened; closing on it would make the menu flash and vanish.
 	if escape and Time.get_ticks_msec() - _opened_msec < config.escape_grace_ms:
+		return true
+
+	if team_screen != null and team_screen.is_open():
+		if escape:
+			team_screen.close()
 		return true
 
 	if loadout_screen != null and loadout_screen.is_open():
@@ -1185,6 +1244,7 @@ func describe() -> Dictionary:
 		"pages": pages.size(), "server_rules": _server_rules.keys(),
 		"pointer": manage_pointer, "overlays": _extra.size(),
 		"maps": maps.describe() if maps != null else {},
+		"teams": teams.describe() if teams != null else {},
 		"loadout": loadout.describe() if loadout != null else {},
 	}
 

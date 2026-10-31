@@ -2,8 +2,8 @@ extends Node
 
 ## Exercises dot-menu with no game: the data model, stock settings and what applies them, the bindings table, the screens, the facade's keys, and what a server may do.
 ## CHECKS is the guard the section counter cannot be: a script error aborts that test, not the run, and only the total notices checks that never ran.
-const SECTIONS := 25
-const CHECKS := 416
+const SECTIONS := 26
+const CHECKS := 425
 
 var _passed := 0
 var _failed := 0
@@ -40,6 +40,7 @@ func _run() -> void:
 	await _test_map_menu()
 	await _test_loadout_menu()
 	_test_avatar_action_keys()
+	_test_team_menu()
 	await _test_hud_follows()
 	_test_moved_defaults()
 	_test_wheel()
@@ -1763,15 +1764,47 @@ static func _loadout_offer(choose: bool = true) -> Dictionary:
 	}
 
 
+func _test_team_menu() -> void:
+	_section("the team menu lists what the server sent, spectate last")
+	var two := {"teams": [{"id": 1, "name": "Red", "colour": "e04040", "count": 2, "max": 0, "closed": "", "current": true},
+		{"id": 2, "name": "Blue", "colour": "4060e0", "count": 1, "max": 0, "closed": "", "current": false}],
+		"ffa": false, "spectating": false, "spectate_ok": true}
+	var entries := DotMenuTeamScreen.entries_for(two)
+	_check(entries.size() == 3 and entries[2]["id"] == "spectate", "two teams make two cards and a Spectate card at the end")
+	_check(entries[0]["name"] == "Red" and entries[0]["current"] and entries[1]["count"] == 1, "names, current and live counts come from the data")
+	var four: Dictionary = two.duplicate(true)
+	for i in range(3, 5):
+		four["teams"].append({"id": i, "name": "Team %d" % i, "colour": "", "count": 0, "max": 0, "closed": "", "current": false})
+	four["teams"][0]["name"] = "Alpha"
+	entries = DotMenuTeamScreen.entries_for(four)
+	_check(entries.size() == 5 and entries[0]["name"] == "Alpha", "four teams make four cards, renamed through the data")
+	var ffa := {"teams": [], "ffa": true, "spectating": false, "spectate_ok": true}
+	entries = DotMenuTeamScreen.entries_for(ffa)
+	_check(entries.size() == 2 and entries[0]["kind"] == "play" and entries[1]["kind"] == "spectate", "a free-for-all lists Play and Spectate only")
+	ffa["spectating"] = true
+	entries = DotMenuTeamScreen.entries_for(ffa)
+	_check(entries[0]["closed"] == "" and entries[1]["current"], "while spectating, Play is open and Spectate is the current card")
+	ffa["spectate_ok"] = false
+	_check(DotMenuTeamScreen.entries_for(ffa).size() == 1, "a server that turns spectate off drops that card")
+	var screen := DotMenuTeamScreen.new()
+	_check(screen.columns_for(2) == 2 and screen.columns_for(4) == 4 and screen.columns_for(8) <= 4, "the grid has a column per card up to a limit, then wraps")
+	screen.free()
+	var keys := DotMenuBindings.new().add_teams("Interface")
+	var row := keys.row_for_action(DotMenuBindings.TEAMS_ACTION)
+	var ev := DotInputBinding.from_text(str(row.get("default", ""))) as InputEventKey
+	_check(ev != null and ev.physical_keycode == KEY_PERIOD, "the Choose team row defaults to the period key")
+	_check(DotMenuBindings.new().add_avatar_actions().row_for_action(DotMenuBindings.AVATAR_POSE_ACTION).get("default", "") != row.get("default", "x"), "and no avatar action shares it")
+
+
 func _test_avatar_action_keys() -> void:
-	_section("comma, period and slash are the emote, pose and gesture rows")
+	_section("comma, semicolon and slash are the emote, pose and gesture rows")
 	var node := DotMenuSettings.new()
 	node.app_namespace = &"menu_avatar_test"
 	node.avatar_actions = true
 	node.config = DotMenuConfig.new()
 	add_child(node)
 	var _s := node.setup(DotSettingsStoreMemory.new(), false)
-	var want := {DotMenuBindings.AVATAR_EMOTE_ACTION: KEY_COMMA, DotMenuBindings.AVATAR_POSE_ACTION: KEY_PERIOD,
+	var want := {DotMenuBindings.AVATAR_EMOTE_ACTION: KEY_COMMA, DotMenuBindings.AVATAR_POSE_ACTION: KEY_SEMICOLON,
 		DotMenuBindings.AVATAR_GESTURE_ACTION: KEY_SLASH}
 	var good := true
 	for action in want:

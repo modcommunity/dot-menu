@@ -33,3 +33,5 @@ What each `DotMenuApi.LEVEL` added; the rule for bumping is on `DotAddonApi`.
 15: DotMenuStock.add_gore_row (the Blood splatters row, for a game that declares `gore`).
 
 16: DotMenuBindings.add_avatar_actions() and the AVATAR_* constants (emote, pose, gesture on , . /); DotMenuSettings.avatar_actions adds them.
+
+17 DotMenuTeams, DotMenuTeamScreen, DotMenu.use_teams/open_teams/show_teams and DotMenuBindings.add_teams (the team menu on the period key; the avatar Pose default moves to Semicolon).

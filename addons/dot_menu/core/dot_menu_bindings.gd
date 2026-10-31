@@ -22,6 +22,9 @@ const MAPS_KEY := "M"
 const LOADOUT_ACTION := &"dot_menu_loadout"
 const LOADOUT_SETTING := &"bind_loadout"
 const LOADOUT_KEY := "B"
+const TEAMS_ACTION := &"dot_menu_teams"
+const TEAMS_SETTING := &"bind_teams"
+const TEAMS_KEY := "Period"
 
 ## The avatar emote, pose and gesture keys (API 16): `,` `.` `/` in every game that plays avatar
 ## actions. The actions are the ones dot-user-avatar's `DotAvatarActionInput` listens on.
@@ -211,11 +214,16 @@ func add_loadout(group: String = "", key: String = LOADOUT_KEY) -> DotMenuBindin
 	return add(LOADOUT_ACTION, LOADOUT_SETTING, "Loadout", key, group if group != "" else help_group())
 
 
+## The team menu key (`dot_menu_teams`, stored as `bind_teams`), the period by default. The avatar pose moved to the semicolon for it.
+func add_teams(group: String = "", key: String = TEAMS_KEY) -> DotMenuBindings:
+	return add(TEAMS_ACTION, TEAMS_SETTING, "Choose team", key, group if group != "" else help_group())
+
+
 ## The three avatar action keys (emote, pose, gesture), on [param group] or the help card.
 func add_avatar_actions(group: String = "") -> DotMenuBindings:
 	var where := group if group != "" else help_group()
 	var _e := add(AVATAR_EMOTE_ACTION, AVATAR_EMOTE_SETTING, "Emote", "Comma", where)
-	var _p := add(AVATAR_POSE_ACTION, AVATAR_POSE_SETTING, "Pose", "Period", where)
+	var _p := add(AVATAR_POSE_ACTION, AVATAR_POSE_SETTING, "Pose", "Semicolon", where)
 	return add(AVATAR_GESTURE_ACTION, AVATAR_GESTURE_SETTING, "Gesture", "Slash", where)
 
 
