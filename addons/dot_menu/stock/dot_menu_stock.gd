@@ -5,6 +5,8 @@ extends RefCounted
 ## The keys are the family's and a contract: another key or scope would reset every player's choice, and `sensitivity` under the account namespace is one number in every game on purpose.
 ## A game declares only what it applies: [method declare] skips keys the schema has, and a row whose setting is not declared is not drawn. Defaults that differ per genre go in [DotMenuConfig].
 
+## The DotRegistry name dot-profiler publishes itself under.
+const PROFILER_SERVICE := &"dot_profiler"
 const GROUP_AUDIO := &"audio"
 const GROUP_VIDEO := &"video"
 const GROUP_CONTROLS := &"controls"
@@ -241,7 +243,31 @@ static func advanced_page() -> DotMenuPage:
 			.formatted(func(v: float) -> String: return "%d px" % roundi(v))) \
 		.add(DotMenuRow.select(&"net_stat_position", "Corner", "",
 			[[&"top_right", "Top right"], [&"bottom_right", "Bottom right"], [&"top_left", "Top left"], [&"bottom_left", "Bottom left"]]))
+	p.build = func(kit: DotMenuKit, body: Control) -> void: performance_section(kit, body)
 	return p
+
+
+## The Performance card, built by the placed [code]dot_profiler[/code] service (dot-profiler, duck-typed);
+## nothing without one. Its panel is not a row: it records, which no setting does.
+static func performance_section(kit: DotMenuKit, body: Control) -> void:
+	var prof := DotRegistry.get_service(PROFILER_SERVICE)
+	if prof == null or not prof.has_method(&"make_menu_panel"):
+		return
+	var panel := prof.call(&"make_menu_panel", kit) as Control
+	if panel == null:
+		return
+	var wrap := VBoxContainer.new()
+	wrap.name = "Performance"
+	wrap.add_theme_constant_override(&"separation", 8)
+	var head := MarginContainer.new()
+	head.add_theme_constant_override(&"margin_top", 6)
+	head.add_theme_constant_override(&"margin_left", 4)
+	head.add_child(kit.section("Performance"))
+	wrap.add_child(head)
+	var card := kit.card()
+	card.add_child(panel)
+	wrap.add_child(card)
+	body.add_child(wrap)
 
 
 static func general_page() -> DotMenuPage:

@@ -3,7 +3,7 @@ extends Node
 ## Exercises dot-menu with no game: the data model, stock settings and what applies them, the bindings table, the screens, the facade's keys, and what a server may do.
 ## CHECKS is the guard the section counter cannot be: a script error aborts that test, not the run, and only the total notices checks that never ran.
 const SECTIONS := 26
-const CHECKS := 425
+const CHECKS := 427
 
 var _passed := 0
 var _failed := 0
@@ -159,6 +159,14 @@ class FakeFx extends RefCounted:
 class FakeLook extends RefCounted:
 	var mouse_sensitivity := 0.0
 	var invert_look_y := false
+
+
+class FakeProfiler extends RefCounted:
+	func make_menu_panel(_kit: Object) -> Control:
+		var l := Label.new()
+		l.name = "FakeProfilerPanel"
+		l.text = "profiler panel"
+		return l
 
 
 class FakeHands extends Node:
@@ -1056,7 +1064,17 @@ func _test_net_stat() -> void:
 	await get_tree().process_frame
 	_check(_row_control(menu, "net_stat") != null and _row_control(menu, "net_stat_height") != null,
 		"the Advanced page shows the level and the height")
+	_check(menu.find_child("Performance", true, false) == null, "and no Performance card without a profiler placed")
 	menu.close()
+	var profiler := FakeProfiler.new()
+	DotRegistry.register(DotMenuStock.PROFILER_SERVICE, profiler)
+	menu.open(&"advanced")
+	await get_tree().process_frame
+	var perf := menu.find_child("Performance", true, false)
+	_check(perf != null and perf.find_child("FakeProfilerPanel", true, false) != null,
+		"a placed profiler's panel is drawn in a Performance card, built with the menu's kit")
+	menu.close()
+	DotRegistry.unregister_instance(DotMenuStock.PROFILER_SERVICE, profiler)
 
 	var _fps := st.set_value(&"show_fps", true)
 	var _two := st.set_value(&"net_stat", 2)

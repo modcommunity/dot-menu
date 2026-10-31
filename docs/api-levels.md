@@ -35,3 +35,5 @@ What each `DotMenuApi.LEVEL` added; the rule for bumping is on `DotAddonApi`.
 16: DotMenuBindings.add_avatar_actions() and the AVATAR_* constants (emote, pose, gesture on , . /); DotMenuSettings.avatar_actions adds them.
 
 17 DotMenuTeams, DotMenuTeamScreen, DotMenu.use_teams/open_teams/show_teams and DotMenuBindings.add_teams (the team menu on the period key; the avatar Pose default moves to Semicolon).
+
+18 DotMenuStock.performance_section and PROFILER_SERVICE: the Advanced page draws a Performance card from a placed `dot_profiler` service's `make_menu_panel(kit)`, duck-typed.
