@@ -37,3 +37,4 @@ What each `DotMenuApi.LEVEL` added; the rule for bumping is on `DotAddonApi`.
 17 DotMenuTeams, DotMenuTeamScreen, DotMenu.use_teams/open_teams/show_teams and DotMenuBindings.add_teams (the team menu on the period key; the avatar Pose default moves to Semicolon).
 
 18 DotMenuStock.performance_section and PROFILER_SERVICE: the Advanced page draws a Performance card from a placed `dot_profiler` service's `make_menu_panel(kit)`, duck-typed.
+19 DotMenuTeams.default_when_unwired and default_offer(): the period key opens a free-for-all Play/Spectate menu when no server link and no offer is wired, instead of a toast.

@@ -17,6 +17,8 @@ var offer_fn: Callable = Callable()
 var choose_fn: Callable = Callable()
 
 var enabled: bool = true
+## With nothing wired (no server link, no [member offer_fn]) the menu still opens as a free-for-all: Play and Spectate. False keeps the old toast.
+var default_when_unwired: bool = true
 var menu: DotMenu = null
 var link: Object = null
 var link_service: StringName = &"dot_client_link"
@@ -43,9 +45,17 @@ func open() -> void:
 		_ask(l, "")
 		return
 	if not offer_fn.is_valid():
-		_say("This game has no teams to choose.")
+		if default_when_unwired:
+			show_data(default_offer())
+		else:
+			_say("This game has no teams to choose.")
 		return
 	show_data(offer_fn.call())
+
+
+## The offer for a game that wired nothing: a free-for-all with Spectate on offer.
+static func default_offer() -> Dictionary:
+	return {"teams": [], "ffa": true, "spectating": false, "spectate_ok": true, "enabled": true, "wait": 0.0}
 
 
 ## Draws the menu on [param data]; public for a game with its own wire and for a suite.

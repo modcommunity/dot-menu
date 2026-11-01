@@ -2,8 +2,8 @@ extends Node
 
 ## Exercises dot-menu with no game: the data model, stock settings and what applies them, the bindings table, the screens, the facade's keys, and what a server may do.
 ## CHECKS is the guard the section counter cannot be: a script error aborts that test, not the run, and only the total notices checks that never ran.
-const SECTIONS := 26
-const CHECKS := 427
+const SECTIONS := 27
+const CHECKS := 431
 
 var _passed := 0
 var _failed := 0
@@ -41,6 +41,7 @@ func _run() -> void:
 	await _test_loadout_menu()
 	_test_avatar_action_keys()
 	_test_team_menu()
+	_test_team_menu_unwired()
 	await _test_hud_follows()
 	_test_moved_defaults()
 	_test_wheel()
@@ -1812,6 +1813,24 @@ func _test_team_menu() -> void:
 	var ev := DotInputBinding.from_text(str(row.get("default", ""))) as InputEventKey
 	_check(ev != null and ev.physical_keycode == KEY_PERIOD, "the Choose team row defaults to the period key")
 	_check(DotMenuBindings.new().add_avatar_actions().row_for_action(DotMenuBindings.AVATAR_POSE_ACTION).get("default", "") != row.get("default", "x"), "and no avatar action shares it")
+
+
+func _test_team_menu_unwired() -> void:
+	_section("the team key still opens a Play and Spectate menu when the game wired nothing")
+	var menu := _menu()
+	var teams := menu.use_teams()
+	teams.open()
+	_check(menu.team_screen.is_open() and bool(menu.team_screen.last_data.get("ffa", false)), "no link and no offer: the menu opens as a free-for-all")
+	_check(teams.last_said == "" and DotMenuTeamScreen.entries_for(menu.team_screen.last_data).size() == 2, "no toast, and the cards are Play and Spectate")
+	menu.team_screen.close()
+	teams.default_when_unwired = false
+	teams.open()
+	_check(not menu.team_screen.is_open() and teams.last_said != "", "the switch off keeps the toast")
+	teams.default_when_unwired = true
+	teams.open()
+	teams.choose("spectate")
+	_check(teams.last_said == "This game cannot change teams.", "a choice nothing is wired to answer says so")
+	_free_menu(menu)
 
 
 func _test_avatar_action_keys() -> void:
