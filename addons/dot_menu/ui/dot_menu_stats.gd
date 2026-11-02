@@ -4,7 +4,6 @@ extends Node
 ## Puts a game's per-player statistics on its Tab board: one lifetime column per stat the server lists in the snapshot's `stat_columns` (dot-game's `DotGameStatsBoard` builds them), the optional ones hidden until the player turns them on.
 ## Child of a [DotMenuScoreboard]; it follows the snapshot, so a game that replaces `board.columns` afterwards keeps the stat columns. [member enabled] is what the `cl_stats_ui` cvar sets.
 
-const CHANNEL := "menu.stats"
 
 ## Row field prefixes: this session's figure, and the lifetime total. Text, already formatted by the server.
 const SESSION := "st_"

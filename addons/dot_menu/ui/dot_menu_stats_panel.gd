@@ -4,7 +4,6 @@ extends Control
 ## The local player's statistics as a card: each stat's figure this session and the lifetime total, themed by the kit. Reads the same Tab-board snapshot [DotMenuStats] does (`stat_columns` plus the player's own row), so it needs no stats API of its own.
 ## [method show_for] opens it for a few seconds (an end-of-round screen); [method toggle] is for a key. It never takes the mouse or keyboard.
 
-const CHANNEL := "menu.stats_panel"
 
 var kit: DotMenuKit = null
 
