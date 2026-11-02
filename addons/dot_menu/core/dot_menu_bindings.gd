@@ -35,6 +35,11 @@ const AVATAR_EMOTE_SETTING := &"bind_avatar_emote"
 const AVATAR_POSE_SETTING := &"bind_avatar_pose"
 const AVATAR_GESTURE_SETTING := &"bind_avatar_gesture"
 
+## The workbench toggle (`;`), registered by [DotMenuSettings] only where dot-workbench is linked. dot-game's DotGameWorkbench listens on the action.
+const WORKBENCH_ACTION := &"dot_workbench_toggle"
+const WORKBENCH_SETTING := &"bind_workbench"
+const WORKBENCH_KEY := "Semicolon"
+
 ## The stock weapon-cycling actions and settings ([method add_wheel_weapons], API 10): the
 ## settings are the ones game-arena has always stored the wheel's weapon rows as, so a game
 ## that moves its own rows onto these keeps every player's keys.
@@ -219,12 +224,18 @@ func add_teams(group: String = "", key: String = TEAMS_KEY) -> DotMenuBindings:
 	return add(TEAMS_ACTION, TEAMS_SETTING, "Choose team", key, group if group != "" else help_group())
 
 
+## The workbench toggle key (`dot_workbench_toggle`, stored as `bind_workbench`), the semicolon by default, on the help card. The avatar pose moved to the apostrophe for it.
+func add_workbench(group: String = "", key: String = WORKBENCH_KEY) -> DotMenuBindings:
+	return add(WORKBENCH_ACTION, WORKBENCH_SETTING, "Workbench", key, group if group != "" else help_group())
+
+
 ## The three avatar action keys (emote, pose, gesture), on [param group] or the help card.
 func add_avatar_actions(group: String = "") -> DotMenuBindings:
 	var where := group if group != "" else help_group()
 	var _e := add(AVATAR_EMOTE_ACTION, AVATAR_EMOTE_SETTING, "Emote", "Comma", where)
-	var _p := add(AVATAR_POSE_ACTION, AVATAR_POSE_SETTING, "Pose", "Semicolon", where)
-	return add(AVATAR_GESTURE_ACTION, AVATAR_GESTURE_SETTING, "Gesture", "Slash", where)
+	var _p := add(AVATAR_POSE_ACTION, AVATAR_POSE_SETTING, "Pose", "Apostrophe", where)
+	var _g := add(AVATAR_GESTURE_ACTION, AVATAR_GESTURE_SETTING, "Gesture", "Slash", where)
+	return renamed(AVATAR_POSE_SETTING, ["Period", "Semicolon"])
 
 
 ## The card the help key goes on: the interface keys, or the general ones, or the last card.

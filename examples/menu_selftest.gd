@@ -2,8 +2,8 @@ extends Node
 
 ## Exercises dot-menu with no game: the data model, stock settings and what applies them, the bindings table, the screens, the facade's keys, and what a server may do.
 ## CHECKS is the guard the section counter cannot be: a script error aborts that test, not the run, and only the total notices checks that never ran.
-const SECTIONS := 27
-const CHECKS := 431
+const SECTIONS := 28
+const CHECKS := 437
 
 var _passed := 0
 var _failed := 0
@@ -40,6 +40,7 @@ func _run() -> void:
 	await _test_map_menu()
 	await _test_loadout_menu()
 	_test_avatar_action_keys()
+	_test_workbench_key()
 	_test_team_menu()
 	_test_team_menu_unwired()
 	await _test_hud_follows()
@@ -1833,15 +1834,49 @@ func _test_team_menu_unwired() -> void:
 	_free_menu(menu)
 
 
+func _test_workbench_key() -> void:
+	_section("the workbench toggle is the semicolon, a rebindable row, and a rebind survives a restart")
+	var table := DotMenuBindings.new().add_workbench("General")
+	var row := table.row_for_action(DotMenuBindings.WORKBENCH_ACTION)
+	var def := DotInputBinding.from_text(str(row.get("default", ""))) as InputEventKey
+	_check(def != null and def.physical_keycode == KEY_SEMICOLON, "the default binding is the semicolon")
+	_check(table.defaults_on("Semicolon").size() == 1, "and no other row shares it")
+	_check(DotMenuBindings.new().add_avatar_actions().defaults_on("Semicolon").is_empty(), "the avatar pose no longer does")
+	var store := DotSettingsStoreMemory.new()
+	var a := DotMenuSettings.new()
+	a.app_namespace = &"menu_wb_key"
+	a.config = DotMenuConfig.new()
+	a.bindings = DotMenuBindings.new().add_workbench("General")
+	add_child(a)
+	var _sa := a.setup(store, false)
+	var ev := InputMap.action_get_events(DotMenuBindings.WORKBENCH_ACTION)
+	_check(ev.size() == 1 and (ev[0] as InputEventKey).physical_keycode == KEY_SEMICOLON, "the action is in the InputMap on the semicolon")
+	var done := a.bindings.rebind(a.bindings.row_for_action(DotMenuBindings.WORKBENCH_ACTION), "Backslash", a.settings)
+	_check(done.ok, "it rebinds")
+	var _f := a.settings.flush()
+	a.queue_free()
+	InputMap.erase_action(DotMenuBindings.WORKBENCH_ACTION)
+	var b := DotMenuSettings.new()
+	b.app_namespace = &"menu_wb_key"
+	b.config = DotMenuConfig.new()
+	b.bindings = DotMenuBindings.new().add_workbench("General")
+	add_child(b)
+	var _sb := b.setup(store, false)
+	ev = InputMap.action_get_events(DotMenuBindings.WORKBENCH_ACTION)
+	_check(ev.size() == 1 and (ev[0] as InputEventKey).physical_keycode == KEY_BACKSLASH, "a restart over the same store has it on the new key")
+	b.queue_free()
+	InputMap.erase_action(DotMenuBindings.WORKBENCH_ACTION)
+
+
 func _test_avatar_action_keys() -> void:
-	_section("comma, semicolon and slash are the emote, pose and gesture rows")
+	_section("comma, apostrophe and slash are the emote, pose and gesture rows")
 	var node := DotMenuSettings.new()
 	node.app_namespace = &"menu_avatar_test"
 	node.avatar_actions = true
 	node.config = DotMenuConfig.new()
 	add_child(node)
 	var _s := node.setup(DotSettingsStoreMemory.new(), false)
-	var want := {DotMenuBindings.AVATAR_EMOTE_ACTION: KEY_COMMA, DotMenuBindings.AVATAR_POSE_ACTION: KEY_SEMICOLON,
+	var want := {DotMenuBindings.AVATAR_EMOTE_ACTION: KEY_COMMA, DotMenuBindings.AVATAR_POSE_ACTION: KEY_APOSTROPHE,
 		DotMenuBindings.AVATAR_GESTURE_ACTION: KEY_SLASH}
 	var good := true
 	for action in want:

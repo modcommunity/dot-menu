@@ -6,6 +6,8 @@ extends Node
 ## `setup` applies before it returns ([DotMenuApplier]'s reason), and anything bound after is applied as it is bound.
 
 const CHANNEL := "menu.settings"
+## Present only where dot-workbench is linked, which is when the Controls page offers its key.
+const WORKBENCH_SCRIPT := "res://addons/dot_workbench/dot_workbench_api.gd"
 
 ## A menu opened or the last one closed. What a client suspends its input sampler on.
 signal menu_state_changed(any_open: bool)
@@ -88,6 +90,9 @@ func setup(store: DotSettingsStore = null, with_menu: bool = true) -> DotResult:
 	if avatar_actions and bindings.row_for_action(DotMenuBindings.AVATAR_EMOTE_ACTION).is_empty() \
 			and bindings.row_for_setting(DotMenuBindings.AVATAR_EMOTE_SETTING).is_empty():
 		var _a := bindings.add_avatar_actions()
+	if ResourceLoader.exists(WORKBENCH_SCRIPT) and bindings.row_for_action(DotMenuBindings.WORKBENCH_ACTION).is_empty() \
+			and bindings.row_for_setting(DotMenuBindings.WORKBENCH_SETTING).is_empty():
+		var _w := bindings.add_workbench("", bindings.free_key([DotMenuBindings.WORKBENCH_KEY, "F9"]))
 	if map_menu and bindings.row_for_action(DotMenuBindings.MAPS_ACTION).is_empty() \
 			and bindings.row_for_setting(DotMenuBindings.MAPS_SETTING).is_empty():
 		var _m := bindings.add_maps("", bindings.free_key([DotMenuBindings.MAPS_KEY, "F3"]))
