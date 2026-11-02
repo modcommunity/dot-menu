@@ -144,6 +144,8 @@ func receive(data: Dictionary) -> void:
 
 
 func _done(ok: bool, message: String) -> void:
+	if not ok:
+		DotLog.info(CHANNEL, "team change refused", {"why": message})
 	if ok:
 		if menu != null and menu.team_screen != null:
 			menu.team_screen.close()
