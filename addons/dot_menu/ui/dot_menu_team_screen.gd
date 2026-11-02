@@ -9,6 +9,12 @@ signal closed()
 signal chosen(id: String)
 
 const MAX_COLUMNS := 4
+const CARD_SIZE := Vector2(190, 150)
+const GAP := 12
+## The scrolling card area never takes more than this of the screen's height, or the window more than the width fraction.
+const MAX_HEIGHT_FRACTION := 0.6
+const MAX_WIDTH_FRACTION := 0.9
+const WINDOW_PAD := 56 + 16
 
 ## Asks the server again, every [member refresh_sec] while open, so the counts stay live.
 signal refresh_requested()
@@ -31,6 +37,7 @@ var _window: PanelContainer = null
 var _title: Label = null
 var _note: Label = null
 var _grid: GridContainer = null
+var _scroll: ScrollContainer = null
 var _footer: Label = null
 var _built := false
 
@@ -42,6 +49,9 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	visible = false
 	_build()
+	get_viewport().size_changed.connect(func() -> void:
+		if visible:
+			_rebuild())
 
 
 func restyle(new_kit: DotMenuKit) -> void:
@@ -83,9 +93,13 @@ func _build() -> void:
 	col.add_child(_note)
 	_grid = GridContainer.new()
 	_grid.name = "Cards"
-	_grid.add_theme_constant_override(&"h_separation", 12)
-	_grid.add_theme_constant_override(&"v_separation", 12)
-	col.add_child(_grid)
+	_grid.add_theme_constant_override(&"h_separation", GAP)
+	_grid.add_theme_constant_override(&"v_separation", GAP)
+	_scroll = ScrollContainer.new()
+	_scroll.name = "Scroll"
+	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_scroll.add_child(_grid)
+	col.add_child(_scroll)
 	_footer = kit.label("", kit.size_small, p.dim)
 	col.add_child(_footer)
 	_built = true
@@ -142,8 +156,15 @@ static func entries_for(data: Dictionary) -> Array:
 	return out
 
 
+## Columns for [param n] cards: two rows when there are many, but never wider than the screen fits.
 func columns_for(n: int) -> int:
-	return clampi(n, 1, MAX_COLUMNS) if n <= MAX_COLUMNS else ceili(n / 2.0)
+	var base := clampi(n, 1, MAX_COLUMNS) if n <= MAX_COLUMNS else ceili(n / 2.0)
+	var room := _view_size().x * MAX_WIDTH_FRACTION - WINDOW_PAD
+	return mini(base, maxi(1, int((room + GAP) / (CARD_SIZE.x + GAP))))
+
+
+func _view_size() -> Vector2:
+	return get_viewport_rect().size if is_inside_tree() else Vector2(1280, 720)
 
 
 ## Card [param index] (0-based) picked. A closed card says why instead of asking the server.
@@ -239,6 +260,7 @@ func _input(event: InputEvent) -> void:
 func _rebuild() -> void:
 	if _grid == null:
 		return
+	var keep := _scroll.scroll_vertical
 	DotMenuKit.clear(_grid)
 	_title.text = title_text
 	var ffa := bool(last_data.get("ffa", false))
@@ -249,13 +271,30 @@ func _rebuild() -> void:
 	elif wait > 0.0:
 		note = "You can switch again in %d s." % ceili(wait)
 	_note.text = note
-	_grid.columns = columns_for(entries.size())
+	var cols := columns_for(entries.size())
+	_grid.columns = cols
 	for i in entries.size():
 		_grid.add_child(_card(i, entries[i] as Dictionary))
+	var rows := ceili(float(entries.size()) / cols)
+	var full := Vector2(cols * CARD_SIZE.x + (cols - 1) * GAP, rows * CARD_SIZE.y + (rows - 1) * GAP)
+	var cap := _view_size().y * MAX_HEIGHT_FRACTION
+	# A scroll container's minimum size ignores its content, so the window is sized here.
+	_scroll.custom_minimum_size = Vector2(full.x + (16 if full.y > cap else 0), minf(full.y, cap))
+	if is_inside_tree():
+		_reveal_focus(keep)
 	var keys := "1-%d or click  ·  arrows and Enter  ·  " % mini(entries.size(), 9)
 	var toggle := DotInputBinding.describe_action(toggle_action) if toggle_action != &"" and InputMap.has_action(toggle_action) else ""
 	_footer.text = keys + ((toggle + " or Esc closes") if toggle != "" else "Esc closes") + \
 		(("   " + last_result) if last_result != "" else "")
+
+
+## After layout: put the scroll back where it was, then bring the focused card into view.
+func _reveal_focus(keep: int) -> void:
+	await get_tree().process_frame
+	if _grid == null or not is_inside_tree() or focus >= _grid.get_child_count():
+		return
+	_scroll.scroll_vertical = keep
+	_scroll.ensure_control_visible(_grid.get_child(focus) as Control)
 
 
 func _card(index: int, e: Dictionary) -> Control:
@@ -267,7 +306,7 @@ func _card(index: int, e: Dictionary) -> Control:
 	var button := Button.new()
 	button.name = "Card%d" % (index + 1)
 	button.focus_mode = Control.FOCUS_NONE
-	button.custom_minimum_size = Vector2(190, 150)
+	button.custom_minimum_size = CARD_SIZE
 	var edge := shade if focused or bool(e["current"]) else p.line
 	var width := 3 if focused else (2 if bool(e["current"]) else 1)
 	var fill := Color(shade, 0.16 if not dead else 0.05) if bool(e["current"]) or focused else p.card

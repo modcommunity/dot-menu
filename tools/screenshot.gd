@@ -74,6 +74,16 @@ func _run() -> void:
 	menu.maps.open_rows(_demo.call("maps"), false, "this server", "generic", true)
 	await _shot("maps_vote")
 	menu.picker.close()
+	var many := DotMenuTeamScreen.new()
+	_demo.add_child(many)
+	var teams: Array = []
+	for i in 40:
+		teams.append({"id": i + 1, "name": "Team %d" % (i + 1), "colour": Color.from_hsv(i / 40.0, 0.6, 0.9).to_html(false), "count": i % 5, "max": 0, "closed": "", "current": i == 2})
+	many.open({"teams": teams, "spectate_ok": true})
+	for i in 12:
+		many.move(1)
+	await _shot("team_screen_40")
+	many.queue_free()
 	var tabbed: Array = _demo.call("maps")
 	for m in [["ffa", "Free for all", "Everyone against everyone."], ["tdm", "Team deathmatch", "Two teams, first to the limit."], ["ctf", "Capture the flag", "Carry theirs home."]]:
 		tabbed.append({"id": "mode:" + m[0], "name": m[1], "detail": m[2], "kind": "mode", "current": m[0] == "tdm"})
