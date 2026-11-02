@@ -469,7 +469,10 @@ func _test_applier() -> void:
 
 	var hands := FakeHands.new()
 	add_child(hands)
-	_check(hands.horizontal == 65.0, "a view model added after boot gets the viewmodel_fov default")
+	_check(DotMenuStock.VIEWMODEL_FOV == 54, "the view model default is 54, the value that read closest to a first-person shooter's in the Arena render")
+	_check(hands.horizontal == float(DotMenuStock.VIEWMODEL_FOV), "a view model added after boot gets the viewmodel_fov default")
+	var on_screen := func(cam: float) -> float: return DotViewLens.lens_scale(cam, DotViewLens.vertical_from_horizontal_4_3(54.0)) / tan(deg_to_rad(cam) * 0.5)
+	_check(is_equal_approx(on_screen.call(73.7), on_screen.call(83.6)) and is_equal_approx(on_screen.call(60.0), on_screen.call(100.0)), "the hands' size on screen does not depend on the world field of view")
 	var _vm := st.set_value(&"viewmodel_fov", 80)
 	_check(hands.horizontal == 80.0, "and follows the setting live")
 	_check(DotMenuStock.video_page().sections.any(func(sec) -> bool: return sec.rows.any(func(r) -> bool: return r.key == &"viewmodel_fov")), "the Video page has its slider")

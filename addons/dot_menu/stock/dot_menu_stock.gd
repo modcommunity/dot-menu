@@ -30,7 +30,7 @@ const GROUP_VIEWMODEL := &"viewmodel"
 ## A game with this script class gets `viewmodel_fov` (zee-dot-weapons' `ZeeViewModel`).
 const VIEW_MODEL_CLASS := &"ZeeViewModel"
 ## `viewmodel_fov` default, horizontal degrees on a 4:3 frame like `field_of_view`.
-const VIEWMODEL_FOV := 65
+const VIEWMODEL_FOV := 54
 
 ## What [method declare] adds when it is not told: everything except music.
 const DEFAULT_GROUPS: Array[StringName] = [

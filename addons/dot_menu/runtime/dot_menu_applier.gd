@@ -355,12 +355,12 @@ func _apply_look() -> void:
 
 func _apply_view_models() -> void:
 	if is_inside_tree() and _has(&"viewmodel_fov"):
-		get_tree().call_group(VIEW_MODEL_GROUP, &"set_hands_fov_at_4_3", settings.get_float(&"viewmodel_fov", 65.0))
+		get_tree().call_group(VIEW_MODEL_GROUP, &"set_hands_fov_at_4_3", settings.get_float(&"viewmodel_fov", float(DotMenuStock.VIEWMODEL_FOV)))
 
 
 func _on_node_added(node: Node) -> void:
 	if node.is_in_group(VIEW_MODEL_GROUP) and _has(&"viewmodel_fov"):
-		node.call(&"set_hands_fov_at_4_3", settings.get_float(&"viewmodel_fov", 65.0))
+		node.call(&"set_hands_fov_at_4_3", settings.get_float(&"viewmodel_fov", float(DotMenuStock.VIEWMODEL_FOV)))
 
 
 func _apply_fov() -> void:
