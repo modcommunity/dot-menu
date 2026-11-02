@@ -413,10 +413,7 @@ func _apply_window_mode(mode: StringName, why: StringName) -> void:
 			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
 			return
 		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
-		var _locked: Variant = JavaScriptBridge.eval(
-			"(navigator.keyboard && navigator.keyboard.lock) ? (navigator.keyboard.lock(), true) : false",
-			true
-		)
+		DotWeb.lock_keyboard()
 		return
 
 	match mode:
