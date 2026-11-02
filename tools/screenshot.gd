@@ -95,6 +95,23 @@ func _run() -> void:
 	menu.toast("Nominated Foundry. Rocked: 1 of 3.")
 	await _shot("maps_toast")
 
+	await _loadout_shots(menu, settings)
+	await _scoreboard_shots(menu, settings)
+
+	var hud: Control = _demo.get("hud")
+	menu.open_layout_editor(hud, {&"clock": "Clock", &"speed": "Speed"})
+	menu.layout_editor.drag(&"clock", hud.call("element_rect", &"clock").get_center(), Vector2(260, 140))
+	await _shot("layout_editor")
+	menu.layout_editor.reset_all()
+	menu.layout_editor.close()
+
+	await _net_stat_shots(menu, settings)
+
+	settings.reset_all()
+	quit(0)
+
+
+func _loadout_shots(menu: DotMenu, settings: DotSettingsManager) -> void:
 	var offer: Dictionary = _demo.call("loadout_offer")
 	var _lo := menu.use_loadout(func() -> Dictionary: return offer, func(_p: Dictionary) -> Dictionary:
 		return {"ok": true, "text": "Loadout saved: you get it when you next spawn."})
@@ -121,6 +138,8 @@ func _run() -> void:
 	root.get_window().size = Vector2i(1600, 900)
 	await _frames(3)
 
+
+func _scoreboard_shots(menu: DotMenu, settings: DotSettingsManager) -> void:
 	menu.scoreboard.open()
 	await _shot("scoreboard_teams")
 	menu.scoreboard.close()
@@ -182,18 +201,6 @@ func _run() -> void:
 	card.queue_free()
 	stats.queue_free()
 	menu.scoreboard.source = Callable(_demo.get_script(), &"roster")
-
-	var hud: Control = _demo.get("hud")
-	menu.open_layout_editor(hud, {&"clock": "Clock", &"speed": "Speed"})
-	menu.layout_editor.drag(&"clock", hud.call("element_rect", &"clock").get_center(), Vector2(260, 140))
-	await _shot("layout_editor")
-	menu.layout_editor.reset_all()
-	menu.layout_editor.close()
-
-	await _net_stat_shots(menu, settings)
-
-	settings.reset_all()
-	quit(0)
 
 
 ## net_stat over three seconds of made-up traffic shaped like a real client's (state snapshots, a content burst, a ping that spikes once).

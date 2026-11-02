@@ -143,13 +143,10 @@ var _was_open := false
 var _lock_seen := false
 var _opened_msec := 0
 var _recapture_frames := 0
-var _server_rules: Dictionary = {}
-## reason -> rows hidden for it ([method hide_rows]).
-var _hidden_by: Dictionary = {}
+var _rules := DotMenuRules.new(self)
 var _ready_done := false
-## The HUDs [method follow_hud] keeps in the theme and at the player's size:
-## `{"root": WeakRef, "accent": Theme, "scaled": bool, "fitted": bool}`.
-var _huds: Array[Dictionary] = []
+## The HUDs [method follow_hud] keeps in the theme and at the player's size.
+var _huds := DotMenuHuds.new(self)
 
 
 func _init() -> void:
@@ -171,7 +168,7 @@ func setup() -> DotResult:
 	_wire_stock_rows()
 	_ensure_help_action()
 
-	_theme_id = _stored_theme()
+	_theme_id = stored_theme()
 	kit = DotMenuKit.new(themes.named(_theme_id)) if kit == null else kit.with_palette(themes.named(_theme_id))
 
 	_build()
@@ -617,16 +614,7 @@ func toast(text: String, seconds: float = 3.5) -> void:
 	if text == "" or kit == null:
 		return
 	if toast_plate == null:
-		toast_plate = PanelContainer.new()
-		toast_plate.name = "Toast"
-		toast_plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		toast_plate.set_anchors_preset(Control.PRESET_CENTER_TOP)
-		toast_plate.grow_horizontal = Control.GROW_DIRECTION_BOTH
-		var l := kit.label("", kit.size_body, kit.palette.text, true)
-		l.name = "Text"
-		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		l.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		toast_plate.add_child(l)
+		toast_plate = _make_toast_plate()
 		add_child(toast_plate)
 	var p := kit.palette
 	toast_plate.add_theme_stylebox_override(&"panel", kit.box(Color(p.surface, 0.92), 10, p.accent, 1, Vector4(16, 8, 16, 8)))
@@ -646,6 +634,20 @@ func toast(text: String, seconds: float = 3.5) -> void:
 	var serial := _toast_serial
 	if is_inside_tree() and seconds > 0.0:
 		get_tree().create_timer(seconds).timeout.connect(_expire_toast.bind(serial))
+
+
+func _make_toast_plate() -> PanelContainer:
+	var plate := PanelContainer.new()
+	plate.name = "Toast"
+	plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	plate.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	plate.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	var l := kit.label("", kit.size_body, kit.palette.text, true)
+	l.name = "Text"
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	plate.add_child(l)
+	return plate
 
 
 func _expire_toast(serial: int) -> void:
@@ -802,7 +804,7 @@ func leave_label() -> String:
 
 
 func _refresh_leave() -> void:
-	if screen == null or not leave_on_its_own or _server_rules.has("leave_text"):
+	if screen == null or not leave_on_its_own or _rules.rules.has("leave_text"):
 		return
 	screen.set_action_text(&"leave", leave_label())
 
@@ -845,34 +847,7 @@ func handle_event(event: InputEvent) -> bool:
 	if not any_open():
 		if busy.is_valid() and bool(busy.call()):
 			return false
-		if _is_scoreboard_key(event):
-			if scoreboard != null:
-				scoreboard.open()
-			return true
-		if escape and open_on_escape:
-			if scoreboard != null:
-				scoreboard.close()
-			open()
-			return true
-		if help_action != &"" and InputMap.has_action(help_action) and event.is_action_pressed(help_action):
-			open_help()
-			return true
-		if theme_action != &"" and InputMap.has_action(theme_action) and event.is_action_pressed(theme_action):
-			var _next := cycle_theme()
-			return true
-		if maps != null and maps.enabled and maps_action != &"" and InputMap.has_action(maps_action) \
-				and event.is_action_pressed(maps_action):
-			maps.open()
-			return true
-		if loadout != null and loadout.enabled and loadout_action != &"" and InputMap.has_action(loadout_action) \
-				and event.is_action_pressed(loadout_action):
-			loadout.open()
-			return true
-		if teams != null and teams.enabled and teams_action != &"" and InputMap.has_action(teams_action) \
-				and event.is_action_pressed(teams_action):
-			teams.open()
-			return true
-		return false
+		return _handle_closed(event, escape)
 
 	# The same Escape that took the pointer away in a browser can arrive a moment after the
 	# menu it opened; closing on it would make the menu flash and vanish.
@@ -921,6 +896,38 @@ func handle_event(event: InputEvent) -> bool:
 	if screen.is_open() and escape:
 		screen.close()
 	return true
+
+
+## The keys that open something while nothing is open.
+func _handle_closed(event: InputEvent, escape: bool) -> bool:
+	if _is_scoreboard_key(event):
+		if scoreboard != null:
+			scoreboard.open()
+		return true
+	if escape and open_on_escape:
+		if scoreboard != null:
+			scoreboard.close()
+		open()
+		return true
+	if help_action != &"" and InputMap.has_action(help_action) and event.is_action_pressed(help_action):
+		open_help()
+		return true
+	if theme_action != &"" and InputMap.has_action(theme_action) and event.is_action_pressed(theme_action):
+		var _next := cycle_theme()
+		return true
+	if maps != null and maps.enabled and maps_action != &"" and InputMap.has_action(maps_action) \
+			and event.is_action_pressed(maps_action):
+		maps.open()
+		return true
+	if loadout != null and loadout.enabled and loadout_action != &"" and InputMap.has_action(loadout_action) \
+			and event.is_action_pressed(loadout_action):
+		loadout.open()
+		return true
+	if teams != null and teams.enabled and teams_action != &"" and InputMap.has_action(teams_action) \
+			and event.is_action_pressed(teams_action):
+		teams.open()
+		return true
+	return false
 
 
 ## A text field has the keyboard: `-` is a character then, not the tab key.
@@ -1018,37 +1025,17 @@ func use_theme(id: StringName) -> bool:
 ## set now and on every theme change, so no game has to wire [signal theme_changed] itself. Nothing is rebuilt: a piece reads its colours when it draws.
 ## With [param scaled] the HUD is drawn at `hud_scale` ([DotHud] `user_scale`, or [method DotHud.fit_control]); a root laid out by hand passes false.
 func follow_hud(root: Control, accent: Theme = null, scaled: bool = true) -> void:
-	if root == null:
-		return
-	for entry in _huds:
-		if (entry["root"] as WeakRef).get_ref() == root:
-			entry["accent"] = accent
-			entry["scaled"] = scaled
-			_style_hud(entry)
-			_scale_hud(entry)
-			return
-	var added := {"root": weakref(root), "accent": accent, "scaled": scaled, "fitted": false}
-	_huds.append(added)
-	_style_hud(added)
-	_scale_hud(added)
+	_huds.follow(root, accent, scaled)
 
 
 ## Stops following [param root]; what it was given stays.
 func unfollow_hud(root: Control) -> void:
-	for i in range(_huds.size() - 1, -1, -1):
-		var held: Object = (_huds[i]["root"] as WeakRef).get_ref()
-		if held == null or held == root:
-			_huds.remove_at(i)
+	_huds.unfollow(root)
 
 
 ## Every HUD root still followed. What a check reads.
 func followed_huds() -> Array[Control]:
-	var out: Array[Control] = []
-	for entry in _huds:
-		var held := (entry["root"] as WeakRef).get_ref() as Control
-		if held != null:
-			out.append(held)
-	return out
+	return _huds.roots()
 
 
 ## The player's HUD size: `hud_scale`, 1 where it is not declared.
@@ -1059,51 +1046,15 @@ func hud_scale() -> float:
 
 
 func _style_huds() -> void:
-	for entry in _huds:
-		_style_hud(entry)
-
-
-func _style_hud(entry: Dictionary) -> void:
-	var root := (entry["root"] as WeakRef).get_ref() as Control
-	if root == null:
-		return
-	var p: DotMenuPalette = palette() if (kit != null or themes != null) else DotMenuPalette.new()
-	root.theme = p.hud_theme(entry["accent"] as Theme)
+	_huds.style_all()
 
 
 func _scale_huds() -> void:
-	for entry in _huds:
-		_scale_hud(entry)
+	_huds.scale_all()
 
 
-func _scale_hud(entry: Dictionary) -> void:
-	var root := (entry["root"] as WeakRef).get_ref() as Control
-	if root == null or not bool(entry["scaled"]):
-		return
-	var k := hud_scale()
-	if &"user_scale" in root:
-		root.set(&"user_scale", k)
-		return
-	# A plain root is left exactly as the game laid it out until a size other than 1 is
-	# asked for, and put back on full-rect anchors when 1 is asked for again.
-	if is_equal_approx(k, 1.0) and not bool(entry["fitted"]):
-		return
-	if not root.is_inside_tree():
-		return
-	var vp := root.get_viewport()
-	if not bool(entry["fitted"]):
-		entry["fitted"] = true
-		if not vp.size_changed.is_connected(_scale_huds):
-			vp.size_changed.connect(_scale_huds)
-	if is_equal_approx(k, 1.0):
-		root.scale = Vector2.ONE
-		root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-		entry["fitted"] = false
-		return
-	DotHud.fit_control(root, vp.get_visible_rect().size, k)
-
-
-func _stored_theme() -> StringName:
+## The theme id saved in settings, the default when none.
+func stored_theme() -> StringName:
 	if settings != null and settings.schema != null and settings.schema.has(&"ui_theme"):
 		return StringName(settings.get_string(&"ui_theme", String(themes.default_id())))
 	return themes.default_id()
@@ -1115,7 +1066,7 @@ func _stored_theme() -> StringName:
 func _on_setting_changed(key: StringName, value: Variant, _why: StringName) -> void:
 	match key:
 		&"ui_theme":
-			var _changed := use_theme(_stored_theme())
+			var _changed := use_theme(stored_theme())
 		&"hud_scale":
 			_scale_huds()
 		&"show_fps", &"net_stat", &"net_stat_height", &"net_stat_position":
@@ -1173,87 +1124,19 @@ func _declared(key: StringName) -> bool:
 ## Narrower than the config on purpose: a server may hide and clamp but never set or read a stored value (that would fingerprint a player).
 ## Every rule is dropped by [method release_server_rules] on leaving. Returns the clamps applied.
 func apply_server_rules(rules: Dictionary) -> PackedStringArray:
-	_server_rules = rules.duplicate(true)
-	var applied := PackedStringArray()
-
-	if screen != null:
-		screen.extra_hidden_rows = _hidden_rows()
-		screen.extra_hidden_pages = _strings(rules.get("pages_hidden", []))
-		if rules.has("leave_text"):
-			screen.set_action_text(&"leave", str(rules["leave_text"]))
-
-	var clamps: Variant = rules.get("clamps", {})
-	if clamps is Dictionary and not (clamps as Dictionary).is_empty() and settings != null and settings.policy != null:
-		applied = settings.apply_server_clamps(clamps as Dictionary)
-
-	var allowed := _strings(rules.get("themes", []))
-	if not allowed.is_empty():
-		_offer_themes(allowed)
-
-	if screen != null:
-		screen.refresh()
-	return applied
+	return _rules.apply(rules)
 
 
 ## Drops everything [method apply_server_rules] did. Called on leaving a server.
 func release_server_rules() -> void:
-	_server_rules.clear()
-	if screen != null:
-		screen.extra_hidden_rows = _hidden_rows()
-		screen.extra_hidden_pages = PackedStringArray()
-		screen.set_action_text(&"leave", leave_label())
-	if settings != null and settings.policy != null:
-		settings.release_clamps()
-	_offer_themes(PackedStringArray())
-	if screen != null:
-		screen.refresh()
+	_rules.release()
 
 
 ## Hides [param rows] for a reason of the game's own ([param reason]: `&"voice"` while the
 ## server has voice off), on top of a server's `rows_hidden`. An empty list shows them again.
 ## Kept apart from [method apply_server_rules] so neither undoes the other.
 func hide_rows(reason: StringName, rows: PackedStringArray) -> void:
-	if rows.is_empty():
-		_hidden_by.erase(reason)
-	else:
-		_hidden_by[reason] = rows
-	if screen != null:
-		screen.extra_hidden_rows = _hidden_rows()
-		screen.refresh()
-
-
-func _hidden_rows() -> PackedStringArray:
-	var out := _strings(_server_rules.get("rows_hidden", []))
-	for reason in _hidden_by:
-		for row in (_hidden_by[reason] as PackedStringArray):
-			if not out.has(row):
-				out.append(row)
-	return out
-
-
-## Narrows the theme row to [param allowed] (empty is every theme) and moves off a theme the
-## server does not offer — for this connection only; the stored choice is untouched.
-func _offer_themes(allowed: PackedStringArray) -> void:
-	var row := find_row(&"ui_theme")
-	var offered: Array = []
-	for o in themes.options():
-		if allowed.is_empty() or allowed.has(String(o[0])):
-			offered.append(o)
-	if row != null:
-		row.options = offered
-	var stored := _stored_theme()
-	if not allowed.is_empty() and not allowed.has(String(stored)):
-		var _changed := use_theme(StringName(allowed[0]))
-	else:
-		var _changed := use_theme(stored)
-
-
-static func _strings(v: Variant) -> PackedStringArray:
-	var out := PackedStringArray()
-	if v is Array or v is PackedStringArray:
-		for s in v:
-			out.append(str(s))
-	return out
+	_rules.hide_rows(reason, rows)
 
 
 func describe() -> Dictionary:
@@ -1261,7 +1144,7 @@ func describe() -> Dictionary:
 		"open": any_open(), "menu": screen.describe() if screen != null else {},
 		"help": help.describe() if help != null else {},
 		"theme": String(_theme_id), "themes": themes.size() if themes != null else 0,
-		"pages": pages.size(), "server_rules": _server_rules.keys(),
+		"pages": pages.size(), "server_rules": _rules.rules.keys(),
 		"pointer": manage_pointer, "overlays": _extra.size(),
 		"maps": maps.describe() if maps != null else {},
 		"teams": teams.describe() if teams != null else {},
@@ -1273,6 +1156,6 @@ func describe_lines() -> PackedStringArray:
 	var d := describe()
 	var out := PackedStringArray()
 	out.append("menu: %s, theme %s of %d, %d pages" % ["open" if d["open"] else "closed", d["theme"], d["themes"], d["pages"]])
-	if not _server_rules.is_empty():
-		out.append("  server rules: %s" % ", ".join(PackedStringArray(_server_rules.keys().map(func(k: Variant) -> String: return str(k)))))
+	if not _rules.rules.is_empty():
+		out.append("  server rules: %s" % ", ".join(PackedStringArray(_rules.rules.keys().map(func(k: Variant) -> String: return str(k)))))
 	return out

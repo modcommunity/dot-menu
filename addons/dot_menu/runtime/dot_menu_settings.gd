@@ -69,39 +69,7 @@ func setup(store: DotSettingsStore = null, with_menu: bool = true) -> DotResult:
 		config = DotMenuConfig.new()
 	if schema == null:
 		schema = DotMenuStock.declare(DotSettingsSchema.new())
-	# The loadout key first, so B is the loadout's and the talk key's fallbacks skip it.
-	if loadout_menu and bindings != null and bindings.row_for_action(DotMenuBindings.LOADOUT_ACTION).is_empty() \
-			and bindings.row_for_setting(DotMenuBindings.LOADOUT_SETTING).is_empty():
-		var _l := bindings.add_loadout("", bindings.free_key([DotMenuBindings.LOADOUT_KEY, "F4"]))
-	# The talk key goes with the voice settings, so every game that has them has the key in
-	# its table, its Controls page and its help screen, on the same setting.
-	if bindings != null and schema.has(&"voice_mode") and bindings.row_for_action(&"dot_voice_talk").is_empty():
-		var _v := bindings.add_voice("Communication", bindings.free_key(["V", "K", "B", "X"]))
-	# The help key, H, in every game's table (API 4), unless the game put its own help row
-	# in. A game with no table gets one with the help key alone, so H is still a rebindable
-	# key on the Controls page rather than a key nothing lists.
-	if bindings == null:
-		bindings = DotMenuBindings.new()
-	if bindings.row_for_action(DotMenuBindings.HELP_ACTION).is_empty() \
-			and bindings.row_for_setting(DotMenuBindings.HELP_SETTING).is_empty():
-		var _h := bindings.add_help("", bindings.free_key([DotMenuBindings.HELP_KEY, "F1"]))
-	# The map menu key, M (API 5), the same way: a game's own row on that action or setting is
-	# kept. On M unless the game ships something there, which its suite fails on.
-	if loadout_menu and bindings.row_for_action(DotMenuBindings.LOADOUT_ACTION).is_empty() \
-			and bindings.row_for_setting(DotMenuBindings.LOADOUT_SETTING).is_empty():
-		var _l := bindings.add_loadout("", bindings.free_key([DotMenuBindings.LOADOUT_KEY, "F4"]))
-	if avatar_actions and bindings.row_for_action(DotMenuBindings.AVATAR_EMOTE_ACTION).is_empty() \
-			and bindings.row_for_setting(DotMenuBindings.AVATAR_EMOTE_SETTING).is_empty():
-		var _a := bindings.add_avatar_actions()
-	if ResourceLoader.exists(WORKBENCH_SCRIPT) and bindings.row_for_action(DotMenuBindings.WORKBENCH_ACTION).is_empty() \
-			and bindings.row_for_setting(DotMenuBindings.WORKBENCH_SETTING).is_empty():
-		var _w := bindings.add_workbench("", bindings.free_key([DotMenuBindings.WORKBENCH_KEY, "F9"]))
-	if map_menu and bindings.row_for_action(DotMenuBindings.MAPS_ACTION).is_empty() \
-			and bindings.row_for_setting(DotMenuBindings.MAPS_SETTING).is_empty():
-		var _m := bindings.add_maps("", bindings.free_key([DotMenuBindings.MAPS_KEY, "F3"]))
-	if map_modes and bindings.row_for_action(DotMenuBindings.MODES_ACTION).is_empty() \
-			and bindings.row_for_setting(DotMenuBindings.MODES_SETTING).is_empty():
-		var _t := bindings.add_modes("", bindings.free_key([DotMenuBindings.MODES_KEY, "F2"]))
+	_add_stock_keys()
 	bindings.add_to_schema(schema)
 	var themes := config.make_themes()
 	var _problems := config.apply_to_schema(schema, themes)
@@ -145,6 +113,43 @@ func setup(store: DotSettingsStore = null, with_menu: bool = true) -> DotResult:
 			applier.voice_available_changed.connect(_on_voice_available)
 
 	return DotResult.success(self)
+
+
+## The stock keys a game's table lacks: loadout, talk, help, avatar, workbench, maps, modes.
+func _add_stock_keys() -> void:
+	# The loadout key first, so B is the loadout's and the talk key's fallbacks skip it.
+	if loadout_menu and bindings != null and bindings.row_for_action(DotMenuBindings.LOADOUT_ACTION).is_empty() \
+			and bindings.row_for_setting(DotMenuBindings.LOADOUT_SETTING).is_empty():
+		var _l := bindings.add_loadout("", bindings.free_key([DotMenuBindings.LOADOUT_KEY, "F4"]))
+	# The talk key goes with the voice settings, so every game that has them has the key in
+	# its table, its Controls page and its help screen, on the same setting.
+	if bindings != null and schema.has(&"voice_mode") and bindings.row_for_action(&"dot_voice_talk").is_empty():
+		var _v := bindings.add_voice("Communication", bindings.free_key(["V", "K", "B", "X"]))
+	# The help key, H, in every game's table (API 4), unless the game put its own help row
+	# in. A game with no table gets one with the help key alone, so H is still a rebindable
+	# key on the Controls page rather than a key nothing lists.
+	if bindings == null:
+		bindings = DotMenuBindings.new()
+	if bindings.row_for_action(DotMenuBindings.HELP_ACTION).is_empty() \
+			and bindings.row_for_setting(DotMenuBindings.HELP_SETTING).is_empty():
+		var _h := bindings.add_help("", bindings.free_key([DotMenuBindings.HELP_KEY, "F1"]))
+	# The map menu key, M (API 5), the same way: a game's own row on that action or setting is
+	# kept. On M unless the game ships something there, which its suite fails on.
+	if loadout_menu and bindings.row_for_action(DotMenuBindings.LOADOUT_ACTION).is_empty() \
+			and bindings.row_for_setting(DotMenuBindings.LOADOUT_SETTING).is_empty():
+		var _l := bindings.add_loadout("", bindings.free_key([DotMenuBindings.LOADOUT_KEY, "F4"]))
+	if avatar_actions and bindings.row_for_action(DotMenuBindings.AVATAR_EMOTE_ACTION).is_empty() \
+			and bindings.row_for_setting(DotMenuBindings.AVATAR_EMOTE_SETTING).is_empty():
+		var _a := bindings.add_avatar_actions()
+	if ResourceLoader.exists(WORKBENCH_SCRIPT) and bindings.row_for_action(DotMenuBindings.WORKBENCH_ACTION).is_empty() \
+			and bindings.row_for_setting(DotMenuBindings.WORKBENCH_SETTING).is_empty():
+		var _w := bindings.add_workbench("", bindings.free_key([DotMenuBindings.WORKBENCH_KEY, "F9"]))
+	if map_menu and bindings.row_for_action(DotMenuBindings.MAPS_ACTION).is_empty() \
+			and bindings.row_for_setting(DotMenuBindings.MAPS_SETTING).is_empty():
+		var _m := bindings.add_maps("", bindings.free_key([DotMenuBindings.MAPS_KEY, "F3"]))
+	if map_modes and bindings.row_for_action(DotMenuBindings.MODES_ACTION).is_empty() \
+			and bindings.row_for_setting(DotMenuBindings.MODES_SETTING).is_empty():
+		var _t := bindings.add_modes("", bindings.free_key([DotMenuBindings.MODES_KEY, "F2"]))
 
 
 ## What only the game can say on its help screen: [member DotMenuHelp.about] (the goal), and cards from

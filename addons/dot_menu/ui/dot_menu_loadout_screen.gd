@@ -611,7 +611,7 @@ func _rebuild() -> void:
 	if _hover < 0 and card_index >= 0 and card_index < _grid.get_child_count():
 		_scroll_to.call_deferred(_grid.get_child(card_index))
 
-	_draw_detail()
+	DotMenuLoadoutDetail.draw(self, _detail)
 
 
 func _tab(index: int, slot: Dictionary) -> Control:
@@ -644,7 +644,7 @@ func _tab(index: int, slot: Dictionary) -> Control:
 	line.add_child(cap)
 	var held_id := str(draft.get(str(slot.get("id", "")), ""))
 	var held := _choice(slot, held_id)
-	line.add_child(_icon_box(held, Vector2(64, 40), false))
+	line.add_child(DotMenuLoadoutDetail.icon_box(kit, held, Vector2(64, 40), false))
 	var words := VBoxContainer.new()
 	words.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	words.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -716,7 +716,7 @@ func _card(index: int, item: Dictionary) -> Control:
 	col.offset_top = 10
 	col.offset_bottom = -10
 	b.add_child(col)
-	var pic := _icon_box(item, Vector2(0, 82), true)
+	var pic := DotMenuLoadoutDetail.icon_box(kit, item, Vector2(0, 82), true)
 	pic.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	col.add_child(pic)
 	var line := HBoxContainer.new()
@@ -746,7 +746,7 @@ func _card(index: int, item: Dictionary) -> Control:
 	elif locked:
 		under = "set by the server"
 	else:
-		under = "  ·  ".join(_shown_tags(item, 3))
+		under = "  ·  ".join(DotMenuLoadoutDetail.shown_tags(current_slot(), item, 3))
 	var u := kit.label(under, kit.size_small - 2, under_colour, equipped)
 	u.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	u.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
@@ -758,105 +758,6 @@ func _card(index: int, item: Dictionary) -> Control:
 func _scroll_to(card: Control) -> void:
 	if _scroll != null and is_instance_valid(card) and card.is_inside_tree():
 		_scroll.ensure_control_visible(card)
-
-
-## The tags worth showing: not the slot's own name or the kind, which the card already says.
-func _shown_tags(item: Dictionary, limit: int) -> PackedStringArray:
-	var slot := current_slot()
-	var said := [str(slot.get("id", "")).to_lower(), str(slot.get("name", "")).to_lower(), str(item.get("kind", "")).to_lower()]
-	var out := PackedStringArray()
-	for t: Variant in item.get("tags", []):
-		var tag := str(t)
-		if out.size() < limit and not said.has(tag.to_lower()):
-			out.append(tag)
-	return out
-
-
-## A picture frame: the item's icon, or its initials when it has none (an empty box reads as
-## broken art).
-func _icon_box(item: Dictionary, min_size: Vector2, framed: bool) -> Control:
-	var p := kit.palette
-	var frame := PanelContainer.new()
-	frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	frame.custom_minimum_size = min_size
-	frame.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	# A dark display case in every theme: a game's weapon art is usually light on transparent,
-	# and on the paper theme's light card it disappears (rendered).
-	var case := Color(0.07, 0.08, 0.11, 0.92 if p.is_light() else 0.45)
-	frame.add_theme_stylebox_override(&"panel", kit.box(case if framed or p.is_light() else Color(0, 0, 0, 0), kit.radius_small, Color(0, 0, 0, 0), 0, Vector4(6, 4, 6, 4)))
-	var tex := DotMenuPicker.thumbnail_texture(item.get("icon"))
-	if tex != null:
-		var pic := TextureRect.new()
-		pic.texture = tex
-		pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		pic.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		frame.add_child(pic)
-	elif not item.is_empty():
-		var words := str(item.get("name", item.get("id", "?"))).split(" ", false)
-		var initials := ""
-		for w in words:
-			if initials.length() < 2:
-				initials += w.substr(0, 1).to_upper()
-		var l := kit.label(initials, kit.size_heading if framed else kit.size_small, p.dim, true)
-		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		l.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		frame.add_child(l)
-	return frame
-
-
-## The highlighted card: a big picture, its name and line, and each statistic as a bar with what
-## is equipped now drawn behind it, so "better or worse than what I have" is one glance.
-func _draw_detail() -> void:
-	DotMenuKit.clear(_detail)
-	var p := kit.palette
-	var list := choices()
-	if list.is_empty():
-		return
-	var item := list[clampi(card_index, 0, list.size() - 1)] as Dictionary
-	var slot := current_slot()
-	var held := _choice(slot, str(draft.get(str(slot.get("id", "")), "")))
-
-	var pic := _icon_box(item, Vector2(250, 140), true)
-	_detail.add_child(pic)
-
-	var words := VBoxContainer.new()
-	words.custom_minimum_size = Vector2(230, 0)
-	words.add_theme_constant_override(&"separation", 4)
-	_detail.add_child(words)
-	words.add_child(kit.label(str(item.get("name", item.get("id", ""))), kit.size_heading + 2, p.text, true))
-	var kind := str(item.get("kind", slot.get("name", "")))
-	if kind != "":
-		words.add_child(kit.section(kind))
-	var detail := str(item.get("detail", ""))
-	if detail != "":
-		words.add_child(kit.paragraph(detail, kit.size_small, p.muted))
-	var tags := _shown_tags(item, 8)
-	if not tags.is_empty():
-		words.add_child(kit.label("  ·  ".join(tags), kit.size_small - 1, p.dim))
-	if bool(item.get("locked", false)):
-		words.add_child(kit.label("Not unlocked", kit.size_small, p.danger, true))
-		var get_it := kit.primary_button("Get in store")
-		get_it.name = "GetInStore"
-		get_it.focus_mode = Control.FOCUS_NONE
-		get_it.pressed.connect(func() -> void: store_requested.emit(StringName(str(item.get("id", ""))), str(item.get("store", ""))))
-		words.add_child(get_it)
-
-	var bars := VBoxContainer.new()
-	bars.name = "Stats"
-	bars.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	bars.alignment = BoxContainer.ALIGNMENT_CENTER
-	bars.add_theme_constant_override(&"separation", 7)
-	_detail.add_child(bars)
-	var held_stats := {}
-	for st: Variant in held.get("stats", []):
-		held_stats[str((st as Dictionary).get("label", ""))] = float((st as Dictionary).get("value", 0.0))
-	for st: Variant in item.get("stats", []):
-		var stat := st as Dictionary
-		var label := str(stat.get("label", ""))
-		bars.add_child(DotMenuStatBar.build(kit, label, clampf(float(stat.get("value", 0.0)), 0.0, 1.0),
-			str(stat.get("text", "")), float(held_stats.get(label, -1.0)), str(held.get("id", "")) == str(item.get("id", ""))))
 
 
 func describe() -> Dictionary:
