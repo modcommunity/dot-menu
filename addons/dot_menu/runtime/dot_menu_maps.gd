@@ -187,6 +187,7 @@ func show_tab(id: StringName) -> void:
 			p.page = i / DotMenuPicker.PAGE_SIZE
 			break
 	p.pick_closes = id == TAB_MAPS or apply_mode_now
+	p.noun = tr("modes") if id == TAB_MODES else noun
 	_draw_tab()
 
 
