@@ -2,8 +2,8 @@ extends Node
 
 ## Exercises dot-menu with no game: the data model, stock settings and what applies them, the bindings table, the screens, the facade's keys, and what a server may do.
 ## CHECKS is the guard the section counter cannot be: a script error aborts that test, not the run, and only the total notices checks that never ran.
-const SECTIONS := 28
-const CHECKS := 437
+const SECTIONS := 29
+const CHECKS := 451
 
 var _passed := 0
 var _failed := 0
@@ -38,6 +38,7 @@ func _run() -> void:
 	await _test_voice()
 	await _test_help_key_and_leave()
 	await _test_map_menu()
+	await _test_map_modes()
 	await _test_loadout_menu()
 	_test_avatar_action_keys()
 	_test_workbench_key()
@@ -1530,6 +1531,89 @@ func _test_map_menu() -> void:
 
 	await _test_map_menu_without_table(rows)
 	link.queue_free()
+	node.queue_free()
+	await get_tree().process_frame
+
+
+func _test_map_modes() -> void:
+	_section("- switches the map menu between Maps and Game modes")
+	for a in [DotMenuBindings.MAPS_ACTION, DotMenuBindings.HELP_ACTION, DotMenuBindings.MODES_ACTION]:
+		if InputMap.has_action(a):
+			InputMap.erase_action(a)
+	var node := DotMenuSettings.new()
+	node.app_namespace = &"menu_modes_test"
+	node.config = DotMenuConfig.new()
+	node.config.escape_grace_ms = 0
+	node.map_modes = true
+	add_child(node)
+	var _s := node.setup(DotSettingsStoreMemory.new())
+	var mrow := node.bindings.row_for_action(DotMenuBindings.MODES_ACTION)
+	_check(not mrow.is_empty() and str(mrow["default"]) == "Minus", "the tab key is in the table, on - by default")
+
+	var chosen: Array = []
+	var maps_only: Array = [{"id": "map:a", "name": "A"}, {"id": "map:b", "name": "B", "current": true}]
+	var both: Array = maps_only + [{"id": "mode:ffa", "name": "Free for all", "kind": "mode"}, {"id": "mode:tdm", "name": "Team", "kind": "mode"}]
+	var rows: Array = maps_only.duplicate()
+	var maps := node.use_maps(func() -> Array: return rows, func(id: StringName, mode: StringName) -> DotResult:
+		chosen.append([id, mode])
+		return DotResult.success(id))
+	maps.open()
+	await get_tree().process_frame
+	_check(not maps.has_tabs() and node.menu.picker.tabs.is_empty(), "no modes provided: no tab")
+	var _m1 := node.menu.handle_event(_key(KEY_MINUS))
+	_check(node.menu.picker.items.size() == 2 and node.menu.picker.is_open(), "and - does nothing then")
+	node.menu.picker.close()
+
+	rows.assign(both)
+	maps.open()
+	await get_tree().process_frame
+	_check(maps.has_tabs() and node.menu.picker.tabs.size() == 2 and node.menu.picker.items.size() == 2 and maps.tab == &"maps",
+		"modes provided: the tabs show, Maps first, with the maps only")
+	_check(node.menu.picker.find_child("Tab_modes", true, false) != null, "a button per tab")
+	var _m2 := node.menu.handle_event(_key(KEY_MINUS))
+	_check(maps.tab == &"modes" and str(node.menu.picker.items[0]["id"]) == "mode:ffa", "- shows the modes")
+	var _m3 := node.menu.handle_event(_key(KEY_MINUS))
+	_check(maps.tab == &"maps", "and again, the maps")
+
+	var edit := LineEdit.new()
+	add_child(edit)
+	edit.grab_focus()
+	var _m4 := node.menu.handle_event(_key(KEY_MINUS))
+	_check(maps.tab == &"maps", "- is not the tab key while a text field has the keyboard")
+	edit.queue_free()
+	await get_tree().process_frame
+
+	var _m5 := node.menu.handle_event(_key(KEY_MINUS))
+	var _m6 := node.menu.handle_event(_key(KEY_2))
+	_check(maps.tab == &"maps" and node.menu.picker.is_open() and maps.mode == &"mode:tdm", "a mode picked is kept and the list returns to Maps")
+	var _m7 := node.menu.handle_event(_key(KEY_1))
+	await get_tree().process_frame
+	_check(chosen == [[&"map:a", &"mode:tdm"]], "the map picked carries the mode")
+
+	maps.modes_tab = &"hide"
+	maps.open()
+	await get_tree().process_frame
+	_check(not maps.has_tabs() and node.menu.picker.items.size() == 2, "the cvar hide removes the tab")
+	node.menu.picker.close()
+	maps.modes_tab = &"show"
+	rows.assign(maps_only)
+	maps.open()
+	await get_tree().process_frame
+	_check(maps.has_tabs(), "and show forces it")
+	node.menu.picker.close()
+	maps.modes_tab = &"auto"
+
+	var row := node.bindings.row_for_action(DotMenuBindings.MODES_ACTION)
+	var res := node.bindings.rebind(row, "F6", node.settings)
+	_check(res.ok and node.bindings.key_for(DotMenuBindings.MODES_ACTION) == "F6", "the key rebinds")
+	rows.assign(both)
+	maps.open()
+	await get_tree().process_frame
+	var _m8 := node.menu.handle_event(_key(KEY_MINUS))
+	var still := maps.tab == &"maps"
+	var _m9 := node.menu.handle_event(_key(KEY_F6))
+	_check(still and maps.tab == &"modes", "and the old key stops, the new one switches")
+	node.menu.picker.close()
 	node.queue_free()
 	await get_tree().process_frame
 

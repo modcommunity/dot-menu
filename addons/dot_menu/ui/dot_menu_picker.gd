@@ -10,6 +10,9 @@ signal closed()
 ## The player picked [param id].
 signal chosen(id: StringName)
 
+## A tab was clicked. The host swaps [member items]; the picker only draws the strip.
+signal tab_clicked(id: StringName)
+
 ## Rows per page. Seven, so 8 and 9 stay the page keys.
 const PAGE_SIZE := 7
 
@@ -31,9 +34,18 @@ var footer_extra: Callable = Callable()
 ## The word for one item in the footer ("maps").
 var noun: String = "items"
 
+## Tabs above the list, `[{id, name}]`. Fewer than two draws no strip: a picker has no tabs by default.
+var tabs: Array = []
+var tab: StringName = &""
+## The key that switches tab, shown beside the strip.
+var tab_key_text: String = ""
+## False on a tab whose pick is a choice kept while the list stays open.
+var pick_closes: bool = true
+
 var _window: PanelContainer = null
 var _rows: VBoxContainer = null
 var _title: Label = null
+var _tab_strip: HBoxContainer = null
 var _instructions: Label = null
 var _footer: Label = null
 var _built := false
@@ -90,6 +102,10 @@ func _build() -> void:
 	_title = kit.label(title_text, kit.size_title, p.text, true)
 	col.add_child(_title)
 	# Kept, and set again on every draw: a game sets its own words after the picker is built.
+	_tab_strip = HBoxContainer.new()
+	_tab_strip.name = "Tabs"
+	_tab_strip.add_theme_constant_override(&"separation", 6)
+	col.add_child(_tab_strip)
 	_instructions = kit.paragraph(instructions)
 	col.add_child(_instructions)
 
@@ -148,8 +164,10 @@ func pick(row: int) -> bool:
 	var it: Variant = at_row(row)
 	if it == null:
 		return false
+	var closes := pick_closes
 	chosen.emit(StringName(str((it as Dictionary).get("id", ""))))
-	close()
+	if closes:
+		close()
 	return true
 
 
@@ -181,6 +199,7 @@ func _rebuild() -> void:
 
 	_title.text = title_text
 	_instructions.text = instructions
+	_draw_tabs()
 	if items.is_empty():
 		_rows.add_child(kit.paragraph(empty_text))
 
@@ -196,6 +215,26 @@ func _rebuild() -> void:
 		if more != "":
 			foot += "  ·  " + more
 	_footer.text = foot + "  ·  8 previous  9 next"
+
+
+func _draw_tabs() -> void:
+	DotMenuKit.clear(_tab_strip)
+	_tab_strip.visible = tabs.size() > 1
+	if not _tab_strip.visible:
+		return
+	var p := kit.palette
+	for t: Variant in tabs:
+		var id := StringName(str((t as Dictionary).get("id", "")))
+		var on := id == tab
+		var b := kit.primary_button(str((t as Dictionary).get("name", id))) if on else kit.secondary_button(str((t as Dictionary).get("name", id)))
+		b.name = "Tab_%s" % id
+		b.focus_mode = Control.FOCUS_NONE
+		b.pressed.connect(func() -> void: tab_clicked.emit(id))
+		_tab_strip.add_child(b)
+	if tab_key_text != "":
+		var hint := kit.label("%s switches" % tab_key_text, kit.size_small, p.muted)
+		hint.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		_tab_strip.add_child(hint)
 
 
 ## Whether any item on this page has a picture or a second line, which makes every row on it
@@ -304,4 +343,4 @@ func _row(row: int, it: Dictionary) -> Control:
 
 
 func describe() -> Dictionary:
-	return {"open": visible, "items": items.size(), "page": page, "pages": pages()}
+	return {"open": visible, "items": items.size(), "page": page, "pages": pages(), "tab": String(tab), "tabs": tabs.size()}

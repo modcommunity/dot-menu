@@ -39,3 +39,5 @@ What each `DotMenuApi.LEVEL` added; the rule for bumping is on `DotAddonApi`.
 18 DotMenuStock.performance_section and PROFILER_SERVICE: the Advanced page draws a Performance card from a placed `dot_profiler` service's `make_menu_panel(kit)`, duck-typed.
 19 DotMenuTeams.default_when_unwired and default_offer(): the period key opens a free-for-all Play/Spectate menu when no server link and no offer is wired, instead of a toast.
 20 DotMenuBindings.add_workbench, WORKBENCH_ACTION/SETTING/KEY (the workbench toggle on the semicolon, added by DotMenuSettings where dot-workbench is linked; the avatar Pose default moves to the apostrophe).
+
+21 The Maps / Game modes tabs: DotMenuMaps.modes_fn/mode_group/modes_tab/apply_mode_now/mode/toggle_tab()/has_tabs(); DotMenu.modes_action; DotMenuBindings.add_modes and MODES_*; DotMenuSettings.map_modes; DotMenuPicker.tabs/tab/pick_closes/tab_clicked.

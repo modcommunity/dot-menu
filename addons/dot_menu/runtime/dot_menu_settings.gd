@@ -37,6 +37,9 @@ var leave_on_its_own: bool = true
 ## client calls [method use_maps]; a game with one map turns this off.
 var map_menu: bool = true
 
+## A rebindable Maps / Game modes tab key (`-`) in this game's table, for a game whose map menu has a modes tab. Off: the menu shows no tab key.
+var map_modes: bool = false
+
 ## The loadout menu key, B, in this game's table (API 6): on for a game where players choose
 ## what they carry, off by default because most of the family's games hand out their kit. The
 ## key does nothing until the client calls [method use_loadout].
@@ -96,6 +99,9 @@ func setup(store: DotSettingsStore = null, with_menu: bool = true) -> DotResult:
 	if map_menu and bindings.row_for_action(DotMenuBindings.MAPS_ACTION).is_empty() \
 			and bindings.row_for_setting(DotMenuBindings.MAPS_SETTING).is_empty():
 		var _m := bindings.add_maps("", bindings.free_key([DotMenuBindings.MAPS_KEY, "F3"]))
+	if map_modes and bindings.row_for_action(DotMenuBindings.MODES_ACTION).is_empty() \
+			and bindings.row_for_setting(DotMenuBindings.MODES_SETTING).is_empty():
+		var _t := bindings.add_modes("", bindings.free_key([DotMenuBindings.MODES_KEY, "F2"]))
 	bindings.add_to_schema(schema)
 	var themes := config.make_themes()
 	var _problems := config.apply_to_schema(schema, themes)

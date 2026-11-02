@@ -41,6 +41,25 @@ var link_service: StringName = &"dot_client_link"
 ## (`chat_command_prefixes`), and a command line is never broadcast.
 var command_prefix: String = "/"
 
+## The Game modes tab (default: none). Rows in the list with `kind: "mode"` (or whose `mode` line equals [member mode_group]) go there, with whatever [member modes_fn] returns solo and a server notice's `modes`.
+## A game that provides no modes shows no tab and the menu is one list as before.
+var modes_fn: Callable = Callable()
+var mode_group: String = ""
+
+## `&"auto"` shows the tab when there are modes, `&"show"` always, `&"hide"` never. Set by `--menu-modes-tab=show|hide` after the game's `--`.
+var modes_tab: StringName = &"auto"
+
+## A mode picked on the Game modes tab is applied at once and closes the menu (the mode changes on this map). False: it is kept, the list returns to Maps, and the next map pick carries map and mode.
+var apply_mode_now: bool = false
+
+## The mode picked this session (its row id), empty until one is. Passed as the second argument of [member change_fn] when it takes two.
+var mode: StringName = &""
+## The tab showing: `&"maps"` or `&"modes"`.
+var tab: StringName = TAB_MAPS
+
+const TAB_MAPS := &"maps"
+const TAB_MODES := &"modes"
+
 ## The picker's heading, and the word for one row ("maps", "courses", "layouts").
 var title: String = "Change map"
 var noun: String = "maps"
@@ -59,11 +78,16 @@ var last_said: String = ""
 ## Whether the picker that is open (or was last) changes directly or starts a vote.
 var direct: bool = true
 
+var _map_rows: Array = []
+var _mode_rows: Array = []
+var _tabbed := false
 var _waiting_since_msec: int = -1
 ## A long list arrives in parts (`part` of `parts`, a notice carries 8 KB): rows by part,
 ## until every one is here.
 var _parts: Dictionary = {}
 var _bound_link: Object = null
+var _head := ""
+var _instructions := ""
 
 
 ## Opens the menu: the solo list now, or asks the server and opens on its answer.
@@ -87,9 +111,13 @@ func open_rows(rows: Array, allowed: bool, where: String = "", flag: String = ""
 	if menu == null:
 		return
 	direct = allowed
-	var items := items_for(rows)
+	_split(rows)
+	_tabbed = modes_tab == &"show" or (modes_tab != &"hide" and not _mode_rows.is_empty())
+	tab = TAB_MAPS
+	var items := _map_rows
 	var p := menu.picker
 	p.noun = noun
+	p.pick_closes = true
 	p.footer_extra = Callable()
 	var key := menu.bindings.key_for(menu.maps_action) if menu.bindings != null and not menu.bindings.row_for_action(menu.maps_action).is_empty() \
 		else DotInputBinding.describe_action(menu.maps_action)
@@ -103,7 +131,89 @@ func open_rows(rows: Array, allowed: bool, where: String = "", flag: String = ""
 		p.instructions = "Changing the map here needs the '%s' permission, and voting is off on this server." % flag
 	if where != "":
 		heading += " — " + where
+	_head = heading
+	_instructions = p.instructions
 	menu.open_picker(items, heading, menu.maps_action, _chosen)
+	_draw_tab()
+
+
+## Splits [param rows] into the Maps and Game modes lists, as picker items.
+func _split(rows: Array) -> void:
+	var maps_in: Array = []
+	var modes_in: Array = []
+	for r: Variant in rows:
+		if r is Dictionary and _is_mode(r as Dictionary):
+			modes_in.append(r)
+		else:
+			maps_in.append(r)
+	if modes_fn.is_valid():
+		var more: Variant = modes_fn.call()
+		if more is Array:
+			modes_in.append_array(more as Array)
+	_map_rows = items_for(maps_in)
+	_mode_rows = items_for(modes_in)
+	for it: Variant in _mode_rows:
+		if mode != &"" and str((it as Dictionary)["id"]) == String(mode):
+			(it as Dictionary)["current"] = true
+			(it as Dictionary)["tags"] = ["playing"]
+
+
+func _is_mode(row: Dictionary) -> bool:
+	if str(row.get("kind", "")) == "mode":
+		return true
+	return mode_group != "" and str(row.get("mode", "")).to_lower() == mode_group.to_lower()
+
+
+## True when the menu shows the Maps and Game modes tabs now.
+func has_tabs() -> bool:
+	return _tabbed
+
+
+## Switches to the other tab; false when there are none.
+func toggle_tab() -> bool:
+	if not _tabbed or menu == null or not menu.picker.is_open():
+		return false
+	show_tab(TAB_MAPS if tab == TAB_MODES else TAB_MODES)
+	return true
+
+
+func show_tab(id: StringName) -> void:
+	tab = id
+	var p := menu.picker
+	p.items = _mode_rows if id == TAB_MODES else _map_rows
+	p.page = 0
+	for i in p.items.size():
+		if bool((p.items[i] as Dictionary).get("current", false)):
+			p.page = i / DotMenuPicker.PAGE_SIZE
+			break
+	p.pick_closes = id == TAB_MAPS or apply_mode_now
+	_draw_tab()
+
+
+func _draw_tab() -> void:
+	var p := menu.picker
+	if not _tabbed:
+		p.tabs = []
+		p.tab = &""
+		p.tab_key_text = ""
+		p._rebuild()
+		return
+	if not p.tab_clicked.is_connected(show_tab):
+		p.tab_clicked.connect(show_tab)
+	p.tabs = [{"id": TAB_MAPS, "name": tr("Maps")}, {"id": TAB_MODES, "name": tr("Game modes")}]
+	p.tab = tab
+	p.tab_key_text = DotInputBinding.describe_action(menu.modes_action)
+	p.instructions = _instructions if tab == TAB_MAPS else tr("Pick a game mode. It applies with the next map you choose.") if not apply_mode_now else tr("Pick a game mode; it changes on this map now.")
+	p._rebuild()
+
+
+## `--menu-modes-tab=show|hide` after the game's `--` forces the tab on or off.
+func read_command_line() -> void:
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--menu-modes-tab="):
+			var v := a.get_slice("=", 1)
+			if v in ["show", "hide", "auto"]:
+				modes_tab = StringName(v)
 
 
 ## Picker items from rows: the mode (or detail) as the second line, "playing" on the current one.
@@ -136,14 +246,29 @@ func items_for(rows: Array) -> Array:
 
 ## A row was picked: change it solo, or ask the server.
 func _chosen(id: StringName) -> void:
+	var picked_mode := tab == TAB_MODES
+	var with_mode := mode
+	if picked_mode:
+		mode = id
+		for it: Variant in _mode_rows:
+			var d := it as Dictionary
+			d["current"] = str(d["id"]) == String(id)
+		if not apply_mode_now:
+			show_tab(TAB_MAPS)
+			return
+		with_mode = id
 	var l := _link()
 	if _connected(l):
-		_ask(l, String(id))
+		_ask(l, String(id), String(with_mode) if not picked_mode and with_mode != &"" else "")
 		return
 	if not change_fn.is_valid():
 		_say("This game cannot change the map.")
 		return
-	var res: Variant = await change_fn.call(id)
+	var res: Variant
+	if change_fn.get_argument_count() >= 2:
+		res = await change_fn.call(id, with_mode)
+	else:
+		res = await change_fn.call(id)
 	var result: DotResult = res if res is DotResult else DotResult.success(id)
 	changed.emit(id, result)
 	if result.ok:
@@ -152,10 +277,13 @@ func _chosen(id: StringName) -> void:
 		_say(result.error.message)
 
 
-func _ask(l: Object, id: String) -> void:
+func _ask(l: Object, id: String, with_mode: String = "") -> void:
 	_bind(l)
 	_waiting_since_msec = Time.get_ticks_msec()
-	l.call(&"send_chat", "%s%s%s" % [command_prefix, COMMAND, (" " + id) if id != "" else ""])
+	var tail := (" " + id) if id != "" else ""
+	if with_mode != "" and id != "":
+		tail += " " + with_mode
+	l.call(&"send_chat", "%s%s%s" % [command_prefix, COMMAND, tail])
 	if menu != null and menu.is_inside_tree() and answer_timeout_sec > 0.0:
 		var asked := _waiting_since_msec
 		menu.get_tree().create_timer(answer_timeout_sec).timeout.connect(func() -> void:
@@ -209,6 +337,13 @@ func receive(data: Dictionary) -> void:
 			_say("Changing the map here needs the '%s' permission, and voting is off." % flag)
 			return
 		var rows: Array = data["maps"] if data["maps"] is Array else []
+		if data.get("modes") is Array:
+			rows = rows.duplicate()
+			for m: Variant in data["modes"]:
+				if m is Dictionary:
+					var md := (m as Dictionary).duplicate()
+					md["kind"] = "mode"
+					rows.append(md)
 		if rows.is_empty():
 			_say("The server has no other map to offer.")
 			return
@@ -248,7 +383,7 @@ func is_online() -> bool:
 func describe() -> Dictionary:
 	return {
 		"enabled": enabled, "solo_rows": rows_fn.is_valid(), "solo_change": change_fn.is_valid(),
-		"online": is_online(), "direct": direct, "last_said": last_said,
+		"online": is_online(), "direct": direct, "tabs": _tabbed, "tab": String(tab), "mode": String(mode), "last_said": last_said,
 		"offer": {"allowed": last_offer.get("allowed", null), "flag": last_offer.get("flag", ""),
 			"maps": (last_offer.get("maps", []) as Array).size() if last_offer.get("maps") is Array else 0},
 	}

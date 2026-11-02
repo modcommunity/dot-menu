@@ -74,6 +74,14 @@ func _run() -> void:
 	menu.maps.open_rows(_demo.call("maps"), false, "this server", "generic", true)
 	await _shot("maps_vote")
 	menu.picker.close()
+	var tabbed: Array = _demo.call("maps")
+	for m in [["ffa", "Free for all", "Everyone against everyone."], ["tdm", "Team deathmatch", "Two teams, first to the limit."], ["ctf", "Capture the flag", "Carry theirs home."]]:
+		tabbed.append({"id": "mode:" + m[0], "name": m[1], "detail": m[2], "kind": "mode", "current": m[0] == "tdm"})
+	menu.maps.open_rows(tabbed, true, "solo")
+	await _shot("maps_tab")
+	var _tg := menu.maps.toggle_tab()
+	await _shot("modes_tab")
+	menu.picker.close()
 	menu.toast("Nominated Foundry. Rocked: 1 of 3.")
 	await _shot("maps_toast")
 

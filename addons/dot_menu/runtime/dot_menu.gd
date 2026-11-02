@@ -56,6 +56,9 @@ var picker_action: StringName = &""
 ## the picker. Nothing happens on it until the game calls [method use_maps].
 var maps_action: StringName = DotMenuBindings.MAPS_ACTION
 
+## The key that switches the map menu's Maps and Game modes tabs (`-`). A tab exists only when the game provides modes.
+var modes_action: StringName = DotMenuBindings.MODES_ACTION
+
 ## The map menu. Null until [method use_maps]. See [DotMenuMaps].
 var maps: DotMenuMaps = null
 
@@ -468,6 +471,8 @@ func _on_picker_chosen(id: StringName) -> void:
 	_picker_chosen = Callable()
 	if to.is_valid():
 		to.call(id)
+		if picker.is_open() and not _picker_chosen.is_valid():
+			_picker_chosen = to
 	else:
 		picked.emit(id)
 
@@ -482,6 +487,10 @@ func use_maps(rows_fn: Callable, change_fn: Callable) -> DotMenuMaps:
 	maps.rows_fn = rows_fn
 	maps.change_fn = change_fn
 	maps.enabled = true
+	maps.read_command_line()
+	if modes_action != &"" and not InputMap.has_action(modes_action):
+		InputMap.add_action(modes_action)
+		var _tab := DotInputBinding.apply(modes_action, DotMenuBindings.MODES_KEY)
 	if maps_action != &"" and not InputMap.has_action(maps_action):
 		InputMap.add_action(maps_action)
 		var _bound := DotInputBinding.apply(maps_action, DotMenuBindings.MAPS_KEY)
@@ -887,6 +896,11 @@ func handle_event(event: InputEvent) -> bool:
 		return true
 
 	if picker.is_open():
+		if not escape and picker.tabs.size() > 1 and maps != null and modes_action != &"" and InputMap.has_action(modes_action) \
+				and event.is_action_pressed(modes_action):
+			if not _typing():
+				maps.toggle_tab()
+			return true
 		if escape or (_picker_close != &"" and InputMap.has_action(_picker_close) and event.is_action_pressed(_picker_close)):
 			picker.close()
 		else:
@@ -907,6 +921,12 @@ func handle_event(event: InputEvent) -> bool:
 	if screen.is_open() and escape:
 		screen.close()
 	return true
+
+
+## A text field has the keyboard: `-` is a character then, not the tab key.
+func _typing() -> bool:
+	var focus := get_viewport().gui_get_focus_owner() if is_inside_tree() else null
+	return (focus is LineEdit and (focus as LineEdit).editable) or (focus is TextEdit and (focus as TextEdit).editable)
 
 
 func _is_scoreboard_key(event: InputEvent) -> bool:

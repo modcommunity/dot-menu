@@ -103,6 +103,8 @@ A rebind can never make a conflict (it swaps), so the third layer only ever fire
 - **The link is found, not handed over**: `dot_client_link` in `DotRegistry` when M is pressed, as for Leave. Nothing here names dot-server or dot-vote; a notice is read by its `topic` and `data`.
 - **One picker, two owners.** The map menu opens the same `DotMenuPicker` a game's own list uses (a taunt list), so `open_picker` takes the key that closes this list and who gets its choice: a map id must never reach the game's `picked` handler.
 
+- **An optional Game modes tab** (API 21). Rows with `kind: "mode"` (or whose `mode` equals `DotMenuMaps.mode_group`), plus what `modes_fn` returns and a server notice's `modes`, go on a second tab; no modes means no tab and one list as before. `-` (`dot_menu_modes`, `bind_modes`, added by `DotMenuSettings.map_modes`) or a click switches, and is ignored while a text field has focus. A mode pick is kept and the list returns to Maps; the next map pick calls `change_fn(id, mode)` (two-argument callable) or sends `/mapmenu <id> <mode>`. `--menu-modes-tab=show|hide` after the game's `--` forces the tab. Rendered in `screenshots/maps_tab.png` and `modes_tab.png`.
+
 ## The loadout menu on B
 
 **B opens a loadout screen: the slots down the left, each slot's choices as cards with a picture, and the highlighted card's statistics against what is equipped** (API 6, from Christian's first play test: "users should be able to choose their loadout using B by default ... make sure the loadout menu is really nice and supports a primary, secondary, melee, and grenades"). Rendered in `screenshots/loadout*.png`.

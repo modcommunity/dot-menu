@@ -16,6 +16,10 @@ const HELP_KEY := "H"
 const MAPS_ACTION := &"dot_menu_maps"
 const MAPS_SETTING := &"bind_maps"
 const MAPS_KEY := "M"
+## Switches the open map menu between Maps and Game modes.
+const MODES_ACTION := &"dot_menu_modes"
+const MODES_SETTING := &"bind_modes"
+const MODES_KEY := "Minus"
 
 ## The loadout menu's key (API 6), B, in every game where players choose what they carry: the
 ## same row on every such game's Controls page, so "B is loadout" holds across the family.
@@ -211,6 +215,11 @@ func add_help(group: String = "", key: String = HELP_KEY) -> DotMenuBindings:
 ## hand calls this itself.
 func add_maps(group: String = "", key: String = MAPS_KEY) -> DotMenuBindings:
 	return add(MAPS_ACTION, MAPS_SETTING, "Change map", key, group if group != "" else help_group())
+
+
+## The Maps / Game modes tab key (`dot_menu_modes`, stored as `bind_modes`), `-` by default. For a game that opts in to a modes tab ([member DotMenuSettings.map_modes]).
+func add_modes(group: String = "", key: String = MODES_KEY) -> DotMenuBindings:
+	return add(MODES_ACTION, MODES_SETTING, "Maps / Game modes tab", key, group if group != "" else help_group())
 
 
 ## The loadout menu key (`dot_menu_loadout`, stored as `bind_loadout`), B by default, on the same
