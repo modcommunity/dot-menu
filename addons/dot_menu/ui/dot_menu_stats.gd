@@ -20,6 +20,7 @@ var enabled: bool = true:
 
 var _signature := ""
 var _keys: Array[StringName] = []
+var _seen: Dictionary = {}
 
 
 ## Adds a [DotMenuStats] under [param on] and returns it.
@@ -35,20 +36,19 @@ static func install(on: DotMenuScoreboard) -> DotMenuStats:
 
 
 func _process(_delta: float) -> void:
-	if board != null and board.visible:
-		_sync()
+	if board != null and board.visible and (not is_same(board.snapshot, _seen) or not _intact()):
+		# By name: the rebuild runs only on a change, not every frame.
+		call_deferred(&"_sync")
 
 
 ## Brings the board's columns in line with the latest snapshot.
 func _sync() -> void:
 	if board == null:
 		return
+	_seen = board.snapshot
 	var listed: Array = [] if not enabled else board.snapshot.get(COLUMNS_KEY, [])
-	var intact := true
-	for key in _keys:
-		intact = intact and _has_column(key)
 	var signature := str(listed)
-	if signature == _signature and intact:
+	if signature == _signature and _intact():
 		return
 	for key in _keys:
 		var _removed := board.remove_column(key)
@@ -66,6 +66,13 @@ func _sync() -> void:
 		_keys.append(key)
 	if board.visible:
 		board.redraw()
+
+
+func _intact() -> bool:
+	for key in _keys:
+		if not _has_column(key):
+			return false
+	return true
 
 
 func _has_column(key: StringName) -> bool:
