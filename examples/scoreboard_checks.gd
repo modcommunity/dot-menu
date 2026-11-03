@@ -29,6 +29,23 @@ static func run(host: Selftest) -> void:
 	var link := FakeLink.new()
 	board.feed_from(link)
 
+	await _held(host, menu, board, link)
+	await _custom(host, board, link)
+	await _hidden(host, menu, board)
+	await _choices(host, menu, board)
+	_persisted(host, board)
+
+	var _e := menu.handle_event(host._key(KEY_ESCAPE))
+	host._check(menu.is_open() and not board.is_open(), "Escape while it is held opens the menu instead")
+	var _c := menu.handle_event(host._key(KEY_ESCAPE))
+
+	var _t := menu.cycle_theme()
+	host._check(board.kit == menu.kit, "and a theme change reaches it")
+	host._free_menu(menu)
+	await host.get_tree().process_frame
+
+
+static func _held(host: Selftest, menu: DotMenu, board: DotMenuScoreboard, link: FakeLink) -> void:
 	var tab := host._key(KEY_TAB)
 	host._check(menu.handle_event(tab) and board.is_open(), "Tab held shows it")
 	host._check(not menu.any_open(), "and it is not an overlay: the player keeps moving and the pointer stays")
@@ -63,6 +80,8 @@ static func run(host: Selftest) -> void:
 	host._check(menu.handle_event(released) and not board.is_open(), "letting go of Tab hides it")
 	host._check(link.asked == [true, false], "and stops the server sending")
 
+
+static func _custom(host: Selftest, board: DotMenuScoreboard, link: FakeLink) -> void:
 	board.add_column({"key": &"kills", "title": "K", "kind": DotMenuScoreboard.KIND_NUMBER}, &"score")
 	board.add_column({"key": &"rank", "title": "Rank", "kind": DotMenuScoreboard.KIND_CUSTOM,
 		"build": func(kit: DotMenuKit, row: Dictionary) -> Control: return kit.label("#%d" % int(row.get("rank", 0)))})
@@ -73,7 +92,7 @@ static func run(host: Selftest) -> void:
 		"a game adds its own columns where it wants them")
 	board.open()
 	await host.get_tree().process_frame
-	texts = host._texts(board)
+	var texts := host._texts(board)
 	host._check(texts.has("#9") and texts.has("5"), "drawn from its own decoration and its own builder")
 	board.close()
 	board.prepare = func(snap: Dictionary) -> void:
@@ -99,6 +118,8 @@ static func run(host: Selftest) -> void:
 	link.scoreboard_received.emit(host._snapshot())
 	host._check(board.rows().size() == 1, "and a source wins over the feed")
 
+
+static func _hidden(host: Selftest, menu: DotMenu, board: DotMenuScoreboard) -> void:
 	# --- Columns a player hides ---
 	board.build_row = Callable()
 	board.source = func() -> Dictionary:
@@ -106,7 +127,7 @@ static func run(host: Selftest) -> void:
 	board.add_column({"key": &"best", "title": "Best", "kind": DotMenuScoreboard.KIND_NUMBER, "hidden": true}, &"ping")
 	board.open()
 	await host.get_tree().process_frame
-	texts = host._texts(board)
+	var texts := host._texts(board)
 	host._check(not texts.has("Best") and texts.has("Ping") and texts.has("Score"), "a column the game starts hidden is not drawn")
 	menu.open(&"general")
 	await host.get_tree().process_frame
@@ -121,9 +142,11 @@ static func run(host: Selftest) -> void:
 	# Opening the menu puts a held board away; hold it again.
 	board.open()
 
+
+static func _choices(host: Selftest, menu: DotMenu, board: DotMenuScoreboard) -> void:
 	var ping_off := menu.settings.set_value(DotMenuScoreboard.SETTING, "ping,seconds")
 	await host.get_tree().process_frame
-	texts = host._texts(board)
+	var texts := host._texts(board)
 	host._check(ping_off.ok and not texts.has("Ping") and not texts.has("77") and not texts.has("Time") and not texts.has("0:30"),
 		"a setting change redraws the open board: titles and rows lose the column")
 	host._check(texts.has("Score") and texts.has("Player") and texts.has("3") and texts.has("Solo") and texts.has("K"),
@@ -147,6 +170,8 @@ static func run(host: Selftest) -> void:
 	host._check(DotMenuScoreboard.parse_choices(menu.settings.get_string(DotMenuScoreboard.SETTING, "")).size() == 1,
 		"a Settings switch writes the setting")
 
+
+static func _persisted(host: Selftest, board: DotMenuScoreboard) -> void:
 	var req := DotMenuScoreboard.column_required({"key": &"score", "required": true})
 	host._check(req and DotMenuScoreboard.column_required({"key": &"name"}) and not DotMenuScoreboard.column_required({"key": &"name", "required": false}),
 		"required defaults on for the name column only")
@@ -168,12 +193,3 @@ static func run(host: Selftest) -> void:
 	m2.queue_free()
 	board.player_hidden = {}
 	board.remove_column(&"best")
-
-	var _e := menu.handle_event(host._key(KEY_ESCAPE))
-	host._check(menu.is_open() and not board.is_open(), "Escape while it is held opens the menu instead")
-	var _c := menu.handle_event(host._key(KEY_ESCAPE))
-
-	var _t := menu.cycle_theme()
-	host._check(board.kit == menu.kit, "and a theme change reaches it")
-	host._free_menu(menu)
-	await host.get_tree().process_frame

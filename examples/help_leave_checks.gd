@@ -61,6 +61,13 @@ static func run(host: Selftest) -> void:
 	node.menu.help.close()
 	await host.get_tree().process_frame
 
+	await _leave(host, node)
+	_taken_key(host)
+	_own_row(host)
+	await _bare_menu(host)
+
+
+static func _leave(host: Selftest, node: FilledSettings) -> void:
 	# Leave: there, and worded for where the player is.
 	var leave := node.menu.screen.find_child("Action_leave", true, false) as Button
 	node.open()
@@ -79,6 +86,8 @@ static func run(host: Selftest) -> void:
 	link.queue_free()
 	await host.get_tree().process_frame
 
+
+static func _taken_key(host: Selftest) -> void:
 	# A table with something on H already: help goes to the next free key, never onto H twice.
 	var keys := DotMenuBindings.new()
 	keys.add(&"test_heal", &"bind_heal", "Medkit", "H", "Hands")
@@ -91,6 +100,8 @@ static func run(host: Selftest) -> void:
 		"a table that already has H gets help on F1, and H stays on one row")
 	taken.queue_free()
 
+
+static func _own_row(host: Selftest) -> void:
 	# A game whose help row is its own action keeps it, and the menu opens on that.
 	var own := DotMenuBindings.new()
 	own.add(&"test_own_help", &"bind_help", "Help", "H", "Interface")
@@ -103,6 +114,8 @@ static func run(host: Selftest) -> void:
 		and own_node.menu.help_action == &"test_own_help", "a game's own help row is kept, and is the menu's help key")
 	own_node.queue_free()
 
+
+static func _bare_menu(host: Selftest) -> void:
 	# A menu built by hand with no table still gets H.
 	if InputMap.has_action(DotMenuBindings.HELP_ACTION):
 		InputMap.erase_action(DotMenuBindings.HELP_ACTION)

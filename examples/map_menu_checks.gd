@@ -66,6 +66,16 @@ static func run(host: Selftest) -> void:
 	host._check(node.menu.picker.find_children("Thumb", "PanelContainer", true, false).is_empty(),
 		"and a page where no map has a picture draws no empty frames")
 	node.menu.picker.visible = false
+	await _solo(host, node, maps, changed, game_picks)
+	await _refusal_and_toasts(host, node, rows)
+	await _connected(host, node, maps, changed)
+
+	await host._test_map_menu_without_table(rows)
+	node.queue_free()
+	await host.get_tree().process_frame
+
+
+static func _solo(host: Selftest, node: DotMenuSettings, maps: DotMenuMaps, changed: Array, game_picks: Array) -> void:
 	maps.open()
 	var _k := node.menu.handle_event(host._key(KEY_3))
 	await host.get_tree().process_frame
@@ -75,6 +85,8 @@ static func run(host: Selftest) -> void:
 	var _k3 := node.menu.handle_event(host._key(KEY_M))
 	host._check(not node.menu.picker.is_open() and changed.size() == 1, "M again closes it, changing nothing")
 
+
+static func _refusal_and_toasts(host: Selftest, node: DotMenuSettings, rows: Array) -> void:
 	var refuse := node.use_maps(func() -> Array: return rows, func(_id: StringName) -> DotResult:
 		return DotResult.fail(DotError.CODE_STATE, "A round is being decided."))
 	refuse.open()
@@ -91,6 +103,8 @@ static func run(host: Selftest) -> void:
 	await host.get_tree().create_timer(0.3).timeout
 	host._check(node.menu.toast_text() == "second", "an older toast's timer does not hide a newer one")
 
+
+static func _connected(host: Selftest, node: DotMenuSettings, maps: DotMenuMaps, changed: Array) -> void:
 	# Connected: the server is asked, and its answer decides.
 	var link := FakeMapLink.new()
 	host.add_child(link)
@@ -119,7 +133,7 @@ static func run(host: Selftest) -> void:
 	link.answer({"maps": [{"id": "dm_atrium", "name": "Atrium"}, {"id": "dm_yard", "name": "Yard"}],
 		"allowed": false, "flag": "generic", "vote": true, "where": "this server"})
 	await host.get_tree().process_frame
-	texts = host._texts(node.menu.picker)
+	var texts := host._texts(node.menu.picker)
 	host._check(node.menu.picker.is_open() and texts.has("Vote for a map — this server")
 		and texts.any(func(t: String) -> bool: return t.contains("'generic'") and t.contains("rocks the vote")),
 		"without the owner's flag it is a vote, and it says which flag")
@@ -127,8 +141,4 @@ static func run(host: Selftest) -> void:
 	link.answer({"maps": [{"id": "dm_yard", "name": "Yard"}], "allowed": false, "flag": "changemap", "vote": false})
 	host._check(not node.menu.picker.is_open() and node.menu.toast_text().contains("'changemap'"),
 		"with no flag and no vote, the refusal is shown and nothing opens")
-
-	await host._test_map_menu_without_table(rows)
 	link.queue_free()
-	node.queue_free()
-	await host.get_tree().process_frame

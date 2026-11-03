@@ -4,7 +4,6 @@ addons/dot_menu/core/dot_menu_kit.gd::theme	88
 addons/dot_menu/runtime/dot_menu.gd	1161
 addons/dot_menu/stock/dot_menu_stock.gd::_declare	103
 addons/dot_menu/ui/dot_menu_loadout_screen.gd::_build	90
-addons/dot_menu/ui/dot_menu_net_stat.gd	830
 examples/menu_demo.gd::_build_menu	94
 examples/menu_selftest.gd	1207
 tools/screenshot.gd::_run	96

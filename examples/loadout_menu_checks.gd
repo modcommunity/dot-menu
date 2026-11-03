@@ -62,6 +62,24 @@ static func run(host: Selftest) -> void:
 	host._check(screen.find_children("*", "TextureRect", true, false).size() >= 2, "a card with art shows it (the card, the tab and the detail)")
 	host._check(screen.find_children("Stats", "VBoxContainer", true, false).size() == 1, "and the highlighted card has its statistics drawn")
 
+	await _draft(host, node, screen, lo, saved)
+	await _restore_and_server_sets(host, screen, lo, saved)
+
+	var link := FakeLoadoutLink.new()
+	host.add_child(link)
+	lo.link = link
+	await _online(host, node, screen, lo, link, saved)
+
+	await host._test_loadout_bare(node)
+
+	if FileAccess.file_exists(DotMenuLoadout.REMEMBER_FILE):
+		var _rm2 := DirAccess.remove_absolute(DotMenuLoadout.REMEMBER_FILE)
+	link.queue_free()
+	node.queue_free()
+	await host.get_tree().process_frame
+
+
+static func _draft(host: Selftest, node: DotMenuSettings, screen: DotMenuLoadoutScreen, lo: DotMenuLoadout, saved: Array) -> void:
 	var _r := screen.handle_key(host._key(KEY_RIGHT))
 	var _a := screen.handle_key(host._key(KEY_ENTER))
 	await host.get_tree().process_frame
@@ -90,6 +108,8 @@ static func run(host: Selftest) -> void:
 	host._check(node.menu.toast_text() == "Loadout equipped.", "and what the game did is said on screen")
 	host._check(lo.remembered() == {"primary": "launcher", "secondary": "pistol"}, "the choice is remembered for this account, fixed slots left to the server")
 
+
+static func _restore_and_server_sets(host: Selftest, screen: DotMenuLoadoutScreen, lo: DotMenuLoadout, saved: Array) -> void:
 	saved.clear()
 	lo.open()
 	await host.get_tree().process_frame
@@ -104,25 +124,18 @@ static func run(host: Selftest) -> void:
 	screen.close()
 	host._check(saved.is_empty() and lo.last_offer["choose"] == false, "when the server sets every loadout, nothing can be picked or sent")
 
-	var link := FakeLoadoutLink.new()
-	host.add_child(link)
-	lo.link = link
+
+
+static func _online(host: Selftest, node: DotMenuSettings, screen: DotMenuLoadoutScreen, lo: DotMenuLoadout, link: FakeLoadoutLink, saved: Array) -> void:
 	host._check(node.menu.handle_event(host._key(KEY_B)) and link.sent == ["/loadout locked"] and not screen.is_open(), "online, B asks the server, locked items included")
 	link.answer(host._loadout_offer())
 	await host.get_tree().process_frame
 	host._check(screen.is_open() and lo.last_offer["slots"][0]["choices"][0].has("stats"), "and opens on its offer, with this client's art and numbers")
-	_one = screen.handle_key(host._key(KEY_2))
-	_c = screen.pick(1)
+	var _one := screen.handle_key(host._key(KEY_2))
+	var _c := screen.pick(1)
 	screen.close()
 	host._check(link.sent.back() == "/loadout secondary=revolver" and saved.is_empty(), "a choice is the server's to take, not this client's")
 	link.answer({"result": {"ok": false, "text": "This server does not allow 'revolver' in the secondary slot."}})
 	host._check(node.menu.toast_text().contains("does not allow"), "and a refusal is said on screen")
 	load("res://examples/loadout_locked_checks.gd").run(host, screen, lo, link)
 	load("res://examples/loadout_random_checks.gd").run(host, screen, lo, link)
-	await host._test_loadout_bare(node)
-
-	if FileAccess.file_exists(DotMenuLoadout.REMEMBER_FILE):
-		var _rm2 := DirAccess.remove_absolute(DotMenuLoadout.REMEMBER_FILE)
-	link.queue_free()
-	node.queue_free()
-	await host.get_tree().process_frame

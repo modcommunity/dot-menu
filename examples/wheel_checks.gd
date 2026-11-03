@@ -25,6 +25,13 @@ static func run(host: Selftest) -> void:
 		"Space and both wheel directions are all on jump at once")
 	host._check(host._wheel(MOUSE_BUTTON_WHEEL_UP).is_action_pressed(&"dot_fps_jump"), "a wheel tick is a press of jump")
 
+	_rebinding(host, k, st)
+	_old_document(host)
+	_weapons(host)
+	_delete_key(host)
+
+
+static func _rebinding(host: Selftest, k: DotMenuBindings, st: DotSettingsManager) -> void:
 	var _f := k.apply_setting(&"bind_jump", "J")
 	host._check(host._on_action(&"dot_fps_jump", "J") and not host._on_action(&"dot_fps_jump", "Space") and host._on_action(&"dot_fps_jump", "Wheel up"),
 		"re-applying Jump's own key replaces only that key and keeps the wheel")
@@ -55,6 +62,8 @@ static func run(host: Selftest) -> void:
 		and st.get_string(&"bind_flashlight") == "F", "a reset puts the wheel back on jump")
 	st.queue_free()
 
+
+static func _old_document(host: Selftest) -> void:
 	# A document where the player had put the wheel on something before the wheel jumped.
 	var k2 := host._keys().add_wheel_jump()
 	var s2 := DotSettingsSchema.new()
@@ -68,6 +77,8 @@ static func run(host: Selftest) -> void:
 		"and that direction's jump goes to nothing, the other still jumps")
 	m.queue_free()
 
+
+static func _weapons(host: Selftest) -> void:
 	# A game with weapons: the wheel goes through them, and does not jump.
 	var w := host._keys().add_wheel_jump().add_wheel_weapons()
 	host._check(w.row_for_setting(DotMenuBindings.WHEEL_JUMP_UP_SETTING).is_empty() and w.row_for_setting(DotMenuBindings.WHEEL_JUMP_DOWN_SETTING).is_empty(),
@@ -87,6 +98,8 @@ static func run(host: Selftest) -> void:
 		"a game's own actions, stored as the stock settings")
 	m3.queue_free()
 
+
+static func _delete_key(host: Selftest) -> void:
 	# The Controls page: Delete clears an extra key's button, and only an extra key's.
 	var b := DotMenuKeyButton.new()
 	b.clearable = true

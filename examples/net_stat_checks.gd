@@ -41,6 +41,20 @@ static func run(host: Selftest) -> void:
 	menu.close()
 	DotRegistry.unregister_instance(DotMenuStock.PROFILER_SERVICE, profiler)
 
+	await _settings(host, menu, st, ns)
+	_meter(host, ns)
+	await _frame_clock(host, ns)
+	await _prediction(host, ns)
+
+	var _off := st.set_value(&"net_stat", 0)
+	host._check(not ns.visible and menu._fps_label.visible, "net_stat 0 hides it, and the counter comes back")
+
+	host._free_menu(menu)
+
+	await host._test_net_stat_own()
+
+
+static func _settings(host: Selftest, menu: DotMenu, st: DotSettingsManager, ns: DotMenuNetStat) -> void:
 	var _fps := st.set_value(&"show_fps", true)
 	var _two := st.set_value(&"net_stat", 2)
 	host._check(ns.visible and ns.level == DotMenuNetStat.Level.GRAPH, "net_stat 2 draws the graph")
@@ -62,6 +76,8 @@ static func run(host: Selftest) -> void:
 	var bad := st.set_value(&"net_stat_position", &"middle")
 	host._check(not bad.ok or ns.corner == &"top_left", "a corner that is not one is refused")
 
+
+static func _meter(host: Selftest, ns: DotMenuNetStat) -> void:
 	# A meter fed by hand: 4 KB on the state channel and 512 B of control a bucket, 40 ms ping.
 	var meter := DotMeteredPeer.new()
 	meter.note_rtt(40.0)
@@ -94,6 +110,8 @@ static func run(host: Selftest) -> void:
 	ns._push(null)
 	host._check(not bool(ns.describe()["connected"]), "with no meter it says so, not a flat line")
 
+
+static func _frame_clock(host: Selftest, ns: DotMenuNetStat) -> void:
 	# The frame clock on the wall clock: frames held to 25 ms by a busy wait read as 25 ms or
 	# more, whatever the smoothed process delta says. Headless, so render is 0 and the busy
 	# wait lands in the script part.
@@ -118,6 +136,8 @@ static func run(host: Selftest) -> void:
 	await host.get_tree().process_frame
 	host._check(int(ns.frames.summary(1.0)["hitches"]) >= 1, "a 60 ms frame is counted as a hitch")
 
+
+static func _prediction(host: Selftest, ns: DotMenuNetStat) -> void:
 	# Prediction counters, from whatever the net source returns, per second.
 	var fake := FakeNetManager.new()
 	ns.net_source = func() -> Object: return fake
@@ -135,10 +155,3 @@ static func run(host: Selftest) -> void:
 	var px := int(ns.describe()["pixels_3d"])
 	var win := host.get_window().size
 	host._check(px == win.x * win.y, "the 3D pixel count is the window's device pixels at scale 1 (%d)" % px)
-
-	var _off := st.set_value(&"net_stat", 0)
-	host._check(not ns.visible and menu._fps_label.visible, "net_stat 0 hides it, and the counter comes back")
-
-	host._free_menu(menu)
-
-	await host._test_net_stat_own()
