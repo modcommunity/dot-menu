@@ -28,6 +28,10 @@ var size_small: int = 13
 var _bold: Font = null
 
 
+## Smallest height of a button or row, set by the menu on a touch screen; 0 leaves the desktop sizes.
+var touch_target: int = 0
+
+
 func _init(p_palette: DotMenuPalette = null) -> void:
 	palette = p_palette if p_palette != null else DotMenuPalette.new()
 
@@ -39,6 +43,7 @@ func with_palette(p: DotMenuPalette) -> DotMenuKit:
 	k.embolden = embolden
 	k.bold_font = bold_font
 	k.radius = radius
+	k.touch_target = touch_target
 	k.radius_small = radius_small
 	k.size_title = size_title
 	k.size_heading = size_heading
@@ -243,7 +248,7 @@ func primary_button(text: String) -> Button:
 	var p := palette
 	var b := Button.new()
 	b.text = text
-	b.custom_minimum_size = Vector2(0, 42)
+	b.custom_minimum_size = Vector2(0, maxi(42, touch_target))
 	var pad := Vector4(16, 10, 16, 10)
 	var none := Color(0, 0, 0, 0)
 	b.add_theme_stylebox_override(&"normal", box(p.accent_deep, radius_small, none, 0, pad))
@@ -264,7 +269,7 @@ func secondary_button(text: String) -> Button:
 	var p := palette
 	var b := Button.new()
 	b.text = text
-	b.custom_minimum_size = Vector2(0, 42)
+	b.custom_minimum_size = Vector2(0, maxi(42, touch_target))
 	var pad := Vector4(16, 10, 16, 10)
 	b.add_theme_stylebox_override(&"normal", box(p.card, radius_small, p.line, 1, pad))
 	b.add_theme_stylebox_override(&"hover", box(p.card_hover, radius_small, p.accent, 1, pad))
@@ -283,7 +288,7 @@ func nav_button(text: String, group: ButtonGroup = null) -> Button:
 	var b := Button.new()
 	b.text = text
 	b.alignment = HORIZONTAL_ALIGNMENT_LEFT
-	b.custom_minimum_size = Vector2(0, 38)
+	b.custom_minimum_size = Vector2(0, maxi(38, touch_target))
 	b.focus_mode = Control.FOCUS_ALL
 	if group != null:
 		b.toggle_mode = true

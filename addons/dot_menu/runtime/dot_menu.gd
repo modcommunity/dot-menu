@@ -121,6 +121,9 @@ var _fps_label: Label = null
 ## nothing is open, with the key as it is bound now.
 var help_hint: PanelContainer = null
 
+## The tappable Menu button on a touch screen, where there is no Escape key; null otherwise.
+var menu_button: Button = null
+
 ## The short line [method toast] shows; null until the first one.
 var toast_plate: PanelContainer = null
 ## Where the toast's top edge sits, in pixels from the top. A game whose HUD draws a strip
@@ -207,6 +210,7 @@ func _build() -> void:
 	add_child(net_stat)
 
 	_build_help_hint()
+	_build_menu_button()
 
 	# Under everything else on this layer: the menu opened over a held board is on top.
 	scoreboard = DotMenuScoreboard.new()
@@ -315,16 +319,34 @@ func _build_help_hint() -> void:
 	_refresh_help_hint()
 
 
+## A Menu button for a touch screen: Escape is the only other way in, and a phone has none.
+func _build_menu_button() -> void:
+	if not config.touch_ui():
+		return
+	kit.touch_target = 52
+	menu_button = kit.secondary_button("Menu")
+	menu_button.name = "MenuButton"
+	menu_button.focus_mode = Control.FOCUS_NONE
+	menu_button.custom_minimum_size = Vector2(96, 52)
+	menu_button.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	menu_button.offset_left = 14.0
+	menu_button.offset_top = 14.0
+	menu_button.pressed.connect(open)
+	add_child(menu_button)
+
+
 ## The hint's key as bound now, and whether it shows: not while anything is open, not when
 ## the help key is on nothing.
 func _refresh_help_hint() -> void:
+	if menu_button != null:
+		menu_button.visible = not any_open()
 	if help_hint == null or help == null:
 		return
 	var k := help.help_key_shown()
 	var label := help_hint.find_child("Key", true, false)
 	if label != null and k != "":
 		((label as PanelContainer).get_child(0) as Label).text = k
-	help_hint.visible = k != "" and not any_open()
+	help_hint.visible = k != "" and not any_open() and menu_button == null
 
 
 ## Whether the help key is in no table row, so the help screen has to list it by hand.

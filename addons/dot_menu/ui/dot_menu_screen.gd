@@ -43,6 +43,9 @@ var extra_hidden_pages: PackedStringArray = PackedStringArray()
 
 var _page: StringName = &""
 var _nav: Dictionary = {}
+
+## Touch on a phone-wide screen: the page tabs sit above the page instead of beside it.
+var _narrow := false
 var _action_buttons: Dictionary = {}
 var _window: PanelContainer = null
 var _body: VBoxContainer = null
@@ -61,6 +64,7 @@ func _ready() -> void:
 		kit = DotMenuKit.new()
 	if config == null:
 		config = DotMenuConfig.new()
+	kit.touch_target = 52 if config.touch_ui() else 0
 	DotMenuKit.fill_parent(self)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	visible = false
@@ -100,12 +104,15 @@ func _build() -> void:
 	_window.add_theme_stylebox_override(&"panel", kit.surface_box())
 	centre.add_child(_window)
 
-	var columns := HBoxContainer.new()
+	_narrow = config.touch_ui() and get_viewport_rect().size.x < 600.0
+	var columns: BoxContainer = VBoxContainer.new() if _narrow else HBoxContainer.new()
 	columns.add_theme_constant_override(&"separation", 0)
 	_window.add_child(columns)
 
 	columns.add_child(_sidebar())
-	columns.add_child(_content())
+	var content := _content()
+	content.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	columns.add_child(content)
 	_built = true
 
 
@@ -180,6 +187,10 @@ func _fit() -> void:
 	if _window == null:
 		return
 	var view := get_viewport_rect().size
+	# A phone turned on its side changes layout: rebuild rather than leave the portrait one overflowing.
+	if _built and (config.touch_ui() and view.x < 600.0) != _narrow:
+		restyle(kit)
+		return
 	var m := float(config.window_margin) * 2.0
 	_window.custom_minimum_size = Vector2(
 		clampf(view.x - m, 320.0, float(config.window_max_width)),
@@ -194,14 +205,15 @@ func _sidebar() -> Control:
 	s.corner_radius_top_right = 0
 	s.corner_radius_bottom_right = 0
 	side.add_theme_stylebox_override(&"panel", s)
-	side.custom_minimum_size = Vector2(config.sidebar_width, 0)
+	if not _narrow:
+		side.custom_minimum_size = Vector2(config.sidebar_width, 0)
 
 	var col := VBoxContainer.new()
 	col.name = "Sidebar"
 	col.add_theme_constant_override(&"separation", 6)
 	side.add_child(col)
 
-	if config.brand_mark != "" or config.brand_name != "":
+	if not _narrow and (config.brand_mark != "" or config.brand_name != ""):
 		var brand := HBoxContainer.new()
 		brand.add_theme_constant_override(&"separation", 10)
 		if config.brand_mark != "":
@@ -214,25 +226,32 @@ func _sidebar() -> Control:
 		col.add_child(brand)
 
 	_subtitle = kit.paragraph(subtitle, kit.size_small, p.dim)
-	_subtitle.visible = subtitle != ""
+	_subtitle.visible = subtitle != "" and not _narrow
 	col.add_child(_subtitle)
 	col.add_child(DotMenuKit.gap(14))
 
 	_resume = kit.primary_button("Resume")
 	_resume.name = "Resume"
 	_resume.pressed.connect(close)
+	_resume.visible = not _narrow
 	col.add_child(_resume)
 	col.add_child(DotMenuKit.gap(10))
 
-	var tabs := VBoxContainer.new()
+	var tabs: Container = HFlowContainer.new() if _narrow else VBoxContainer.new()
 	tabs.name = "Pages"
 	tabs.add_theme_constant_override(&"separation", 6)
 	col.add_child(tabs)
 
 	var spacer := Control.new()
 	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	spacer.visible = not _narrow
 	col.add_child(spacer)
 
+	var action_row: Container = col
+	if _narrow:
+		action_row = HFlowContainer.new()
+		action_row.add_theme_constant_override(&"h_separation", 6)
+		col.add_child(action_row)
 	for a in actions:
 		var id: StringName = a.get("id", &"")
 		var b := kit.nav_button(str(a.get("text", "")), null)
@@ -243,7 +262,7 @@ func _sidebar() -> Control:
 		b.visible = str(a.get("text", "")) != ""
 		b.pressed.connect(func() -> void: action_requested.emit(id))
 		_action_buttons[id] = b
-		col.add_child(b)
+		action_row.add_child(b)
 	return side
 
 
@@ -252,7 +271,7 @@ func _sidebar() -> Control:
 func _rebuild_sidebar() -> void:
 	if not _built:
 		return
-	var tabs := _window.find_child("Pages", true, false) as VBoxContainer
+	var tabs := _window.find_child("Pages", true, false) as Container
 	if tabs == null:
 		return
 	DotMenuKit.clear(tabs)
@@ -289,11 +308,17 @@ func _content() -> Control:
 	_title = kit.label("", kit.size_title, p.text, true)
 	_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head.add_child(_title)
-	var esc := HBoxContainer.new()
-	esc.add_theme_constant_override(&"separation", 6)
-	esc.add_child(kit.keycap("Esc"))
-	esc.add_child(kit.label("to resume", kit.size_small, p.dim))
-	head.add_child(esc)
+	if config.touch_ui():
+		var done := kit.secondary_button("Close")
+		done.name = "Close"
+		done.pressed.connect(close)
+		head.add_child(done)
+	else:
+		var esc := HBoxContainer.new()
+		esc.add_theme_constant_override(&"separation", 6)
+		esc.add_child(kit.keycap("Esc"))
+		esc.add_child(kit.label("to resume", kit.size_small, p.dim))
+		head.add_child(esc)
 	col.add_child(head)
 
 	_blurb = kit.paragraph("", kit.size_small, p.muted)
@@ -304,6 +329,9 @@ func _content() -> Control:
 	_scroll = ScrollContainer.new()
 	_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	if config.touch_ui():
+		# Drag scrolls; a finger wobbles more than a mouse, so a tap on a row is not a scroll.
+		_scroll.scroll_deadzone = 24
 	col.add_child(_scroll)
 
 	var pad := MarginContainer.new()
@@ -508,9 +536,9 @@ func _row(card: VBoxContainer, title: String, description: String, control: Cont
 	if card.get_child_count() > 0:
 		card.add_child(HSeparator.new())
 
-	var line := HBoxContainer.new()
-	line.add_theme_constant_override(&"separation", 18)
-	line.custom_minimum_size = Vector2(0, 52)
+	var line: BoxContainer = VBoxContainer.new() if _narrow else HBoxContainer.new()
+	line.add_theme_constant_override(&"separation", 8 if _narrow else 18)
+	line.custom_minimum_size = Vector2(0, maxi(52, kit.touch_target + 8))
 
 	var words := VBoxContainer.new()
 	words.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -605,7 +633,7 @@ func _slider(row: DotMenuRow) -> Control:
 	slider.min_value = r.x
 	slider.max_value = r.y
 	slider.step = r.z
-	slider.custom_minimum_size = Vector2(190, 22)
+	slider.custom_minimum_size = Vector2(190, maxi(22, kit.touch_target - 8))
 	slider.focus_mode = Control.FOCUS_ALL
 	slider.editable = row.is_enabled()
 	var v: Variant = _value_of(row)
@@ -644,7 +672,7 @@ func _select(row: DotMenuRow) -> Control:
 		options.append([current, DotMenuRow.label_for_option(current)])
 
 	var pick := OptionButton.new()
-	pick.custom_minimum_size = Vector2(200, 36)
+	pick.custom_minimum_size = Vector2(200, maxi(36, kit.touch_target - 8))
 	pick.focus_mode = Control.FOCUS_ALL
 	pick.fit_to_longest_item = true
 	pick.disabled = not row.is_enabled()

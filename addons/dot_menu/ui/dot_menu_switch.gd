@@ -17,7 +17,8 @@ func _init(p_kit: DotMenuKit = null) -> void:
 	toggle_mode = true
 	flat = true
 	focus_mode = Control.FOCUS_ALL
-	custom_minimum_size = TRACK
+	# The track draws right-aligned in a taller, wider hit area on a touch screen.
+	custom_minimum_size = Vector2(TRACK.x + 20.0, maxf(TRACK.y, kit.touch_target)) if kit.touch_target > 0 else TRACK
 	mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	# The flat button draws nothing of its own; the focus ring is drawn below.

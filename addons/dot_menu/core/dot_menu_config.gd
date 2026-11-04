@@ -53,6 +53,10 @@ extends DotConfig
 ## keys the game never sees.
 @export var browser_tips: StringName = &"auto"
 
+## "auto" (a touch screen, [method DotPlatform.has_touch]), "on" or "off": a Menu button on the HUD, a Close
+## button for Escape, finger-sized rows and a menu that fits a phone.
+@export var touch: StringName = &"auto"
+
 ## Typed before a chat command on the help screen ("!rtv").
 @export var command_prefix: String = "!"
 
@@ -84,6 +88,13 @@ extends DotConfig
 ## Draw the connection overlay when the `net_stat` setting asks for it. Off for a host that
 ## draws its own; the setting is still declared and stored.
 @export var net_stat: bool = true
+
+
+## Whether the menu draws for fingers.
+func touch_ui() -> bool:
+	if touch == &"on":
+		return true
+	return touch != &"off" and DotPlatform.has_touch()
 
 
 func env_prefix() -> String:
