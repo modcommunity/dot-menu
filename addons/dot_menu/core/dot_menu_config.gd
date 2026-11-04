@@ -85,6 +85,11 @@ extends DotConfig
 ## [member DotMenu.help_hint] is the Control, for a game that wants it somewhere exact.
 @export var help_hint: StringName = &"top_right"
 
+## The touch Menu button's corner (top_right, top_left, bottom_right, bottom_left). Top right
+## because a HUD's title and clock sit top left and centre; a game whose HUD uses the right
+## moves it.
+@export var menu_button_corner: StringName = &"top_right"
+
 ## Draw the connection overlay when the `net_stat` setting asks for it. Off for a host that
 ## draws its own; the setting is still declared and stored.
 @export var net_stat: bool = true

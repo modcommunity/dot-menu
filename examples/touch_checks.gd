@@ -21,6 +21,7 @@ static func run(host: Selftest) -> void:
 	await host.get_tree().process_frame
 	host._check(menu.menu_button != null and menu.menu_button.visible, "touch shows the Menu button on the HUD")
 	host._check(menu.menu_button != null and menu.menu_button.custom_minimum_size.y >= 52, "the Menu button is finger-sized")
+	host._check(menu.menu_button != null and menu.menu_button.anchor_left == 1.0 and menu.menu_button.offset_right < 0.0, "the Menu button sits top right, clear of a HUD title top left")
 	menu.open(&"video")
 	await host.get_tree().process_frame
 	host._check(menu.menu_button != null and not menu.menu_button.visible, "the Menu button hides while a screen is open")
