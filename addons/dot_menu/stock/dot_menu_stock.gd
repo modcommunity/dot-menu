@@ -29,6 +29,8 @@ const GROUP_VIEWMODEL := &"viewmodel"
 
 ## A game with this script class gets `viewmodel_fov` (zee-dot-weapons' `ZeeViewModel`).
 const VIEW_MODEL_CLASS := &"ZeeViewModel"
+## Every view model class that answers `set_hands_fov_at_4_3`; a game with any of them gets `viewmodel_fov`.
+const VIEW_MODEL_CLASSES: Array[StringName] = [VIEW_MODEL_CLASS, &"AwViewModel"]
 ## `viewmodel_fov` default, horizontal degrees on a 4:3 frame like `field_of_view`.
 const VIEWMODEL_FOV := 54
 
@@ -198,7 +200,7 @@ static func declare_net_stat(schema: DotSettingsSchema, corner: StringName = &""
 ## Whether this project ships a first-person view model (a global script class, so no addon is named).
 static func has_view_model() -> bool:
 	for c in ProjectSettings.get_global_class_list():
-		if c.get("class") == VIEW_MODEL_CLASS:
+		if VIEW_MODEL_CLASSES.has(StringName(c.get("class", ""))):
 			return true
 	return false
 
