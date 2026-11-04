@@ -28,9 +28,9 @@ const GROUP_MUSIC := &"music"
 const GROUP_VIEWMODEL := &"viewmodel"
 
 ## A game with this script class gets `viewmodel_fov` (zee-dot-weapons' `ZeeViewModel`).
-const VIEW_MODEL_CLASS := &"ZeeViewModel"
+const ZEE_VIEW_MODEL_CLASS := &"ZeeViewModel"
 ## Every view model class that answers `set_hands_fov_at_4_3`; a game with any of them gets `viewmodel_fov`.
-const VIEW_MODEL_CLASSES: Array[StringName] = [VIEW_MODEL_CLASS, &"AwViewModel"]
+const VIEW_MODEL_CLASSES: Array[StringName] = [ZEE_VIEW_MODEL_CLASS, &"AwViewModel"]
 ## `viewmodel_fov` default, horizontal degrees on a 4:3 frame like `field_of_view`.
 const VIEWMODEL_FOV := 54
 
