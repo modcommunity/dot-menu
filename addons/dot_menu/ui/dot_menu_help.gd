@@ -201,7 +201,7 @@ func is_open() -> bool:
 
 
 func _fit() -> void:
-	if _window == null:
+	if _window == null or not is_inside_tree():
 		return
 	var view := get_viewport_rect().size
 	var m := float(config.window_margin) * 2.0

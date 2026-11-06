@@ -208,7 +208,7 @@ func _fit_bar() -> void:
 
 
 func _fit() -> void:
-	if _window == null:
+	if _window == null or not is_inside_tree():
 		return
 	var view := get_viewport_rect().size
 	_window.custom_minimum_size = Vector2(clampf(view.x - 80.0, 360.0, 1080.0), 0)
@@ -217,7 +217,7 @@ func _fit() -> void:
 
 ## The panel stops at [constant MAX_HEIGHT_FRACTION] of the view; the rows scroll, the header stays.
 func _fit_scroll() -> void:
-	if _scroll == null or _head == null:
+	if _scroll == null or _head == null or not is_inside_tree():
 		return
 	var room := get_viewport_rect().size.y * MAX_HEIGHT_FRACTION - 40.0 - 12.0 - _head.get_combined_minimum_size().y
 	var want := minf(_body.get_combined_minimum_size().y, maxf(room, 80.0))
