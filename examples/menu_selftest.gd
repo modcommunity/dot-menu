@@ -3,7 +3,7 @@ extends "res://examples/menu_selftest_base.gd"
 ## Exercises dot-menu with no game: the data model, stock settings and what applies them, the bindings table, the screens, the facade's keys, and what a server may do.
 ## CHECKS is the guard the section counter cannot be: a script error aborts that test, not the run, and only the total notices checks that never ran.
 const SECTIONS := 32
-const CHECKS := 491
+const CHECKS := 493
 
 
 func _ready() -> void:
