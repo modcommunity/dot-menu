@@ -205,6 +205,7 @@ The stock settings and their defaults:
 | `invert_mouse` | off | | account |
 | `shake_scale` | 1.0 | 0 to 2 | device |
 | `allow_flashes` | on | | device |
+| `reduce_motion` | off | | device; applied to fx targets with `reduce_motion` or `reduced_motion` (dot-ui `DotWinnerReveal`) |
 | `ui_theme` | midnight | the themes | account |
 | `scoreboard_hidden` | empty | | device |
 | `show_fps` | off | | device |

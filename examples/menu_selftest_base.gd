@@ -97,6 +97,8 @@ class FakeMixer extends RefCounted:
 class FakeFx extends RefCounted:
 	var shake_scale := 1.0
 	var allow_flashes := true
+	var reduce_motion := false
+	var reduced_motion := false
 	var quality := 3
 
 
