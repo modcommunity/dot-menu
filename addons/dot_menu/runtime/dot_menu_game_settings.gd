@@ -19,6 +19,7 @@ func _init(game_spec: DotMenuGameSpec = null) -> void:
 	config.brand_name = spec.brand_name
 	if spec.bindings_maker.is_valid():
 		bindings = spec.bindings_maker.call()
+	config.open_on_pointer_release = spec.open_on_pointer_release
 	if spec.help_hint != &"":
 		config.help_hint = spec.help_hint
 	# By name: an older dot-menu has no such property.
@@ -29,6 +30,8 @@ func _init(game_spec: DotMenuGameSpec = null) -> void:
 
 func setup(store: DotSettingsStore = null, with_menu: bool = true) -> DotResult:
 	var made := super.setup(store, with_menu)
+	if menu != null and spec != null and spec.gore_text != "":
+		DotMenuStock.add_gore_row(menu.page(&"video"))
 	if menu != null and spec != null and spec.comfort_row_text != "":
 		var general := menu.page(&"general")
 		if general != null:

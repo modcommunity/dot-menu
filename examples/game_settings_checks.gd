@@ -14,6 +14,8 @@ static func _spec() -> DotMenuGameSpec:
 	spec.reduce_motion_text = "Nothing slides."
 	spec.comfort_row_text = "Nothing slides in."
 	spec.ambient_text = "Quiet sounds."
+	spec.gore_text = "Blood."
+	spec.open_on_pointer_release = false
 	spec.not_applied = [&"ui_volume", &"voice_volume"] as Array[StringName]
 	spec.bindings_maker = func() -> DotMenuBindings: return DotMenuBindings.new().add_movement()
 	spec.help_hint = &"off"
@@ -40,12 +42,17 @@ static func run(host: Selftest) -> void:
 	spec.ambient_text = ""
 	host._check(not spec.make_schema().has(&"ambient"), "no ambient text, no ambient settings")
 	spec.ambient_text = "Quiet sounds."
+	host._check(schema.has(&"gore") and schema.find(&"gore").default_value == true, "gore is declared when the spec has blood")
+	spec.gore_text = ""
+	host._check(not spec.make_schema().has(&"gore"), "and not when it has none")
+	spec.gore_text = "Blood."
 
 	var node := DotMenuGameSettings.new(spec)
 	host._check(node.name == "Settings" and node.directory == "user://spec_run_settings" and node.app_namespace == &"spec_run",
 		"the node takes its name, directory and namespace from the spec")
 	host._check(node.config.brand_name == "Spec Run" and node.config.help_hint == &"off", "and the brand and help hint")
 	host._check(node.config.menu_button_corner == &"top_left", "and the corner of the menu button")
+	host._check(not node.config.open_on_pointer_release, "and whether a lost pointer lock opens the menu")
 	host._check(node.bindings.groups().size() > 0, "and the key table the spec makes")
 	host.add_child(node)
 	var res := node.setup(DotSettingsStoreMemory.new())

@@ -23,6 +23,9 @@ var reduce_motion_text: String = ""
 ## Also puts a "Reduce motion" toggle with this description on the General page's Comfort section. Empty: no extra row.
 var comfort_row_text: String = ""
 
+## A `gore` toggle (dot-fx's decals read it) with this description, and its "Blood splatters" row on the Video page. Empty: the game has no blood.
+var gore_text: String = ""
+
 ## The ambient sound toggle's description; it comes with an `ambient_volume`. Empty: the game has no ambient settings.
 var ambient_text: String = ""
 
@@ -37,6 +40,9 @@ var help_hint: StringName = &""
 
 ## `DotMenuConfig.menu_button_corner` when not empty (a touch game keeps the thumbs' corner clear).
 var menu_button_corner: StringName = &""
+
+## `DotMenuConfig.open_on_pointer_release`: false for a game whose Escape belongs to something else.
+var open_on_pointer_release: bool = true
 
 ## The help screen: the goal, prose cards as [title, text], and sections as [title, rows, kind].
 var help_about: String = ""
@@ -55,6 +61,8 @@ func make_schema() -> DotSettingsSchema:
 	if reduce_motion_text != "":
 		s.add(DotSettingsDef.boolean(&"reduce_motion", false, &"accessibility").with_scope(DotSettingsDef.Scope.ACCOUNT)
 			.with_description(reduce_motion_text))
+	if gore_text != "":
+		s.add(DotSettingsDef.boolean(&"gore", true, &"video").with_description(gore_text))
 	if ambient_text != "":
 		s.add(DotSettingsDef.boolean(&"ambient", true, &"audio").with_description(ambient_text))
 		s.add(DotSettingsDef.number(&"ambient_volume", 1.0, 0.0, 1.0, &"audio"))
