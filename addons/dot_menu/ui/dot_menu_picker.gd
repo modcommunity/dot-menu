@@ -57,6 +57,14 @@ func _ready() -> void:
 	DotMenuKit.fill_parent(self)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	visible = false
+
+
+## Builds the window on first use. A menu that is never opened, or not yet, costs a bare
+## control: the screens used to build every node at start, which was ~95 nodes in a game
+## that opens them once or twice a session.
+func _ensure_built() -> void:
+	if _built:
+		return
 	_build()
 
 
@@ -123,6 +131,7 @@ func open(list: Array, title: String = "") -> void:
 	items = list
 	if title != "":
 		title_text = title
+	_ensure_built()
 	page = 0
 	for i in items.size():
 		if items[i] is Dictionary and bool((items[i] as Dictionary).get("current", false)):

@@ -69,8 +69,9 @@ static func run(host: Selftest) -> void:
 
 static func _leave(host: Selftest, node: FilledSettings) -> void:
 	# Leave: there, and worded for where the player is.
-	var leave := node.menu.screen.find_child("Action_leave", true, false) as Button
+	# The window is built on the first open, so the button is looked up after it.
 	node.open()
+	var leave := node.menu.screen.find_child("Action_leave", true, false) as Button
 	host._check(leave != null and leave.visible and leave.text == ("" if DotPlatform.is_web() else "Quit game"),
 		"Leave is in the stock menu, and solo on a desktop it quits")
 	host._check(node.menu.screen.find_child("Action_help", true, false) != null, "so is Help & commands")

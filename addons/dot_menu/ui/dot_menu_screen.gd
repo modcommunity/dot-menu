@@ -68,10 +68,17 @@ func _ready() -> void:
 	DotMenuKit.fill_parent(self)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	visible = false
-	_build()
 	_watch_viewport()
-	_fit()
 
+
+## Builds the window on first use. A menu that is never opened, or not yet, costs a bare
+## control: the screens used to build every node at start, which was ~95 nodes in a game
+## that opens them once or twice a session.
+func _ensure_built() -> void:
+	if _built:
+		return
+	_build()
+	_fit()
 
 ## Rebuilds this screen in [param new_kit]. What a theme change calls.
 ## Rebuilt, not recoloured: walking the tree to find every override again would be a second copy of the build that drifts from the first.
@@ -118,6 +125,7 @@ func _build() -> void:
 
 ## Opens on [param page], or on the page it was last left on, or the first.
 func open(page: StringName = &"") -> void:
+	_ensure_built()
 	if page != &"":
 		_page = page
 	_rebuild_sidebar()

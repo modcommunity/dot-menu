@@ -33,6 +33,14 @@ func _ready() -> void:
 	DotMenuKit.fill_parent(self)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	visible = false
+
+
+## Builds the window on first use. A menu that is never opened, or not yet, costs a bare
+## control: the screens used to build every node at start, which was ~95 nodes in a game
+## that opens them once or twice a session.
+func _ensure_built() -> void:
+	if _built:
+		return
 	_build()
 
 
@@ -88,6 +96,7 @@ func _build() -> void:
 
 
 func open() -> void:
+	_ensure_built()
 	visible = true
 	_dragging = &""
 	queue_redraw()
