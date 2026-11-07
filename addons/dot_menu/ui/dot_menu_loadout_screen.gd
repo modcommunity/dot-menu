@@ -75,7 +75,7 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	visible = false
 	_build()
-	get_viewport().size_changed.connect(_fit)
+	_watch_viewport()
 
 
 func restyle(new_kit: DotMenuKit) -> void:
@@ -764,3 +764,28 @@ func describe() -> Dictionary:
 	return {"open": visible, "slot": str(current_slot().get("id", "")), "card": card_index,
 		"draft": draft.duplicate(), "changes": changes(), "points": points_with(),
 		"budget": int(offer.get("budget", 0)), "status": _status_text}
+
+
+var _watched: Viewport
+var _ready_done := false
+
+
+func _enter_tree() -> void:
+	if _ready_done:
+		_watch_viewport()
+
+
+func _exit_tree() -> void:
+	if _watched != null and _watched.size_changed.is_connected(_fit):
+		_watched.size_changed.disconnect(_fit)
+	_watched = null
+
+
+func _watch_viewport() -> void:
+	_ready_done = true
+	var vp := get_viewport()
+	if vp == _watched:
+		return
+	if vp != null and not vp.size_changed.is_connected(_fit):
+		vp.size_changed.connect(_fit)
+	_watched = vp

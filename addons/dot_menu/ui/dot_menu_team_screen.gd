@@ -49,9 +49,12 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	visible = false
 	_build()
-	get_viewport().size_changed.connect(func() -> void:
-		if visible:
-			_rebuild())
+	_watch_viewport()
+
+
+func _on_size_changed() -> void:
+	if visible and is_inside_tree():
+		_rebuild()
 
 
 func restyle(new_kit: DotMenuKit) -> void:
@@ -380,3 +383,28 @@ func _card(index: int, e: Dictionary) -> Control:
 func describe() -> Dictionary:
 	return {"open": visible, "cards": entries.size(), "focus": focus, "columns": columns_for(entries.size()),
 		"ffa": bool(last_data.get("ffa", false)), "last_result": last_result}
+
+
+var _watched: Viewport
+var _ready_done := false
+
+
+func _enter_tree() -> void:
+	if _ready_done:
+		_watch_viewport()
+
+
+func _exit_tree() -> void:
+	if _watched != null and _watched.size_changed.is_connected(_on_size_changed):
+		_watched.size_changed.disconnect(_on_size_changed)
+	_watched = null
+
+
+func _watch_viewport() -> void:
+	_ready_done = true
+	var vp := get_viewport()
+	if vp == _watched:
+		return
+	if vp != null and not vp.size_changed.is_connected(_on_size_changed):
+		vp.size_changed.connect(_on_size_changed)
+	_watched = vp

@@ -69,7 +69,7 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	visible = false
 	_build()
-	get_viewport().size_changed.connect(_fit)
+	_watch_viewport()
 	_fit()
 
 
@@ -184,7 +184,7 @@ func set_action_text(id: StringName, text: String) -> void:
 ## Sized to the window, within limits, so a laptop and a 4K screen both get a menu that fits
 ## rather than one that is either cramped or lost in the middle.
 func _fit() -> void:
-	if _window == null:
+	if _window == null or not is_inside_tree():
 		return
 	var view := get_viewport_rect().size
 	# A phone turned on its side changes layout: rebuild rather than leave the portrait one overflowing.
@@ -716,3 +716,28 @@ func describe() -> Dictionary:
 		"open": visible, "page": String(_page), "pages": visible_pages().size(),
 		"hidden_rows": Array(extra_hidden_rows), "hidden_pages": Array(extra_hidden_pages),
 	}
+
+
+var _watched: Viewport
+var _ready_done := false
+
+
+func _enter_tree() -> void:
+	if _ready_done:
+		_watch_viewport()
+
+
+func _exit_tree() -> void:
+	if _watched != null and _watched.size_changed.is_connected(_fit):
+		_watched.size_changed.disconnect(_fit)
+	_watched = null
+
+
+func _watch_viewport() -> void:
+	_ready_done = true
+	var vp := get_viewport()
+	if vp == _watched:
+		return
+	if vp != null and not vp.size_changed.is_connected(_fit):
+		vp.size_changed.connect(_fit)
+	_watched = vp
