@@ -44,5 +44,10 @@ static func run(host: Node) -> void:
 	host.add_child(vp2)
 	vp2.add_child(board)
 	host._check(vp2.size_changed.is_connected(fit) and not vp.size_changed.is_connected(fit), "joining another viewport connects to that one")
+	vp2.remove_child(board)
+	var window2 := board.find_child("Window", true, false) as Control
+	window2.custom_minimum_size = Vector2(7, 7)
+	board._fit()
+	host._check(window2.custom_minimum_size == Vector2(7, 7), "a pending fit on a detached board does nothing instead of erroring")
 	vp2.queue_free()
 	vp.queue_free()

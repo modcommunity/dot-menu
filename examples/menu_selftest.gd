@@ -3,7 +3,7 @@ extends "res://examples/menu_selftest_base.gd"
 ## Exercises dot-menu with no game: the data model, stock settings and what applies them, the bindings table, the screens, the facade's keys, and what a server may do.
 ## CHECKS is the guard the section counter cannot be: a script error aborts that test, not the run, and only the total notices checks that never ran.
 const SECTIONS := 32
-const CHECKS := 476
+const CHECKS := 478
 
 
 func _ready() -> void:
@@ -622,6 +622,11 @@ func _test_help_and_picker() -> void:
 	_check(caps.has("L"), "a key rebound a moment ago is shown where it is now")
 	_check(caps.any(func(t: String) -> bool: return t.begins_with("You are playing offline")), "and offline it says why there are no commands")
 	menu.help.close()
+	menu.remove_child(menu.help)
+	menu.help._window.custom_minimum_size = Vector2(7, 7)
+	menu.help._fit()
+	_check(menu.help._window.custom_minimum_size == Vector2(7, 7), "a pending fit on a detached help does nothing instead of erroring")
+	menu.add_child(menu.help)
 
 	var items: Array = []
 	for i in 10:
