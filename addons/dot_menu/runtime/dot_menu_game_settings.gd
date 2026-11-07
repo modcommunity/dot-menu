@@ -21,6 +21,9 @@ func _init(game_spec: DotMenuGameSpec = null) -> void:
 		bindings = spec.bindings_maker.call()
 	if spec.help_hint != &"":
 		config.help_hint = spec.help_hint
+	# By name: an older dot-menu has no such property.
+	if spec.menu_button_corner != &"" and &"menu_button_corner" in config:
+		config.set(&"menu_button_corner", spec.menu_button_corner)
 	var _layered := config.load_layered()
 
 

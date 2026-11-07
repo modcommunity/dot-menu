@@ -35,6 +35,9 @@ var bindings_maker: Callable = Callable()
 ## `DotMenuConfig.help_hint` when not empty (`&"off"` hides the corner plate).
 var help_hint: StringName = &""
 
+## `DotMenuConfig.menu_button_corner` when not empty (a touch game keeps the thumbs' corner clear).
+var menu_button_corner: StringName = &""
+
 ## The help screen: the goal, prose cards as [title, text], and sections as [title, rows, kind].
 var help_about: String = ""
 var help_cards: Array = []

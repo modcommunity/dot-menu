@@ -17,6 +17,7 @@ static func _spec() -> DotMenuGameSpec:
 	spec.not_applied = [&"ui_volume", &"voice_volume"] as Array[StringName]
 	spec.bindings_maker = func() -> DotMenuBindings: return DotMenuBindings.new().add_movement()
 	spec.help_hint = &"off"
+	spec.menu_button_corner = &"top_left"
 	spec.help_about = "Get across."
 	spec.help_cards = [["Rules", "First across wins."]]
 	spec.help_sections = [["Mouse", [["Left", "Fire"]], &"keys"]]
@@ -44,6 +45,7 @@ static func run(host: Selftest) -> void:
 	host._check(node.name == "Settings" and node.directory == "user://spec_run_settings" and node.app_namespace == &"spec_run",
 		"the node takes its name, directory and namespace from the spec")
 	host._check(node.config.brand_name == "Spec Run" and node.config.help_hint == &"off", "and the brand and help hint")
+	host._check(node.config.menu_button_corner == &"top_left", "and the corner of the menu button")
 	host._check(node.bindings.groups().size() > 0, "and the key table the spec makes")
 	host.add_child(node)
 	var res := node.setup(DotSettingsStoreMemory.new())
