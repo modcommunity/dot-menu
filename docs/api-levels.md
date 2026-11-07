@@ -41,3 +41,4 @@ What each `DotMenuApi.LEVEL` added; the rule for bumping is on `DotAddonApi`.
 20 DotMenuBindings.add_workbench, WORKBENCH_ACTION/SETTING/KEY (the workbench toggle on the semicolon, added by DotMenuSettings where dot-workbench is linked; the avatar Pose default moves to the apostrophe).
 
 21 The Maps / Game modes tabs: DotMenuMaps.modes_fn/mode_group/modes_tab/apply_mode_now/mode/toggle_tab()/has_tabs(); DotMenu.modes_action; DotMenuBindings.add_modes and MODES_*; DotMenuSettings.map_modes; DotMenuPicker.tabs/tab/pick_closes/tab_clicked.
+22 DotMenuGameSpec and DotMenuGameSettings: a game declares its settings menu (names, field of view, ambient and Comfort rows, left-out stock keys, key table, help text) as data.

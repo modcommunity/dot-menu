@@ -246,3 +246,17 @@ add_child(ed)
 ed.add_set(npc_set, "NPCs")
 ed.open("npc", "zombie")   # Apply saves to the player's user tier by default
 ```
+
+## dot_menu_game_spec
+
+```gdscript
+var spec := DotMenuGameSpec.new()
+spec.brand_name = "Wipeout"
+spec.settings_dir = "user://wipeout_settings"
+spec.app_namespace = &"wipeout"
+spec.ambient_text = "Quiet sounds under the course."
+spec.bindings_maker = func() -> DotMenuBindings: return WoBindings.make()
+spec.help_about = "Get round the course as fast as you can."
+spec.help_cards = [["Points", "Finishing earns points by place."]]
+var settings := DotMenuGameSettings.new(spec)         # or a shim: func _init(): super(spec_for())
+```

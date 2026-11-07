@@ -2,8 +2,8 @@ extends "res://examples/menu_selftest_base.gd"
 
 ## Exercises dot-menu with no game: the data model, stock settings and what applies them, the bindings table, the screens, the facade's keys, and what a server may do.
 ## CHECKS is the guard the section counter cannot be: a script error aborts that test, not the run, and only the total notices checks that never ran.
-const SECTIONS := 32
-const CHECKS := 493
+const SECTIONS := 33
+const CHECKS := 506
 
 
 func _ready() -> void:
@@ -34,6 +34,7 @@ func _run() -> void:
 	await load("res://examples/touch_checks.gd").run(self)
 	await _test_voice()
 	await load("res://examples/help_leave_checks.gd").run(self)
+	await load("res://examples/game_settings_checks.gd").run(self)
 	await load("res://examples/exit_tree_checks.gd").run(self)
 	await load("res://examples/map_menu_checks.gd").run(self)
 	await _test_map_modes()
