@@ -323,6 +323,10 @@ func _test_applier() -> void:
 	_check(is_equal_approx(mixer.master, 0.5) and mixer.applied > 0, "a stored volume is applied at boot, without being touched")
 	_check(is_equal_approx(look.mouse_sensitivity, 2.0 * DotMenuApplier.DEGREES_PER_COUNT), "the sensitivity is the family's degrees per count")
 	_check(fx.shake_scale == 0.0, "the shake reaches the effects")
+	_check(DotMenuStock.declare(DotSettingsSchema.new()).has(&"reduce_motion") and not fx.reduce_motion and not fx.reduced_motion,
+		"reduce_motion is a stock Comfort key, off by default")
+	var _rm := st.set_value(&"reduce_motion", true)
+	_check(fx.reduce_motion and fx.reduced_motion, "turning reduce_motion on reaches both spellings of the effects' flag")
 	_check(cam.fov == 90.0, "and the field of view the camera")
 	_check(heard.size() == 1 and heard[0][1] == &"applied", "a game's handler hears the boot value once")
 

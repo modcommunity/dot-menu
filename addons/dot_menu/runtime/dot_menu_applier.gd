@@ -28,7 +28,7 @@ const APPLIES: Array[StringName] = [
 	&"master_volume", &"sfx_volume", &"ui_volume", &"music_volume", &"voice_volume", &"ambience_volume",
 	&"voice_mode", &"voice_input_device",
 	&"fps_max", &"vsync", &"window_mode", &"render_scale",
-	&"shake_scale", &"allow_flashes", &"fx_quality",
+	&"shake_scale", &"allow_flashes", &"reduce_motion", &"fx_quality",
 	&"sensitivity", &"invert_mouse", &"field_of_view", &"viewmodel_fov",
 ]
 const APPLIED_BY_MENU: Array[StringName] = [
@@ -245,7 +245,7 @@ func _apply(key: StringName, value: Variant, why: StringName) -> void:
 			&"render_scale":
 				if manage_window and is_inside_tree():
 					get_viewport().scaling_3d_scale = clampf(float(value), 0.25, 2.0)
-			&"shake_scale", &"allow_flashes", &"fx_quality":
+			&"shake_scale", &"allow_flashes", &"reduce_motion", &"fx_quality":
 				_apply_fx()
 			&"sensitivity", &"invert_mouse":
 				_apply_look()
@@ -337,6 +337,13 @@ func _apply_fx() -> void:
 			cfg.set(&"shake_scale", settings.get_float(&"shake_scale", 1.0))
 		if _has(&"allow_flashes") and "allow_flashes" in cfg:
 			cfg.set(&"allow_flashes", settings.get_bool(&"allow_flashes", true))
+		# Duck-typed: dot-fx's config says reduce_motion, dot-ui's DotWinnerReveal reduced_motion.
+		if _has(&"reduce_motion"):
+			var still := settings.get_bool(&"reduce_motion", false)
+			if "reduce_motion" in cfg:
+				cfg.set(&"reduce_motion", still)
+			if "reduced_motion" in cfg:
+				cfg.set(&"reduced_motion", still)
 		if _has(&"fx_quality") and "quality" in cfg:
 			cfg.set(&"quality", settings.get_int(&"fx_quality", 3))
 

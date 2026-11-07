@@ -54,7 +54,7 @@ const KEYS := {
 	GROUP_MUSIC: [&"music_volume"],
 	GROUP_VIDEO: [&"window_mode", &"vsync", &"fps_max", &"render_scale", &"field_of_view", &"fx_quality", &"aniso", &"aa", &"mip_bias", &"sharpness"],
 	GROUP_CONTROLS: [&"sensitivity", &"invert_mouse"],
-	GROUP_COMFORT: [&"shake_scale", &"allow_flashes"],
+	GROUP_COMFORT: [&"shake_scale", &"allow_flashes", &"reduce_motion"],
 	GROUP_INTERFACE: [&"ui_theme", &"hud_scale", &"show_fps", &"net_stat", &"net_stat_height", &"net_stat_position", &"scoreboard_hidden"],
 	GROUP_CHAT: [&"chat_window"],
 	GROUP_VOICE: [&"voice_mode", &"voice_input_device"],
@@ -143,6 +143,7 @@ static func _declare(schema: DotSettingsSchema, groups: Array[StringName], theme
 	if groups.has(GROUP_COMFORT):
 		_add(schema, DotSettingsDef.number(&"shake_scale", 1.0, 0.0, 2.0, &"accessibility"))
 		_add(schema, DotSettingsDef.boolean(&"allow_flashes", true, &"accessibility"))
+		_add(schema, DotSettingsDef.boolean(&"reduce_motion", false, &"accessibility"))
 
 	if groups.has(GROUP_INTERFACE):
 		var t := themes if themes != null else DotMenuThemes.stock()
@@ -284,7 +285,8 @@ static func general_page() -> DotMenuPage:
 	p.section("Comfort") \
 		.add(DotMenuRow.slider(&"shake_scale", "Camera shake", "How hard the view shakes for a landing, a hit or an explosion.")
 			.formatted(DotMenuRow.FORMAT_PERCENT_OR_OFF)) \
-		.add(DotMenuRow.toggle(&"allow_flashes", "Screen flashes", "Full-screen flashes of colour."))
+		.add(DotMenuRow.toggle(&"allow_flashes", "Screen flashes", "Full-screen flashes of colour.")) \
+		.add(DotMenuRow.toggle(&"reduce_motion", "Reduce motion", "Screens such as the winner reveal show their final frame at once, with nothing moving."))
 	p.section("Chat") \
 		.add(DotMenuRow.select(&"chat_window", "Chat box", "Auto hides it on a server that already shows chat somewhere else.",
 			[[&"auto", "Auto"], [&"on", "Always"], [&"off", "Never"]]))
