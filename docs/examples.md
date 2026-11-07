@@ -260,3 +260,5 @@ spec.help_about = "Get round the course as fast as you can."
 spec.help_cards = [["Points", "Finishing earns points by place."]]
 var settings := DotMenuGameSettings.new(spec)         # or a shim: func _init(): super(spec_for())
 ```
+
+Hooks for what a plain spec cannot say, all optional: `has_fov` (false for a 2D game), `base_schema` (a callable returning the schema the game's settings start from), `extra_defs` / `late_defs` (more settings before / after the ambient pair), `extra_rows` (`[page, section, DotMenuRow]`), `page_makers` (`[callable returning a DotMenuPage, before_page_id]`), `migrations` (schema version -> `func(doc) -> doc`), `fov_transform`, `before_setup` (`func(settings, store) -> store`, for a game's one-off file migration), `config_settings` and `manage_pointer`.

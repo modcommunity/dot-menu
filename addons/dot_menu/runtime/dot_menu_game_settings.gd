@@ -17,6 +17,10 @@ func _init(game_spec: DotMenuGameSpec = null) -> void:
 	schema = spec.make_schema()
 	config = DotMenuConfig.new()
 	config.brand_name = spec.brand_name
+	if not spec.config_settings.is_empty():
+		config.settings = spec.config_settings.duplicate(true)
+	manage_pointer = spec.manage_pointer
+	migrations = spec.migrations.duplicate()
 	if spec.bindings_maker.is_valid():
 		bindings = spec.bindings_maker.call()
 	config.open_on_pointer_release = spec.open_on_pointer_release
@@ -29,13 +33,25 @@ func _init(game_spec: DotMenuGameSpec = null) -> void:
 
 
 func setup(store: DotSettingsStore = null, with_menu: bool = true) -> DotResult:
-	var made := super.setup(store, with_menu)
+	var where := store
+	if spec != null and spec.before_setup.is_valid():
+		where = spec.before_setup.call(self, store)
+	var made := super.setup(where, with_menu)
+	if applier != null and spec != null and spec.fov_transform.is_valid():
+		applier.fov_transform = spec.fov_transform
 	if menu != null and spec != null and spec.gore_text != "":
 		DotMenuStock.add_gore_row(menu.page(&"video"))
 	if menu != null and spec != null and spec.comfort_row_text != "":
 		var general := menu.page(&"general")
 		if general != null:
 			general.section("Comfort").add(DotMenuRow.toggle(&"reduce_motion", "Reduce motion", spec.comfort_row_text))
+	if menu != null and spec != null:
+		for entry: Array in spec.extra_rows:
+			var page := menu.page(entry[0])
+			if page != null:
+				page.section(entry[1]).add(entry[2])
+		for entry: Array in spec.page_makers:
+			var _p := menu.add_page(entry[0].call(), entry[1])
 	return made
 
 
