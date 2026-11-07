@@ -328,9 +328,20 @@ func _build_menu_button() -> void:
 	menu_button.name = "MenuButton"
 	menu_button.focus_mode = Control.FOCUS_NONE
 	menu_button.custom_minimum_size = Vector2(96, 52)
-	menu_button.set_anchors_preset(Control.PRESET_TOP_LEFT)
-	menu_button.offset_left = 14.0
-	menu_button.offset_top = 14.0
+	var where := config.menu_button_corner
+	var right := where == &"top_right" or where == &"bottom_right"
+	var top := where == &"top_right" or where == &"top_left"
+	menu_button.set_anchors_preset(
+		(Control.PRESET_TOP_RIGHT if right else Control.PRESET_TOP_LEFT) if top
+		else (Control.PRESET_BOTTOM_RIGHT if right else Control.PRESET_BOTTOM_LEFT))
+	menu_button.grow_horizontal = Control.GROW_DIRECTION_BEGIN if right else Control.GROW_DIRECTION_END
+	menu_button.grow_vertical = Control.GROW_DIRECTION_END if top else Control.GROW_DIRECTION_BEGIN
+	var x := -14.0 if right else 14.0
+	var y := 14.0 if top else -14.0
+	menu_button.offset_left = x
+	menu_button.offset_right = x
+	menu_button.offset_top = y
+	menu_button.offset_bottom = y
 	menu_button.pressed.connect(open)
 	add_child(menu_button)
 
