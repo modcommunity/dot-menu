@@ -62,6 +62,18 @@ static func run(host: Selftest) -> void:
 	host._check(screen.find_children("*", "TextureRect", true, false).size() >= 2, "a card with art shows it (the card, the tab and the detail)")
 	host._check(screen.find_children("Stats", "VBoxContainer", true, false).size() == 1, "and the highlighted card has its statistics drawn")
 
+	# prepare() draws the screen hidden: the first B after it, on the same offer, makes no node.
+	screen.close()
+	await host.get_tree().process_frame
+	await lo.prepare()
+	var entered_first := [0]
+	var count_first := func(_n: Node) -> void: entered_first[0] += 1
+	host.get_tree().node_added.connect(count_first)
+	var _first := node.menu.handle_event(host._key(KEY_B))
+	await host.get_tree().process_frame
+	host.get_tree().node_added.disconnect(count_first)
+	host._check(screen.is_open() and entered_first[0] == 0, "B after prepare() makes no node (%d entered)" % entered_first[0])
+
 	# Pressing B again on the same offer draws nothing new (a hover that did not move, a reopen: ~220 nodes freed and made for the same picture); a changed state does redraw.
 	var entered := [0]
 	var count := func(_n: Node) -> void: entered[0] += 1

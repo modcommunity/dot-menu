@@ -258,6 +258,23 @@ func _fit() -> void:
 
 
 func open(p_offer: Dictionary) -> void:
+	_take(p_offer)
+	visible = true
+	_fit()
+	_rebuild()
+
+
+## Draws the screen for [param p_offer] without showing it, so the first [method open] on the same offer finds it drawn and
+## makes no node (the game does this under its load cover). Does nothing while the screen is open.
+func prepare(p_offer: Dictionary) -> void:
+	if visible:
+		return
+	_take(p_offer)
+	_rebuild()
+
+
+## The offer, with the draft reset to what is equipped.
+func _take(p_offer: Dictionary) -> void:
 	offer = p_offer
 	draft.clear()
 	for s: Variant in slots():
@@ -269,9 +286,6 @@ func open(p_offer: Dictionary) -> void:
 	_focus_equipped()
 	_status_text = ""
 	_hover = -1
-	visible = true
-	_fit()
-	_rebuild()
 
 
 ## Closes, and sends the changed slots if there are any and the player may choose.

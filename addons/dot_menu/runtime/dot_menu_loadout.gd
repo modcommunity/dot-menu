@@ -93,6 +93,22 @@ func open() -> void:
 	open_offer(data)
 
 
+## Solo: draws the screen on the offer now, hidden, so the first B finds it drawn (and the game's [member decorate_fn] has made its
+## pictures). Connected, the server's answer is the offer, so there is nothing to draw ahead. Safe to call again; a changed offer is
+## simply drawn again when B opens it.
+func prepare() -> void:
+	if not enabled or menu == null or menu.loadout_screen == null or _connected(_link()) or not offer_fn.is_valid():
+		return
+	var data := _dictionary(await offer_fn.call())
+	var screen := menu.loadout_screen
+	if data.is_empty() or screen == null or screen.is_open():
+		return
+	last_offer = decorate(data)
+	screen.title_text = title
+	screen.toggle_action = menu.loadout_action
+	screen.prepare(last_offer)
+
+
 ## Opens the screen on [param data] (`DotLoadoutManager.offer_for`'s shape), decorated. Public so a
 ## game with its own wire for the offer, or a suite, can open it.
 func open_offer(data: Dictionary) -> void:
