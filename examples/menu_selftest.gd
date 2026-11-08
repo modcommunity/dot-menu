@@ -3,7 +3,7 @@ extends "res://examples/menu_selftest_base.gd"
 ## Exercises dot-menu with no game: the data model, stock settings and what applies them, the bindings table, the screens, the facade's keys, and what a server may do.
 ## CHECKS is the guard the section counter cannot be: a script error aborts that test, not the run, and only the total notices checks that never ran.
 const SECTIONS := 34
-const CHECKS := 524
+const CHECKS := 530
 
 
 func _ready() -> void:
@@ -743,8 +743,8 @@ func _test_net_stat_own() -> void:
 	var followed := DotMenuNetStat.follow(host, mine)
 	var _lvl := mine.set_value(&"net_stat", 2)
 	var _hh := mine.set_value(&"net_stat_height", 64)
-	_check(followed.visible and followed.level == 2 and followed.graph_height == 64 and own.keys().size() == 4,
-		"a game with no menu declares the three and follows them")
+	_check(followed.visible and followed.level == 2 and followed.graph_height == 64 and own.keys().size() == 5,
+		"a game with no menu declares the four and follows them")
 	host.queue_free()
 	await get_tree().process_frame
 	_check(mine.set_value(&"net_stat", 1).ok, "and a change after the overlay is gone is no error")

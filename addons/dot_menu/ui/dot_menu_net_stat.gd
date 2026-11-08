@@ -12,6 +12,9 @@ enum Level { OFF = 0, NUMBERS = 1, GRAPH = 2, FULL = 3 }
 ## top centre and the bottom, their chat bottom left).
 const POSITIONS: Array[StringName] = [&"top_right", &"bottom_right", &"top_left", &"bottom_left"]
 
+## `net_stat_style`: solid fills every bar edge to edge and the ping under its line, like the profiler's graph; line is the older gapped bars and a bare ping line.
+const STYLES: Array[StringName] = [&"solid", &"line"]
+
 const MIN_HEIGHT := 32
 const MAX_HEIGHT := 320
 
@@ -31,6 +34,12 @@ var graph_height: int = 96:
 	set(v):
 		graph_height = clampi(v, MIN_HEIGHT, MAX_HEIGHT)
 		_relayout()
+
+## How the graphs are filled. One of [constant STYLES]; anything else is solid.
+var style: StringName = &"solid":
+	set(v):
+		style = v if STYLES.has(v) else STYLES[0]
+		queue_redraw()
 
 ## Which corner. One of [constant POSITIONS]; anything else is the first.
 var corner: StringName = &"top_right":
@@ -75,6 +84,11 @@ const BAR_GAP := 1.0
 const PAD := 10.0
 const STRIP_H := 30.0
 const GAP := 6.0
+
+## The width a bar is drawn at: the whole step when solid, so neighbours touch.
+func bar_w() -> float:
+	return BAR_W + BAR_GAP if style == &"solid" else BAR_W
+
 
 ## Per bucket: {"in": PackedInt64Array per channel, "out": PackedInt64Array per channel,
 ## "pin": packets, "pout": packets, "frame_ms": the slowest frame in it, "rtt": ms or -1}.
@@ -184,6 +198,8 @@ func read_settings(settings: DotSettingsManager) -> int:
 		graph_height = settings.get_int(&"net_stat_height", graph_height)
 	if settings.schema.has(&"net_stat_position"):
 		corner = StringName(settings.get_string(&"net_stat_position", String(corner)))
+	if settings.schema.has(&"net_stat_style"):
+		style = StringName(settings.get_string(&"net_stat_style", String(style)))
 	level = settings.get_int(&"net_stat", 0)
 	return level
 

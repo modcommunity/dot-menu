@@ -53,28 +53,22 @@ func _frame(rect: Rect2, title: String, scale: String, scale_colour: Color) -> v
 ## Stacked bars by channel, clipped at the top with a bright cap when a bar is more than
 ## the scale holds.
 func _bars(rect: Rect2, key: String, scale: float, one_colour: Variant, alpha: float) -> void:
+	var solid := ns.style == &"solid"
+	var colours: Array[Color] = []
+	for ch in ns.channel_names.size():
+		colours.append(one_colour if one_colour is Color else ns.channel_colour(ch))
 	for i in ns._buckets.size():
 		var chans: PackedInt64Array = ns._buckets[i][key]
 		var x := _bar_x(rect, i)
-		var base := rect.end.y
-		var clipped := false
+		var heights := PackedFloat32Array()
 		for ch in chans.size():
-			if chans[ch] <= 0:
-				continue
-			var h := float(chans[ch]) / ns.bucket_sec / scale * rect.size.y
-			if h > base - rect.position.y:
-				h = base - rect.position.y
-				clipped = true
-			if h <= 0.0:
-				continue
-			var c: Color = one_colour if one_colour is Color else ns.channel_colour(ch)
-			ns.draw_rect(Rect2(x, base - h, ns.BAR_W, h), Color(c, alpha))
-			base -= h
-		if clipped:
-			ns.draw_rect(Rect2(x - 0.5, rect.position.y, ns.BAR_W + 1.0, 2.0), ns._palette().hud_text)
-		elif base < rect.end.y - 1.0:
+			heights.append(float(chans[ch]) / ns.bucket_sec / scale * rect.size.y)
+		var drawn := DotStackedColumn.draw(ns, x, rect.end.y, ns.bar_w(), heights, colours, rect.size.y, alpha)
+		if drawn.y > 0.0:
+			ns.draw_rect(Rect2(x - 0.5, rect.position.y, ns.bar_w() + 1.0, 2.0), ns._palette().hud_text)
+		elif not solid and drawn.x > 1.0:
 			# A lit top on each bar, so a dense graph still reads as bars.
-			ns.draw_rect(Rect2(x, base, ns.BAR_W, 1.0), Color(1, 1, 1, 0.4 * alpha))
+			ns.draw_rect(Rect2(x, rect.end.y - drawn.x, ns.bar_w(), 1.0), Color(1, 1, 1, 0.4 * alpha))
 
 
 func _draw_arrivals(rect: Rect2) -> void:
@@ -99,7 +93,7 @@ func _draw_ping(rect: Rect2) -> void:
 		var rtt := float(ns._buckets[i]["rtt"])
 		if rtt < 0.0:
 			continue
-		var at := Vector2(_bar_x(rect, i) + ns.BAR_W * 0.5, rect.end.y - clampf(rtt / ns._rtt_scale, 0.0, 1.0) * rect.size.y)
+		var at := Vector2(_bar_x(rect, i) + ns.bar_w() * 0.5, rect.end.y - clampf(rtt / ns._rtt_scale, 0.0, 1.0) * rect.size.y)
 		points.append(at)
 		if bool(ns._buckets[i].get("fresh", false)):
 			samples.append(at)
@@ -114,6 +108,9 @@ func _draw_ping(rect: Rect2) -> void:
 		# Right-aligned against the graph, on the dashed rule it names.
 		ns.draw_string(ns._font(), Vector2(lx, rect.get_center().y + float(fs) * 0.5 - 1.0), "%d ms" % roundi(ns._rtt_scale * 0.5),
 			HORIZONTAL_ALIGNMENT_RIGHT, ns.GUTTER - 6.0, fs - 1, Color(colour, 0.7))
+	if ns.style == &"solid":
+		for at in points:
+			ns.draw_rect(Rect2(at.x - ns.bar_w() * 0.5, at.y, ns.bar_w(), rect.end.y - at.y), Color(colour, 0.28))
 	if points.size() >= 2:
 		ns.draw_polyline(points, Color(0, 0, 0, 0.5), 3.5, true)
 		ns.draw_polyline(points, colour, 1.6, true)
@@ -151,21 +148,18 @@ func _draw_frames(rect: Rect2) -> void:
 			continue
 		var x := _bar_x(rect, i)
 		var parts: PackedInt32Array = ns._buckets[i].get("parts", PackedInt32Array([0, 0, 0, 0]))
-		var base := rect.end.y
-		var room := rect.size.y
+		var heights := PackedFloat32Array()
 		for k in 3:
-			var h := minf(float(parts[k + 1]) / 1000.0 * px, room)
-			if h > 0.0:
-				ns.draw_rect(Rect2(x, base - h, ns.BAR_W, h), Color(PART_COLOURS[k], 0.85))
-				base -= h
-				room -= h
+			heights.append(float(parts[k + 1]) / 1000.0 * px)
+		var stacked := DotStackedColumn.draw(ns, x, rect.end.y, ns.bar_w(), heights, PART_COLOURS, rect.size.y, 0.85).x
+		var base := rect.end.y - stacked
 		var total_h := minf(ms * px, rect.size.y)
 		var wait_h := total_h - (rect.end.y - base)
 		var c := p.hud_ahead if ms <= 17.5 else (p.warn if ms <= 34.0 else p.danger)
 		if wait_h > 0.0:
-			ns.draw_rect(Rect2(x, base - wait_h, ns.BAR_W, wait_h), Color(c, 0.45))
+			ns.draw_rect(Rect2(x, base - wait_h, ns.bar_w(), wait_h), Color(c, 0.45))
 		if ms > top_ms:
-			ns.draw_rect(Rect2(x - 0.5, rect.position.y, ns.BAR_W + 1.0, 2.0), p.danger)
+			ns.draw_rect(Rect2(x - 0.5, rect.position.y, ns.bar_w() + 1.0, 2.0), p.danger)
 
 
 func _draw_text(rect: Rect2) -> void:

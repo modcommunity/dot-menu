@@ -212,6 +212,7 @@ The stock settings and their defaults:
 | `net_stat` | 0 (off) | 0 to 3 | device |
 | `net_stat_height` | 96 | 32 to 320 pixels | device |
 | `net_stat_position` | top_right | top_right, bottom_right, top_left, bottom_left | device |
+| `net_stat_style` | solid | solid, line | device |
 | `chat_window` | auto | auto, on, off | account |
 
 A theme file is a list of palettes. Any colour left out comes from `base`:
