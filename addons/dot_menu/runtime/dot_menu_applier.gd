@@ -32,7 +32,7 @@ const APPLIES: Array[StringName] = [
 	&"sensitivity", &"invert_mouse", &"field_of_view", &"viewmodel_fov",
 ]
 const APPLIED_BY_MENU: Array[StringName] = [
-	&"ui_theme", &"hud_scale", &"show_fps", &"net_stat", &"net_stat_height", &"net_stat_position",
+	&"ui_theme", &"hud_scale", &"show_fps", &"net_stat", &"net_stat_height", &"net_stat_position", &"net_stat_style",
 	&"scoreboard_hidden",
 ]
 

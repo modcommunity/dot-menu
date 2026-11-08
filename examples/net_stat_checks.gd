@@ -73,8 +73,41 @@ static func _settings(host: Selftest, menu: DotMenu, st: DotSettingsManager, ns:
 	var _c := st.set_value(&"net_stat_position", &"top_left")
 	host._check(is_zero_approx(ns.anchor_left) and is_zero_approx(ns.anchor_top) and ns.offset_left > 0.0,
 		"the corner setting moves it")
+	host._check(ns.style == &"solid" and is_equal_approx(ns.bar_w(), DotMenuNetStat.BAR_W + DotMenuNetStat.BAR_GAP),
+		"the graph style defaults to solid: bars as wide as their step, so they touch")
+	var _s := st.set_value(&"net_stat_style", &"line")
+	host._check(ns.style == &"line" and is_equal_approx(ns.bar_w(), DotMenuNetStat.BAR_W), "net_stat_style line brings back the gapped bars")
+	var bad_style := st.set_value(&"net_stat_style", &"mist")
+	host._check(not bad_style.ok or ns.style == &"line", "a style that is not one is refused")
+	var _s2 := st.set_value(&"net_stat_style", &"solid")
+	host._check(await _solid_pixels(host, ns), "DotStackedColumn stacks bands and flags a cut-off column")
 	var bad := st.set_value(&"net_stat_position", &"middle")
 	host._check(not bad.ok or ns.corner == &"top_left", "a corner that is not one is refused")
+
+
+## The shared stacked-column helper, drawn for real: stacked heights add up, and a column taller than the room is cut and flagged.
+class ColumnProbe extends Control:
+	var heights := PackedFloat32Array()
+	var result := Vector2(-1.0, -1.0)
+
+	func _draw() -> void:
+		var cols: Array[Color] = [Color.RED, Color.GREEN]
+		result = DotStackedColumn.draw(self, 0.0, 40.0, 4.0, heights, cols, 40.0, 0.5)
+
+
+static func _solid_pixels(host: Selftest, _ns: DotMenuNetStat) -> bool:
+	var probe := ColumnProbe.new()
+	probe.size = Vector2(8, 40)
+	probe.heights = PackedFloat32Array([10.0, 15.0])
+	host.add_child(probe)
+	await host.get_tree().process_frame
+	var fits := is_equal_approx(probe.result.x, 25.0) and probe.result.y == 0.0
+	probe.heights = PackedFloat32Array([30.0, 30.0])
+	probe.queue_redraw()
+	await host.get_tree().process_frame
+	var cut := is_equal_approx(probe.result.x, 40.0) and probe.result.y == 1.0
+	probe.queue_free()
+	return fits and cut
 
 
 static func _meter(host: Selftest, ns: DotMenuNetStat) -> void:

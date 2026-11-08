@@ -1102,7 +1102,7 @@ func _on_setting_changed(key: StringName, value: Variant, _why: StringName) -> v
 			var _changed := use_theme(stored_theme())
 		&"hud_scale":
 			_scale_huds()
-		&"show_fps", &"net_stat", &"net_stat_height", &"net_stat_position":
+		&"show_fps", &"net_stat", &"net_stat_height", &"net_stat_position", &"net_stat_style":
 			_apply_net_stat()
 		DotMenuScoreboard.SETTING:
 			if scoreboard != null:

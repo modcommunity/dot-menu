@@ -55,7 +55,7 @@ const KEYS := {
 	GROUP_VIDEO: [&"window_mode", &"vsync", &"fps_max", &"render_scale", &"field_of_view", &"fx_quality", &"aniso", &"aa", &"mip_bias", &"sharpness"],
 	GROUP_CONTROLS: [&"sensitivity", &"invert_mouse"],
 	GROUP_COMFORT: [&"shake_scale", &"allow_flashes", &"reduce_motion"],
-	GROUP_INTERFACE: [&"ui_theme", &"hud_scale", &"show_fps", &"net_stat", &"net_stat_height", &"net_stat_position", &"scoreboard_hidden"],
+	GROUP_INTERFACE: [&"ui_theme", &"hud_scale", &"show_fps", &"net_stat", &"net_stat_height", &"net_stat_position", &"net_stat_style", &"scoreboard_hidden"],
 	GROUP_CHAT: [&"chat_window"],
 	GROUP_VOICE: [&"voice_mode", &"voice_input_device"],
 	GROUP_VIEWMODEL: [&"viewmodel_fov"],
@@ -195,6 +195,8 @@ static func declare_net_stat(schema: DotSettingsSchema, corner: StringName = &""
 		.with_description("The height of net_stat's graph, in pixels."))
 	_add(schema, DotSettingsDef.choice(&"net_stat_position", default_corner, DotMenuNetStat.POSITIONS, &"network")
 		.with_description("The corner net_stat is drawn in."))
+	_add(schema, DotSettingsDef.choice(&"net_stat_style", &"solid", DotMenuNetStat.STYLES, &"network")
+		.with_description("How net_stat's graphs are filled: solid areas like the profiler's, or the older gapped bars with a thin ping line."))
 	return schema
 
 
@@ -245,7 +247,9 @@ static func advanced_page() -> DotMenuPage:
 			.with_range(DotMenuNetStat.MIN_HEIGHT, DotMenuNetStat.MAX_HEIGHT, 8)
 			.formatted(func(v: float) -> String: return "%d px" % roundi(v))) \
 		.add(DotMenuRow.select(&"net_stat_position", "Corner", "",
-			[[&"top_right", "Top right"], [&"bottom_right", "Bottom right"], [&"top_left", "Top left"], [&"bottom_left", "Bottom left"]]))
+			[[&"top_right", "Top right"], [&"bottom_right", "Bottom right"], [&"top_left", "Top left"], [&"bottom_left", "Bottom left"]])) \
+		.add(DotMenuRow.select(&"net_stat_style", "Graph style", "Solid fills the bars and the ping like the profiler's graph; Lines is the older gapped bars.",
+			[[&"solid", "Solid"], [&"line", "Lines"]]))
 	p.build = func(kit: DotMenuKit, body: Control) -> void: performance_section(kit, body)
 	return p
 
