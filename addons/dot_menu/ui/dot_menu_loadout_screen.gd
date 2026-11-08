@@ -333,6 +333,7 @@ func _on_spawn_toggled(on: bool) -> void:
 	if not (r is Dictionary) or random_spawn_rule() != 1 or on == bool((r as Dictionary).get("spawn_on", false)):
 		return
 	(r as Dictionary)["spawn_on"] = on
+	_status_text = ""
 	_rebuild()
 	random_spawn_requested.emit(on)
 
