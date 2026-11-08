@@ -30,6 +30,7 @@ static func icon_box(kit: DotMenuKit, item: Dictionary, min_size: Vector2, frame
 	if tex != null:
 		var pic := TextureRect.new()
 		pic.texture = tex
+		DotMenuPicker.apply_pixel_filter(pic, tex, item)
 		pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		pic.mouse_filter = Control.MOUSE_FILTER_IGNORE

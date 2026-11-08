@@ -281,6 +281,18 @@ static func thumbnail_texture(value: Variant) -> Texture2D:
 	return null
 
 
+## Pixel art (a sprite no larger than PIXEL_ART_MAX on a side) is drawn with nearest filtering so
+## it scales up crisp; an item's "icon_filter" ("nearest" or "linear") overrides the guess.
+const PIXEL_ART_MAX := 128
+
+
+static func apply_pixel_filter(pic: TextureRect, tex: Texture2D, item: Dictionary) -> void:
+	var mode := str(item.get("icon_filter", "")).to_lower()
+	var nearest := mode == "nearest" or (mode != "linear" and tex != null and maxi(tex.get_width(), tex.get_height()) <= PIXEL_ART_MAX)
+	if nearest:
+		pic.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+
+
 func _row(row: int, it: Dictionary) -> Control:
 	var p := kit.palette
 	var rich := _page_is_rich()
@@ -316,6 +328,7 @@ func _row(row: int, it: Dictionary) -> Control:
 		if tex != null:
 			var pic := TextureRect.new()
 			pic.texture = tex
+			apply_pixel_filter(pic, tex, it)
 			pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 			pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 			pic.clip_contents = true
