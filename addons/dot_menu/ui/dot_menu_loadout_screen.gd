@@ -63,6 +63,8 @@ var _status: Label = null
 var _keys: HBoxContainer = null
 var _scroll: ScrollContainer = null
 var _built := false
+## The state [method _rebuild] last drew (a deep copy), so drawing the same again is skipped.
+var _drawn: Array = []
 var _original: Dictionary = {}
 var _hover := -1
 var _status_text := ""
@@ -200,6 +202,7 @@ func _build() -> void:
 
 	_build_foot(col)
 	_built = true
+	_drawn = []
 	_fit()
 
 
@@ -569,6 +572,16 @@ func revert() -> void:
 func _rebuild() -> void:
 	if not _built:
 		return
+	# Everything below is a function of this state: a rebuild over the state already drawn (B pressed again on the same offer,
+	# a hover that did not move) would free and make ~220 nodes to draw the same thing, so it draws nothing.
+	var state: Array = [offer, draft, _original, slot_index, card_index, _hover, _status_text, title_text, subtitle, toggle_action,
+		DotInputBinding.describe_action(toggle_action) if toggle_action != &"" and InputMap.has_action(toggle_action) else "",
+		_spawn_toggle != null and _spawn_toggle.button_pressed]
+	if state == _drawn:
+		if _hover < 0 and card_index >= 0 and card_index < _grid.get_child_count():
+			_scroll_to.call_deferred(_grid.get_child(card_index))
+		return
+	_drawn = state.duplicate(true)
 	var p := kit.palette
 	_title.text = title_text
 	if _random_button != null:

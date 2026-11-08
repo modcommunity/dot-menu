@@ -62,6 +62,20 @@ static func run(host: Selftest) -> void:
 	host._check(screen.find_children("*", "TextureRect", true, false).size() >= 2, "a card with art shows it (the card, the tab and the detail)")
 	host._check(screen.find_children("Stats", "VBoxContainer", true, false).size() == 1, "and the highlighted card has its statistics drawn")
 
+	# Pressing B again on the same offer draws nothing new (a hover that did not move, a reopen: ~220 nodes freed and made for the same picture); a changed state does redraw.
+	var entered := [0]
+	var count := func(_n: Node) -> void: entered[0] += 1
+	host.get_tree().node_added.connect(count)
+	screen.close()
+	var _again := node.menu.handle_event(host._key(KEY_B))
+	await host.get_tree().process_frame
+	host._check(screen.is_open() and entered[0] == 0, "B again on the same offer makes no node (%d entered)" % entered[0])
+	var _p := screen.pick(1)
+	await host.get_tree().process_frame
+	host.get_tree().node_added.disconnect(count)
+	host._check(entered[0] > 0, "a pick redraws the cards (%d entered)" % entered[0])
+	screen.revert()
+
 	await _draft(host, node, screen, lo, saved)
 	await _restore_and_server_sets(host, screen, lo, saved)
 
