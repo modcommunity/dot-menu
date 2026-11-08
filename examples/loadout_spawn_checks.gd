@@ -17,8 +17,14 @@ static func run(host: Node, screen: DotMenuLoadoutScreen, lo: DotMenuLoadout, li
 	lo.open_offer(offer)
 	var toggle := screen.find_child("RandomSpawn", true, false) as Button
 	host._check(toggle != null and toggle.visible and not toggle.button_pressed and toggle.get_parent() == (screen.find_child("Random", true, false) as Button).get_parent(), "the Every spawn toggle sits next to Random, off")
+	# Web builds ship a font without the ballot-box glyphs (they drew as empty squares): the label must be plain ASCII.
+	var ascii := true
+	for c in toggle.text:
+		ascii = ascii and c.unicode_at(0) < 128
+	host._check(ascii and toggle.text.begins_with("[ ]"), "the toggle label is ASCII (no glyph the web font lacks), unticked: " + toggle.text)
 	link.sent.clear()
 	var _t := screen.handle_key(host._key(KEY_T))
+	host._check(toggle.text.begins_with("[x]"), "ticked label after T: " + toggle.text)
 	host._check(link.sent == ["/loadout randomspawn on"] and screen.is_open() and toggle.button_pressed, "T turns it on, tells the server, and keeps the menu open")
 	_t = screen.handle_key(host._key(KEY_T))
 	host._check(link.sent.back() == "/loadout randomspawn off" and not toggle.button_pressed, "T again turns it off")

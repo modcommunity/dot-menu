@@ -606,7 +606,7 @@ func _rebuild() -> void:
 		var forced := random_spawn_rule() == 2
 		_spawn_toggle.set_pressed_no_signal(random_spawn_on())
 		_spawn_toggle.disabled = forced
-		_spawn_toggle.text = ("%s Every spawn" % ("☑" if random_spawn_on() else "☐")) if not forced else "Every spawn (server)"
+		_spawn_toggle.text = ("%s Every spawn" % ("[x]" if random_spawn_on() else "[ ]")) if not forced else "Every spawn (server)"
 	var note := subtitle if subtitle != "" else str(offer.get("note", ""))
 	if note == "":
 		note = "Pick a card for each slot. Changes are sent when you close this, and apply when you next spawn."
