@@ -92,6 +92,7 @@ var _scroll: ScrollContainer = null
 var _body: VBoxContainer = null
 var _since := 0.0
 var _built := false
+var _drawn_sig := 0
 
 
 ## Avatar, name, score, time connected and ping. What every game starts from.
@@ -450,11 +451,23 @@ func teams(snap: Variant = null) -> Array:
 	return out
 
 
+func _signature(snap: Dictionary) -> int:
+	var keys := PackedStringArray()
+	for c in visible_columns():
+		keys.append(str(c.get("key", "")))
+	return [snap.hash(), keys, group_by, sort_by, side_by_side, title_text, spectators_title, kit.get_instance_id(), player_hidden.hash()].hash()
+
+
 func redraw() -> void:
 	if not _built:
 		return
-	DotMenuKit.clear(_body)
 	var snap := drawn_snapshot()
+	# A held board is redrawn every refresh_sec; rebuilding ~300 nodes for an unchanged snapshot cost ~50 ms of script each time, so skip when nothing visible changed.
+	var sig := _signature(snap)
+	if sig == _drawn_sig and _body.get_child_count() > 0:
+		return
+	_drawn_sig = sig
+	DotMenuKit.clear(_body)
 
 	var header: Control = build_header.call(kit, snap) if build_header.is_valid() else _header(snap)
 	DotMenuKit.clear(_head)
