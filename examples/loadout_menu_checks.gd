@@ -60,6 +60,15 @@ static func run(host: Selftest) -> void:
 	host._check(texts.has("PRIMARY") and texts.has("SIDEARM") and texts.has("GRENADES  ·  SERVER"), "every slot is a tab, a fixed one marked as the server's")
 	host._check(texts.has("EQUIPPED") and texts.has("6 pt") and texts.has("4 / 7 points"), "the cards say what is equipped, what each costs, and the budget")
 	host._check(screen.find_children("*", "TextureRect", true, false).size() >= 2, "a card with art shows it (the card, the tab and the detail)")
+	var small_pics := screen.find_children("*", "TextureRect", true, false).filter(func(n: Node) -> bool: return (n as TextureRect).texture_filter == CanvasItem.TEXTURE_FILTER_NEAREST)
+	host._check(small_pics.size() >= 2, "a small (pixel art) icon is drawn with nearest filtering, not blurred")
+	var big := TextureRect.new()
+	DotMenuPicker.apply_pixel_filter(big, ImageTexture.create_from_image(Image.create(512, 256, false, Image.FORMAT_RGB8)), {})
+	var forced := TextureRect.new()
+	DotMenuPicker.apply_pixel_filter(forced, ImageTexture.create_from_image(Image.create(512, 256, false, Image.FORMAT_RGB8)), {"icon_filter": "nearest"})
+	host._check(big.texture_filter == CanvasItem.TEXTURE_FILTER_PARENT_NODE and forced.texture_filter == CanvasItem.TEXTURE_FILTER_NEAREST, "a large icon keeps the default filter unless the item asks for nearest")
+	big.free()
+	forced.free()
 	host._check(screen.find_children("Stats", "VBoxContainer", true, false).size() == 1, "and the highlighted card has its statistics drawn")
 
 	# prepare() draws the screen hidden: the first B after it, on the same offer, makes no node.
