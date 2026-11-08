@@ -168,6 +168,8 @@ func _test_escape_port() -> void:
 	await get_tree().process_frame
 	var _o := ed.open(ADDON, "tuning.yml")
 	_check(not ed.is_open(), "the editor starts hidden under the menu")
+	menu.open()
+	await get_tree().process_frame
 	_check(menu.screen.find_child("Action_mods", true, false) != null, "Escape gets a Mods action")
 	menu._on_action(&"mods")
 	_check(ed.is_open() and menu.any_open(), "the action opens the editor as an overlay")
