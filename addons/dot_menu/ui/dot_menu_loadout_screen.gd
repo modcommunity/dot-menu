@@ -339,7 +339,7 @@ func _on_spawn_toggled(on: bool) -> void:
 
 ## Asks for a random loadout: closes without the draft and says so. Does nothing when not offered.
 func request_random() -> void:
-	if not visible or not random_offered():
+	if not visible or not random_offered() or spawn_locked():
 		return
 	random_requested.emit()
 	cancel()
@@ -349,7 +349,7 @@ func request_random() -> void:
 ## Sends a saved-loadout action and closes without the draft: the menu reopens on the answer.
 ## A save carries the draft, so the picks made so far are kept in the new loadout.
 func manage(args: String) -> void:
-	if not visible:
+	if not visible or spawn_locked():
 		return
 	var line := args
 	if args.begins_with("save"):
@@ -396,7 +396,14 @@ func choices() -> Array:
 
 
 func slot_locked(slot: Dictionary) -> bool:
-	return not may_choose() or bool(slot.get("fixed", false))
+	return not may_choose() or bool(slot.get("fixed", false)) or spawn_locked()
+
+
+## Whether "random every spawn" is on (the player's tick, or forced by the server), which locks every
+## other control of the screen until it is unticked: the loadout is rolled at each spawn, so a pick here
+## would mean nothing. The draft is left as it was, so unticking brings the earlier picks back.
+func spawn_locked() -> bool:
+	return random_spawn_offered() and random_spawn_on()
 
 
 ## Shows slot [param index] (wrapping), with the keys on its equipped card.
@@ -422,6 +429,8 @@ func pick(index: int) -> bool:
 	card_index = index
 	if slot_locked(slot):
 		_status_text = "The server sets this slot." if bool(slot.get("fixed", false)) else "The server sets every loadout here."
+		if may_choose() and not bool(slot.get("fixed", false)):
+			_status_text = "Random every spawn is on: untick it to change your loadout."
 		_rebuild()
 		return false
 	if bool(item.get("locked", false)):
@@ -577,6 +586,8 @@ static func _repeats(event: InputEvent) -> bool:
 
 ## Puts the draft back as the screen opened.
 func revert() -> void:
+	if spawn_locked():
+		return
 	draft = _original.duplicate()
 	_status_text = "Back to what you had."
 	_focus_equipped()
@@ -600,6 +611,7 @@ func _rebuild() -> void:
 	_title.text = title_text
 	if _random_button != null:
 		_random_button.visible = random_offered()
+		_random_button.disabled = spawn_locked()
 		var price := str((offer.get("random", {}) as Dictionary).get("price", "")) if offer.get("random") is Dictionary else ""
 		_random_button.text = "Random" if price == "" else "Random (%s)" % price
 		_spawn_toggle.visible = random_spawn_offered()
@@ -617,6 +629,7 @@ func _rebuild() -> void:
 	_saved.visible = offer.get("saved") is Array and not (offer["saved"] as Array).is_empty() and may_choose()
 	if _saved.visible:
 		_saved.show_list(offer["saved"] as Array)
+		_saved.set_locked(spawn_locked())
 	_points.add_theme_color_override(&"font_color", p.danger if budget > 0 and points_with() > budget else p.muted)
 	_status.text = _status_text
 	_fill_keys(_keys)
@@ -770,6 +783,8 @@ func _card(index: int, item: Dictionary) -> Control:
 	elif over > 0:
 		under = "%d over budget" % over
 		under_colour = p.danger
+	elif locked and spawn_locked():
+		under = "random every spawn"
 	elif locked:
 		under = "set by the server"
 	else:
