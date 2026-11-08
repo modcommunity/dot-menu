@@ -9,9 +9,11 @@ signal requested(args: String)
 var kit: DotMenuKit
 var _chips: HBoxContainer
 var _name: LineEdit
+var _save_new: Button
 var _rename: Button
 var _delete: Button
 var _held: Array = []
+var _locked: bool = false
 
 
 func setup(p_kit: DotMenuKit) -> void:
@@ -35,9 +37,9 @@ func setup(p_kit: DotMenuKit) -> void:
 	_name.add_theme_stylebox_override(&"normal", kit.box(p.card, kit.radius_small, p.line, 1, Vector4(12, 6, 12, 6)))
 	_name.add_theme_stylebox_override(&"focus", kit.box(p.card, kit.radius_small, p.accent, 1, Vector4(12, 6, 12, 6)))
 	row.add_child(_name)
-	var save := _small("Save new", "SaveNew")
-	save.pressed.connect(func() -> void: _send("save"))
-	row.add_child(save)
+	_save_new = _small("Save new", "SaveNew")
+	_save_new.pressed.connect(func() -> void: _send("save"))
+	row.add_child(_save_new)
 	_rename = _small("Rename", "Rename")
 	_rename.pressed.connect(func() -> void: _send("rename"))
 	row.add_child(_rename)
@@ -55,6 +57,7 @@ func show_list(saved: Array) -> void:
 		var d := e as Dictionary
 		var on := bool(d.get("selected", false))
 		var b := kit.secondary_button(str(d.get("name", "")))
+		b.disabled = _locked
 		b.name = "Chip%d" % (int(d.get("index", 0)) + 1)
 		b.custom_minimum_size = Vector2(0, 36)
 		b.focus_mode = Control.FOCUS_NONE
@@ -66,8 +69,18 @@ func show_list(saved: Array) -> void:
 				requested.emit("use %d" % at))
 		_chips.add_child(b)
 	var real := _held.size() > 0 and bool((_held[0] as Dictionary).get("saved", false))
-	_rename.disabled = not real
-	_delete.disabled = _held.size() < 2 or not real
+	_rename.disabled = _locked or not real
+	_delete.disabled = _locked or _held.size() < 2 or not real
+	_name.editable = not _locked
+	_save_new.disabled = _locked
+
+
+## Greys out every control (random every spawn is on). Call after [method show_list].
+func set_locked(locked: bool) -> void:
+	if locked == _locked:
+		return
+	_locked = locked
+	show_list(_held)
 
 
 func selected_index() -> int:
