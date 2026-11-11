@@ -81,7 +81,7 @@ A rebind can never make a conflict (it swaps), so the third layer only ever fire
 
 - In a browser, pointer lock exits on Escape and the key may not be delivered, so a lost lock opens the menu; an Escape within `escape_grace_ms` is swallowed or the menu flashes shut; closing by a click recaptures and by a key cannot, so `click_to_play` fires twelve frames later.
 - `manage_pointer = false` for a host that owns the mouse (a 2D game, the demo, the suite, `DotMenuSettings`).
-- **`open_on_escape = false`** for a game whose Escape is its own (mg-dangerous-delivery's garage) or which keeps a two-step Escape (game-playground: release the pointer, then open). Escape still closes the menu.
+- **`open_on_escape = false`** for a game whose Escape is its own (mg-dangerous-delivery's garage) or which keeps a two-step Escape (game-playlot: release the pointer, then open). Escape still closes the menu.
 
 ## Help on H and Leave, in every game
 

@@ -61,4 +61,4 @@ tools/screenshot.sh
 
 ## Who uses it
 
-Every game uses dot-menu's Tab scoreboard. The Escape menu: game-g2gfast (where it came from), the `mg-*` games, game-zombie-zone, game-hide-n-seek, game-hungario (its `DotConfig` keys read into the document with `from_config`, and its old dot-ui files migrated once) and dot-game-template through `DotMenuSettings`; game-playground (Escape only; its spawn menu and server browser stay on its own stack); game-arena (with its server browser as a page).
+Every game uses dot-menu's Tab scoreboard. The Escape menu: game-g2gfast (where it came from), the `mg-*` games, game-zombie-zone, game-hide-n-seek, game-hungario (its `DotConfig` keys read into the document with `from_config`, and its old dot-ui files migrated once) and dot-game-template through `DotMenuSettings`; game-playlot (Escape only; its spawn menu and server browser stay on its own stack); game-arena (with its server browser as a page).
