@@ -1,0 +1,6 @@
+# comments
+# Baselines only shrink: scripts/<gate> --update lowers or drops entries and refuses to add.
+addons/dot_menu/ui/dot_menu_help.gd::history	1
+addons/dot_menu/ui/dot_menu_layout_editor.gd::history	1
+addons/dot_menu/ui/dot_menu_picker.gd::history	1
+addons/dot_menu/ui/dot_menu_screen.gd::history	1
