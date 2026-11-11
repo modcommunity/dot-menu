@@ -1,6 +1,6 @@
 # dot-menu
 
-In-game menus as data: an Escape menu whose rows are views of dot-settings, stock settings and pages every game shares, a key table, themes, the held Tab scoreboard, and the `net_stat` connection overlay. Extracted from game-g2gfast's menu.
+In-game menus as data: an Escape menu whose rows are views of dot-settings, stock settings and pages every game shares, a key table, themes, the held Tab scoreboard, and the `net_stat` connection overlay. Extracted from game-airdrift's menu.
 
 **The distributable is `addons/dot_menu/`.** It depends on dot-core, dot-ui and dot-settings and nothing else; dot-audio, dot-fx, dot-player-controller and dot-server are reached duck-typed or through dot-core. Read the family [CLAUDE.md](../../CLAUDE.md) first, and dot-ui's and dot-settings' own, because this sits on both and keeps their rules.
 
@@ -61,4 +61,4 @@ tools/screenshot.sh
 
 ## Who uses it
 
-Every game uses dot-menu's Tab scoreboard. The Escape menu: game-g2gfast (where it came from), the `mg-*` games, game-zombie-zone, game-hide-n-seek, game-hungario (its `DotConfig` keys read into the document with `from_config`, and its old dot-ui files migrated once) and dot-game-template through `DotMenuSettings`; game-playlot (Escape only; its spawn menu and server browser stay on its own stack); game-arena (with its server browser as a page).
+Every game uses dot-menu's Tab scoreboard. The Escape menu: game-airdrift (where it came from), the `mg-*` games, game-zombie-zone, game-hide-n-seek, game-hungario (its `DotConfig` keys read into the document with `from_config`, and its old dot-ui files migrated once) and dot-game-template through `DotMenuSettings`; game-playlot (Escape only; its spawn menu and server browser stay on its own stack); game-fatal-contact (with its server browser as a page).

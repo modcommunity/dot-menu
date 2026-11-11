@@ -14,7 +14,7 @@ I intend on reviewing code, testing, and editing documentation regularly. If you
 ## What it does
 Escape opens a menu with a sidebar of pages (General, Video, Audio, Controls, Advanced, plus any your game adds), a Resume button, Help and Leave. Every switch, slider and drop-down on a page is a view of a [dot-settings](https://github.com/modcommunity/dot-settings) value: it shows what is stored and writes it back when changed. There is no Apply button. A value changed from the console shows up the next time the menu opens.
 
-It started as game-g2gfast's menus and was pulled out so every game gets the same look, the same help screen and the same settings without copying them.
+It started as game-airdrift's menus and was pulled out so every game gets the same look, the same help screen and the same settings without copying them.
 
 - **Stock settings.** Master, effects, interface and voice volume (music if you ask for it), window mode, V-Sync, frame-rate cap, render scale, field of view, effects quality, sensitivity, invert mouse, camera shake, screen flashes, the theme, a frame-rate counter and the chat box. Declared once with the same keys and scopes the games already used, so moving a game onto this keeps every player's choices.
 - **An applier.** `DotMenuApplier` pushes each of those at what it controls (the engine, the audio buses or a dot-audio mixer, a dot-fx config, a dot-player-controller sampler, a camera), once at load and again on every change.

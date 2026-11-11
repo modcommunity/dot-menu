@@ -45,7 +45,7 @@ const WORKBENCH_SETTING := &"bind_workbench"
 const WORKBENCH_KEY := "Semicolon"
 
 ## The stock weapon-cycling actions and settings ([method add_wheel_weapons], API 10): the
-## settings are the ones game-arena has always stored the wheel's weapon rows as, so a game
+## settings are the ones game-fatal-contact has always stored the wheel's weapon rows as, so a game
 ## that moves its own rows onto these keeps every player's keys.
 const WEAPON_PREVIOUS_ACTION := &"dot_menu_weapon_previous"
 const WEAPON_NEXT_ACTION := &"dot_menu_weapon_next"

@@ -225,7 +225,7 @@ func _build_foot(col: VBoxContainer) -> void:
 	_status.name = "Status"
 	_status.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	# Trimmed, never widening: a long refusal pushed the window past its design width and the
-	# right-hand column off screen (rendered in game-arena).
+	# right-hand column off screen (rendered in game-fatal-contact).
 	_status.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	_status.custom_minimum_size = Vector2(1, 0)
 	foot.add_child(_status)
