@@ -1,5 +1,3 @@
-# dot-menu
-
 In-game menus for Godot 4 games, built from data. Press Escape and get a settings menu (General, Video, Audio, Controls, Advanced and any pages your game adds), a help screen, rebindable keys, a Tab scoreboard, a numbered picker, a HUD layout editor, themes, and a connection overlay. Every switch and slider is a view of a [dot-settings](https://github.com/modcommunity/dot-settings) value, so there is no Apply button: a change is saved and applied at once. Part of TMC's open source **Dot** collection (MIT licence).
 
 > Built with Claude Code. Every addon has a headless test suite and the suites pass, but little of this has met real players yet. Please report rough edges.
