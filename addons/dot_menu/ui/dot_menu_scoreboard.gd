@@ -452,9 +452,9 @@ func teams(snap: Variant = null) -> Array:
 
 
 func _signature(snap: Dictionary) -> int:
-	var keys := PackedStringArray()
+	var keys := 0
 	for c in visible_columns():
-		keys.append(str(c.get("key", "")))
+		keys = keys * 31 + hash(c.get("key", ""))
 	return [snap.hash(), keys, group_by, sort_by, side_by_side, title_text, spectators_title, kit.get_instance_id(), player_hidden.hash()].hash()
 
 

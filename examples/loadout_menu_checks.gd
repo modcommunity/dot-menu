@@ -71,6 +71,27 @@ static func run(host: Selftest) -> void:
 	forced.free()
 	host._check(screen.find_children("Stats", "VBoxContainer", true, false).size() == 1, "and the highlighted card has its statistics drawn")
 
+	await _no_redraw(host, node, screen, lo)
+
+	await _draft(host, node, screen, lo, saved)
+	await _restore_and_server_sets(host, screen, lo, saved)
+
+	var link := FakeLoadoutLink.new()
+	host.add_child(link)
+	lo.link = link
+	await _online(host, node, screen, lo, link, saved)
+
+	await host._test_loadout_bare(node)
+
+	if FileAccess.file_exists(DotMenuLoadout.REMEMBER_FILE):
+		var _rm2 := DirAccess.remove_absolute(DotMenuLoadout.REMEMBER_FILE)
+	link.queue_free()
+	node.queue_free()
+	await host.get_tree().process_frame
+
+
+## B after prepare(), or again on the same offer, makes no node; a pick does redraw.
+static func _no_redraw(host: Selftest, node: DotMenuSettings, screen: DotMenuLoadoutScreen, lo: DotMenuLoadout) -> void:
 	# prepare() draws the screen hidden: the first B after it, on the same offer, makes no node.
 	screen.close()
 	await host.get_tree().process_frame
@@ -96,22 +117,6 @@ static func run(host: Selftest) -> void:
 	host.get_tree().node_added.disconnect(count)
 	host._check(entered[0] > 0, "a pick redraws the cards (%d entered)" % entered[0])
 	screen.revert()
-
-	await _draft(host, node, screen, lo, saved)
-	await _restore_and_server_sets(host, screen, lo, saved)
-
-	var link := FakeLoadoutLink.new()
-	host.add_child(link)
-	lo.link = link
-	await _online(host, node, screen, lo, link, saved)
-
-	await host._test_loadout_bare(node)
-
-	if FileAccess.file_exists(DotMenuLoadout.REMEMBER_FILE):
-		var _rm2 := DirAccess.remove_absolute(DotMenuLoadout.REMEMBER_FILE)
-	link.queue_free()
-	node.queue_free()
-	await host.get_tree().process_frame
 
 
 static func _draft(host: Selftest, node: DotMenuSettings, screen: DotMenuLoadoutScreen, lo: DotMenuLoadout, saved: Array) -> void:

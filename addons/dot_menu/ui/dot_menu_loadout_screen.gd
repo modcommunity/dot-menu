@@ -1,5 +1,5 @@
 class_name DotMenuLoadoutScreen
-extends Control
+extends "dot_menu_loadout_offer.gd"
 
 ## The loadout screen: slots down the left, the slot's choices as cards with a picture, and the highlighted card's statistics against what is equipped. Example: docs/examples.md.
 ## A draft sent once when the screen closes (B, Escape, Done): per-click sends would hit a rate-limited server. It shows only what the server will take: fixed slots are locked, over-budget cards are dimmed.
@@ -34,16 +34,9 @@ var _spawn_toggle: Button = null
 ## The action that opened this (B), which also closes it.
 var toggle_action: StringName = &""
 
-## The offer it was opened with.
-var offer: Dictionary = {}
 
-## Slot id to item id: what closing will send.
-var draft: Dictionary = {}
 var _saved: DotMenuLoadoutSaved
 
-## The slot shown (index into the offer's slots) and the card the keys are on.
-var slot_index: int = 0
-var card_index: int = 0
 
 ## The heading.
 var title_text: String = "Loadout"
@@ -65,7 +58,6 @@ var _scroll: ScrollContainer = null
 var _built := false
 ## The state [method _rebuild] last drew (a deep copy), so drawing the same again is skipped.
 var _drawn: Array = []
-var _original: Dictionary = {}
 var _hover := -1
 var _status_text := ""
 
@@ -299,29 +291,6 @@ func close() -> void:
 	closed.emit()
 
 
-## Whether the server offers Random to this player.
-func random_offered() -> bool:
-	var r: Variant = offer.get("random", {})
-	return r is Dictionary and bool((r as Dictionary).get("enabled", false)) and may_choose()
-
-
-## Whether the server lets this player roll a random loadout at every spawn (its rule is 1 or 2).
-func random_spawn_offered() -> bool:
-	return random_offered() and random_spawn_rule() > 0
-
-
-## The server's `mp_loadout_random_on_spawn` for this player's class: 0 off, 1 their choice, 2 forced.
-func random_spawn_rule() -> int:
-	var r: Variant = offer.get("random", {})
-	return int((r as Dictionary).get("spawn", 0)) if r is Dictionary else 0
-
-
-## Whether random-every-spawn applies to this player now: forced by the server, or their toggle.
-func random_spawn_on() -> bool:
-	var r: Variant = offer.get("random", {})
-	return random_spawn_rule() == 2 or (r is Dictionary and bool((r as Dictionary).get("spawn_on", false)))
-
-
 ## Flips the toggle (the T key, the right stick click, a click); a forced rule cannot be flipped.
 func toggle_random_spawn() -> void:
 	if visible and random_spawn_offered() and random_spawn_rule() == 1:
@@ -369,44 +338,6 @@ func is_open() -> bool:
 	return visible
 
 
-## The slots that differ from what the screen opened with: slot id to item id.
-func changes() -> Dictionary:
-	var out: Dictionary = {}
-	for k: Variant in draft.keys():
-		if str(_original.get(k, "")) != str(draft[k]):
-			out[k] = draft[k]
-	return out
-
-
-func slots() -> Array:
-	return offer.get("slots", []) if offer.get("slots") is Array else []
-
-
-func may_choose() -> bool:
-	return bool(offer.get("choose", true))
-
-
-func current_slot() -> Dictionary:
-	var all := slots()
-	return all[slot_index] if slot_index >= 0 and slot_index < all.size() else {}
-
-
-func choices() -> Array:
-	var s := current_slot()
-	return s.get("choices", []) if s.get("choices") is Array else []
-
-
-func slot_locked(slot: Dictionary) -> bool:
-	return not may_choose() or bool(slot.get("fixed", false)) or spawn_locked()
-
-
-## Whether "random every spawn" is on (the player's tick, or forced by the server), which locks every
-## other control of the screen until it is unticked: the loadout is rolled at each spawn, so a pick here
-## would mean nothing. The draft is left as it was, so unticking brings the earlier picks back.
-func spawn_locked() -> bool:
-	return random_spawn_offered() and random_spawn_on()
-
-
 ## Shows slot [param index] (wrapping), with the keys on its equipped card.
 func show_slot(index: int) -> void:
 	var n := slots().size()
@@ -448,37 +379,6 @@ func pick(index: int) -> bool:
 	_status_text = ""
 	_rebuild()
 	return true
-
-
-## Whether cards show their cost: only when the server prices something (a budget, or a weapon with a cost).
-func costs_shown() -> bool:
-	return int(offer.get("budget", 0)) > 0 or bool(offer.get("priced", false))
-
-
-## Points the draft would be over the budget with [param item] in [param slot_id]; 0 within it.
-func over_budget_by(slot_id: String, item: Dictionary) -> int:
-	var budget := int(offer.get("budget", 0))
-	if budget <= 0:
-		return 0
-	return maxi(0, points_with(slot_id, item) - budget)
-
-
-## The draft's points with [param item] in [param slot_id] (or as it is, with an empty item).
-func points_with(slot_id: String = "", item: Dictionary = {}) -> int:
-	var total := 0
-	for s: Variant in slots():
-		var slot := s as Dictionary
-		var id := str(slot["id"])
-		var held := str(item.get("id", "")) if id == slot_id and not item.is_empty() else str(draft.get(id, ""))
-		total += _cost_of(slot, held)
-	return total
-
-
-static func _cost_of(slot: Dictionary, item_id: String) -> int:
-	for c: Variant in slot.get("choices", []):
-		if str((c as Dictionary).get("id", "")) == item_id:
-			return int((c as Dictionary).get("cost", 0))
-	return 0
 
 
 func _focus_equipped() -> void:
@@ -709,13 +609,6 @@ func _tab(index: int, slot: Dictionary) -> Control:
 		dot.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		line.add_child(dot)
 	return b
-
-
-static func _choice(slot: Dictionary, item_id: String) -> Dictionary:
-	for c: Variant in slot.get("choices", []):
-		if str((c as Dictionary).get("id", "")) == item_id:
-			return c as Dictionary
-	return {} if item_id == "" else {"id": item_id, "name": item_id.capitalize()}
 
 
 func _card(index: int, item: Dictionary) -> Control:
