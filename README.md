@@ -124,7 +124,7 @@ A column is data: `key`, `title`, `kind` (text, number, ping, duration, avatar o
 
 ## Settings
 
-`DotMenuConfig` holds what a developer can change without code. It is layered like every Dot config: defaults, then a JSON file, then environment variables, then the command line.
+`DotMenuConfig` holds what a developer can change without code. It is layered like every Gamespice config: defaults, then a JSON file, then environment variables, then the command line.
 
 ```json
 {
