@@ -61,6 +61,9 @@ extends Resource
 ## How much of a side's own colour fills its score plate, 0 to 1: a dark theme tints its
 ## plate and edges it in the colour; the bright one paints it.
 @export_range(0.0, 1.0, 0.01) var hud_team_fill: float = 0.38
+## How much the accent glows, 0 to 1: a shadow of it round the main button and a ring set
+## outside a focused one. 0 is the flat look every theme before Gamespice has.
+@export_range(0.0, 1.0, 0.01) var glow: float = 0.0
 
 @export_group("")
 ## Colours a game names for itself — a team, a rarity, a medal — so they change with the
@@ -78,13 +81,24 @@ const FIELDS: Array[StringName] = [
 ]
 
 ## The non-colour numbers a theme holds, read and written beside [constant FIELDS].
-const NUMBERS: Array[StringName] = [&"hud_team_fill"]
+const NUMBERS: Array[StringName] = [&"hud_team_fill", &"glow"]
 
 
 ## The accent as a faint wash: a selected page, a hovered item, a listening key.
 ## Derived rather than stored, so a theme that changes its accent cannot forget it.
 func accent_wash() -> Color:
 	return Color(accent, 0.13)
+
+
+## The flame gradient's three stops (hot, mid, deep) when the theme names them in [member extra]
+## as flame_hot, flame and flame_deep; empty otherwise, so a theme without one draws no strip.
+func flame() -> PackedColorArray:
+	var none := Color(0, 0, 0, 0)
+	var stops := PackedColorArray([color(&"flame_hot", none), color(&"flame", none), color(&"flame_deep", none)])
+	for c in stops:
+		if c.a <= 0.0:
+			return PackedColorArray()
+	return stops
 
 
 ## The [Theme] a HUD drawn in this palette sets on its root, so dot-ui's glance pieces and plain Labels take their colours from it.

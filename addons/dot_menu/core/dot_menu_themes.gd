@@ -10,9 +10,9 @@ const CHANNEL := "menu.themes"
 var _palettes: Array[DotMenuPalette] = []
 
 
-## The seven stock themes. [b]Midnight[/b] is the default, a dark HUD on deep plates;
-## [b]Arcade[/b] is the first arena HUD's bright look; [b]Paper[/b] is light; [b]High
-## contrast[/b] is for a player who cannot read grey on grey.
+## The eight stock themes. [b]Midnight[/b] is the default, a dark HUD on deep plates;
+## [b]Arcade[/b] is the first FC HUD's bright look; [b]Paper[/b] is light; [b]High
+## contrast[/b] is for a player who cannot read grey on grey; [b]Gamespice[/b] is the web shell's.
 static func stock() -> DotMenuThemes:
 	var t := DotMenuThemes.new()
 	for data in STOCK:
@@ -136,7 +136,34 @@ const STOCK: Array[Dictionary] = [
 		"hud_keycap": [0, 0, 0, 1], "hud_keycap_text": [1, 1, 1],
 		"hud_keycap_edge": [1, 1, 1, 0.9], "hud_team_fill": 0.3,
 	},
+	{
+		# The Gamespice site's tokens (dot-ui DotUiGamespice): bg #140d0b, accent #f2542d, flame #ffc83d > #f2542d > #b8193c.
+		"id": "gamespice", "name": "Gamespice",
+		"backdrop": [0.078, 0.05, 0.042, 0.66], "surface": [0.124, 0.087, 0.076, 0.97],
+		"sidebar": [0.098, 0.066, 0.057, 1.0], "card": [1, 0.92, 0.88, 0.04],
+		"card_hover": [1, 0.92, 0.88, 0.07], "line": [1, 1, 1, 0.1],
+		"text": [0.968, 0.956, 0.952], "muted": [0.736, 0.681, 0.664], "dim": [0.55, 0.5, 0.48],
+		"accent": [0.965, 0.455, 0.333], "accent_deep": [0.949, 0.329, 0.176],
+		"warn": [1.0, 0.784, 0.239], "danger": [1.0, 0.42, 0.388],
+		"keycap": [0.168, 0.125, 0.112], "keycap_edge": [0.255, 0.201, 0.185],
+		"hud_plate": [0.078, 0.05, 0.042, 0.78], "hud_text": [0.98, 0.97, 0.96], "hud_detail": [0.85, 0.76, 0.72],
+		"hud_ahead": [0.5, 0.9, 0.5], "hud_behind": [1.0, 0.42, 0.388],
+		"hud_edge": [0.949, 0.329, 0.176, 0.3], "hud_ink": [0.03, 0.01, 0.0, 0.9], "hud_highlight": [1.0, 0.784, 0.239],
+		"hud_keycap": [0.168, 0.125, 0.112, 0.96], "hud_keycap_text": [0.98, 0.97, 0.96],
+		"hud_keycap_edge": [0.949, 0.329, 0.176, 0.6], "hud_team_fill": 0.38, "glow": 1.0,
+		"extra": {"flame_hot": "#ffc83d", "flame": "#f2542d", "flame_deep": "#b8193c"},
+	},
 ]
+
+
+## The theme the platform hosting the game asks for, from the project setting
+## [code]dot_menu/theme/platform_default[/code]; empty when none. A web shell sets it so every
+## game it runs opens in the shell's look; [method DotMenuConfig.make_themes] puts it first.
+static func platform_default() -> StringName:
+	return StringName(str(ProjectSettings.get_setting(PLATFORM_SETTING, "")))
+
+
+const PLATFORM_SETTING := "dot_menu/theme/platform_default"
 
 
 ## Adds [param palette], or replaces the theme that has its id in place — so a game can

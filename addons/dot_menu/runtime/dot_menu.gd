@@ -28,7 +28,7 @@ var settings: DotSettingsManager = null
 var bindings: DotMenuBindings = null
 var config: DotMenuConfig = null
 
-## The theme catalogue. Null at setup is the stock seven, plus the config's file.
+## The theme catalogue. Null at setup is the stock eight, plus the config's file.
 var themes: DotMenuThemes = null
 
 ## The pages, in sidebar order. Null at setup is [method DotMenuStock.pages].

@@ -2,8 +2,8 @@ extends "res://examples/menu_selftest_keys.gd"
 
 ## Exercises dot-menu with no game: the data model, stock settings and what applies them, the bindings table, the screens, the facade's keys, and what a server may do.
 ## CHECKS is the guard the section counter cannot be: a script error aborts that test, not the run, and only the total notices checks that never ran.
-const SECTIONS := 34
-const CHECKS := 552
+const SECTIONS := 35
+const CHECKS := 564
 
 
 func _ready() -> void:
@@ -18,6 +18,7 @@ func _run() -> void:
 
 	_test_palette()
 	_test_themes()
+	_test_gamespice()
 	_test_config()
 	_test_stock()
 	_test_bindings()
@@ -97,11 +98,11 @@ func _test_themes() -> void:
 	_section("The catalogue")
 
 	var t := DotMenuThemes.stock()
-	_check(t.size() == 7, "seven stock themes")
+	_check(t.size() == 8, "eight stock themes")
 	_check(t.default_id() == &"midnight", "Midnight first, so it is the default")
 	_check(t.named(&"paper").is_light(), "Paper is a light theme")
 	_check(t.named(&"no such theme").id == &"midnight", "an unknown id draws the default, not nothing")
-	_check(t.next(&"contrast") == &"midnight", "the theme key wraps round the end")
+	_check(t.next(&"gamespice") == &"midnight", "the theme key wraps round the end")
 
 	var ember := t.named(&"ember").derive(&"ember", "Ember, but blue")
 	ember.accent = Color.BLUE
@@ -126,7 +127,7 @@ func _test_themes() -> void:
 	f.close()
 	var t2 := DotMenuThemes.stock()
 	var loaded := t2.load_json(path)
-	_check(loaded.ok and t2.find(&"dusk") != null and t2.size() == 8, "a file of themes adds them")
+	_check(loaded.ok and t2.find(&"dusk") != null and t2.size() == 9, "a file of themes adds them")
 	_check(t2.load_json(dir + "/missing.json").ok, "and a missing file is the first launch, not an error")
 	f = FileAccess.open(path, FileAccess.WRITE)
 	f.store_string("{ not json")
@@ -870,6 +871,44 @@ func _contrast(fg: Color, plate: Color, ground: Color) -> float:
 	var a := fg.srgb_to_linear().get_luminance()
 	var b := under.srgb_to_linear().get_luminance()
 	return (maxf(a, b) + 0.05) / (minf(a, b) + 0.05)
+
+
+func _test_gamespice() -> void:
+	_section("The Gamespice theme and the platform's default")
+
+	var t := DotMenuThemes.stock()
+	var g := t.named(&"gamespice")
+	_check(g.id == &"gamespice" and g.accent_deep.to_html(false) == "f2542d", "Gamespice ships, filled in the site's accent #f2542d")
+	_check(g.flame().size() == 3 and g.flame()[0].to_html(false) == "ffc83d" and g.flame()[2].to_html(false) == "b8193c",
+		"with the flame gradient #ffc83d > #f2542d > #b8193c")
+	var mid := t.named(&"midnight")
+	_check(mid.flame().is_empty() and is_zero_approx(mid.glow), "and the flat themes name no flame and no glow")
+	var again := DotMenuPalette.from_dictionary(g.to_dictionary())
+	_check(again.ok and is_equal_approx(again.value.glow, 1.0) and again.value.flame().size() == 3, "the glow and flame survive a round trip")
+
+	var gk := DotMenuKit.new(g)
+	var mk := DotMenuKit.new(mid)
+	var ring := gk.focus_ring()
+	_check(is_equal_approx(ring.border_color.a, 1.0) and ring.expand_margin_left >= 2.0, "a glowing theme's focus ring is full strength and set outside the control")
+	_check(is_equal_approx(mk.focus_ring().border_color.a, 0.7) and is_zero_approx(mk.focus_ring().expand_margin_left), "a flat theme's ring is what it always was")
+	var resume := gk.primary_button("Resume")
+	var lit := resume.get_theme_stylebox(&"normal") as StyleBoxFlat
+	var flat := mk.primary_button("Resume").get_theme_stylebox(&"normal") as StyleBoxFlat
+	_check(lit.shadow_size > 0 and flat.shadow_size == 0, "the main button glows only in a theme that asks for it")
+	resume.free()
+	var strip := gk.flame_strip()
+	_check(strip != null and mk.flame_strip() == null, "the flame strip draws only where the theme has a flame")
+	if strip != null:
+		strip.free()
+
+	_check(DotMenuThemes.platform_default() == &"", "no platform theme unless the project names one")
+	ProjectSettings.set_setting(DotMenuThemes.PLATFORM_SETTING, "gamespice")
+	_check(DotMenuConfig.new().make_themes().default_id() == &"gamespice", "a platform theme becomes every game's default")
+	var narrowed := DotMenuConfig.new()
+	narrowed.themes_allowed = PackedStringArray(["paper", "contrast"])
+	_check(narrowed.make_themes().default_id() == &"paper", "unless the game does not offer it")
+	ProjectSettings.set_setting(DotMenuThemes.PLATFORM_SETTING, null)
+	_check(DotMenuConfig.new().make_themes().default_id() == &"midnight", "and without one Midnight stays the default")
 
 
 func _test_hud_follows() -> void:

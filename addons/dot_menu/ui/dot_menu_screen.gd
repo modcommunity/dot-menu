@@ -210,16 +210,34 @@ func _sidebar() -> Control:
 	var p := kit.palette
 	var side := PanelContainer.new()
 	var s := kit.box(p.sidebar, kit.radius + 4, Color(0, 0, 0, 0), 0, Vector4(18, 22, 18, 18))
-	s.corner_radius_top_right = 0
+	# Beside the page it is the window's left edge; above it, on a phone, the window's top.
+	if _narrow:
+		s.corner_radius_bottom_left = 0
+	else:
+		s.corner_radius_top_right = 0
 	s.corner_radius_bottom_right = 0
 	side.add_theme_stylebox_override(&"panel", s)
 	if not _narrow:
 		side.custom_minimum_size = Vector2(config.sidebar_width, 0)
 
+	# Scrolls when the window is shorter than the column (a phone on its side), so Leave stays reachable;
+	# it follows focus so a gamepad walking the pages scrolls it too.
+	var scroll := ScrollContainer.new()
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	if _narrow:
+		scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.follow_focus = true
+	side.add_child(scroll)
 	var col := VBoxContainer.new()
 	col.name = "Sidebar"
 	col.add_theme_constant_override(&"separation", 6)
-	side.add_child(col)
+	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	col.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.add_child(col)
+	var flame := kit.flame_strip()
+	if flame != null:
+		col.add_child(flame)
+		col.add_child(DotMenuKit.gap(4))
 
 	if not _narrow and (config.brand_mark != "" or config.brand_name != ""):
 		var brand := HBoxContainer.new()
@@ -236,14 +254,18 @@ func _sidebar() -> Control:
 	_subtitle = kit.paragraph(subtitle, kit.size_small, p.dim)
 	_subtitle.visible = subtitle != "" and not _narrow
 	col.add_child(_subtitle)
-	col.add_child(DotMenuKit.gap(14))
+	var under_brand := DotMenuKit.gap(14)
+	under_brand.visible = not _narrow
+	col.add_child(under_brand)
 
 	_resume = kit.primary_button("Resume")
 	_resume.name = "Resume"
 	_resume.pressed.connect(close)
 	_resume.visible = not _narrow
 	col.add_child(_resume)
-	col.add_child(DotMenuKit.gap(10))
+	var under_resume := DotMenuKit.gap(10)
+	under_resume.visible = not _narrow
+	col.add_child(under_resume)
 
 	var tabs: Container = HFlowContainer.new() if _narrow else VBoxContainer.new()
 	tabs.name = "Pages"

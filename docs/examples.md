@@ -60,7 +60,7 @@ DotMenuRow.custom("Name", "", func(kit): return LineEdit.new())
 ## dot_menu_themes
 
 ```gdscript
-var themes := DotMenuThemes.stock()          # the seven this addon ships
+var themes := DotMenuThemes.stock()          # the eight this addon ships
 themes.add(my_palette)                       # a game's own
 themes.load_json("res://ui/themes.json")     # or a file of them
 themes.keep_only(["midnight", "paper"])      # an operator's choice of which to offer

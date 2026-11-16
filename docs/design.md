@@ -26,6 +26,10 @@ dot-ui ships no art and names nothing outside dot-core; its `DotSettingsPanel` g
 
 A theme is a whole palette (`DotMenuPalette`), menus and HUD, never an accent swap. The kit is an instance rebuilt per theme; static vars would mean one palette per process and two menus in one editor session sharing it. A screen is **rebuilt, not recoloured**, on a theme change: every box is set once as an override when built, and walking the tree to find each again is a second copy of the build that drifts.
 
+## The platform's theme
+
+**Gamespice** is the web shell's look as a stock theme: the site's background, glass and hairline, the accent #f2542d, and the flame #ffc83d > #f2542d > #b8193c in `extra` (drawn as a strip over the sidebar by `DotMenuKit.flame_strip`). It is the only theme with `glow` above 0, which lights the main button with an accent shadow and sets the focus ring at full strength outside the control, so keyboard and gamepad focus reads from across a room. Games run inside the shell's process, so the shell's `project.godot` sets `dot_menu/theme/platform_default="gamespice"` and `DotMenuConfig.make_themes` puts it first in every game it hosts. It is a default, not a lock: a player's stored choice wins, and a game whose `themes_allowed` leaves it out keeps its own first theme.
+
 ## The HUD follows the theme
 
 A theme picked in the menu restyles the HUD at once, in every game, through one call made where the HUD is built: `menu.follow_hud(root, accent)`. The menu sets `root.theme` to `palette.hud_theme(accent)` now, after `setup`, and on every theme change; dot-ui's glance pieces read their colours when they draw and every plain Label under the root takes the theme's text colour outlined in its ink, so nothing is rebuilt and nothing walks the tree. Until 2026-10-11 a game had to connect `theme_changed` itself, and the first play test found every HUD but one ignoring the theme.

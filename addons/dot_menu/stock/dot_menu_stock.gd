@@ -63,7 +63,7 @@ const KEYS := {
 
 
 ## Declares the stock settings in [param groups] (default [constant DEFAULT_GROUPS]) that [param schema] does not have yet.
-## [param themes] supplies the `ui_theme` options; null is the stock seven. [param except] is stock keys this game has nothing
+## [param themes] supplies the `ui_theme` options; null is the stock eight. [param except] is stock keys this game has nothing
 ## to apply to, because a declared setting nothing applies is a switch that does nothing.
 static func declare(
 	schema: DotSettingsSchema, groups: Array[StringName] = DEFAULT_GROUPS, themes: DotMenuThemes = null,

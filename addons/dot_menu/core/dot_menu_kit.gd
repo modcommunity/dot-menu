@@ -96,6 +96,40 @@ func surface_box() -> StyleBoxFlat:
 	return s
 
 
+## The ring a focused control wears, for keyboard and gamepad players. [param alpha] is its
+## strength in a flat theme; a theme with [member DotMenuPalette.glow] draws it at full strength,
+## set outside the control so it does not cover a filled button's edge.
+func focus_ring(alpha: float = 0.7) -> StyleBoxFlat:
+	var g := palette.glow
+	var out := roundi(3.0 * g)
+	var s := box(Color(0, 0, 0, 0), radius_small + out, Color(palette.accent, lerpf(alpha, 1.0, g)), 2)
+	s.set_expand_margin_all(out)
+	return s
+
+
+## A thin bar in the theme's flame gradient ([method DotMenuPalette.flame]), or null when the
+## theme has none. [param height] in pixels.
+func flame_strip(height: int = 3) -> Control:
+	var stops := palette.flame()
+	if stops.is_empty():
+		return null
+	var g := Gradient.new()
+	g.offsets = PackedFloat32Array([0.0, 0.5, 1.0])
+	g.colors = stops
+	var tex := GradientTexture2D.new()
+	tex.gradient = g
+	tex.width = 256
+	tex.height = 1
+	var strip := TextureRect.new()
+	strip.name = "Flame"
+	strip.texture = tex
+	strip.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	strip.stretch_mode = TextureRect.STRETCH_SCALE
+	strip.custom_minimum_size = Vector2(0, height)
+	strip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return strip
+
+
 ## A fresh [Theme] every call, for dot-ui's reason: a Theme is mutable and shared.
 func theme() -> Theme:
 	var p := palette
@@ -113,7 +147,7 @@ func theme() -> Theme:
 	t.set_stylebox(&"pressed", &"Button", box(wash, radius_small, p.accent, 1, pad))
 	t.set_stylebox(&"hover_pressed", &"Button", box(wash, radius_small, p.accent, 1, pad))
 	t.set_stylebox(&"disabled", &"Button", box(Color(p.text, 0.015), radius_small, p.line, 1, pad))
-	t.set_stylebox(&"focus", &"Button", box(Color(0, 0, 0, 0), radius_small, Color(p.accent, 0.7), 2))
+	t.set_stylebox(&"focus", &"Button", focus_ring())
 	t.set_color(&"font_color", &"Button", p.text)
 	t.set_color(&"font_hover_color", &"Button", p.text)
 	t.set_color(&"font_pressed_color", &"Button", p.accent)
@@ -139,7 +173,7 @@ func theme() -> Theme:
 
 	# A text field, for a game's own rows (a name, a server address).
 	t.set_stylebox(&"normal", &"LineEdit", box(field, radius_small, p.line, 1, field_pad))
-	t.set_stylebox(&"focus", &"LineEdit", box(Color(0, 0, 0, 0), radius_small, Color(p.accent, 0.7), 2))
+	t.set_stylebox(&"focus", &"LineEdit", focus_ring())
 	t.set_stylebox(&"read_only", &"LineEdit", box(Color(p.text, 0.015), radius_small, p.line, 1, field_pad))
 	t.set_color(&"font_color", &"LineEdit", p.text)
 	t.set_color(&"font_placeholder_color", &"LineEdit", p.dim)
@@ -251,10 +285,18 @@ func primary_button(text: String) -> Button:
 	b.custom_minimum_size = Vector2(0, maxi(42, touch_target))
 	var pad := Vector4(16, 10, 16, 10)
 	var none := Color(0, 0, 0, 0)
-	b.add_theme_stylebox_override(&"normal", box(p.accent_deep, radius_small, none, 0, pad))
-	b.add_theme_stylebox_override(&"hover", box(p.accent_deep.lightened(0.12), radius_small, none, 0, pad))
+	var normal := box(p.accent_deep, radius_small, none, 0, pad)
+	var hover := box(p.accent_deep.lightened(0.12), radius_small, none, 0, pad)
+	# The glow is a shadow in the accent, so a flat theme (glow 0) draws exactly what it did.
+	for pair in [[normal, 0.32], [hover, 0.5]]:
+		var s: StyleBoxFlat = pair[0]
+		s.shadow_color = Color(p.accent_deep, float(pair[1]) * p.glow)
+		s.shadow_size = roundi(14.0 * p.glow)
+		s.shadow_offset = Vector2(0, roundi(3.0 * p.glow))
+	b.add_theme_stylebox_override(&"normal", normal)
+	b.add_theme_stylebox_override(&"hover", hover)
 	b.add_theme_stylebox_override(&"pressed", box(p.accent, radius_small, none, 0, pad))
-	b.add_theme_stylebox_override(&"focus", box(none, radius_small, Color(p.accent, 0.8), 2))
+	b.add_theme_stylebox_override(&"focus", focus_ring(0.8))
 	var ink := DotMenuPalette.ink_on(p.accent_deep)
 	b.add_theme_color_override(&"font_color", ink)
 	b.add_theme_color_override(&"font_hover_color", ink)
@@ -274,7 +316,7 @@ func secondary_button(text: String) -> Button:
 	b.add_theme_stylebox_override(&"normal", box(p.card, radius_small, p.line, 1, pad))
 	b.add_theme_stylebox_override(&"hover", box(p.card_hover, radius_small, p.accent, 1, pad))
 	b.add_theme_stylebox_override(&"pressed", box(p.accent_wash(), radius_small, p.accent, 1, pad))
-	b.add_theme_stylebox_override(&"focus", box(Color(0, 0, 0, 0), radius_small, Color(p.accent, 0.8), 2))
+	b.add_theme_stylebox_override(&"focus", focus_ring(0.8))
 	for c in [&"font_color", &"font_hover_color", &"font_pressed_color", &"font_focus_color"]:
 		b.add_theme_color_override(c, p.text)
 	b.add_theme_font_override(&"font", bold())

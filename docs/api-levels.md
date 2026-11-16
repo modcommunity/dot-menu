@@ -42,3 +42,4 @@ What each `DotMenuApi.LEVEL` added; the rule for bumping is on `DotAddonApi`.
 
 21 The Maps / Game modes tabs: DotMenuMaps.modes_fn/mode_group/modes_tab/apply_mode_now/mode/toggle_tab()/has_tabs(); DotMenu.modes_action; DotMenuBindings.add_modes and MODES_*; DotMenuSettings.map_modes; DotMenuPicker.tabs/tab/pick_closes/tab_clicked.
 22 DotMenuGameSpec and DotMenuGameSettings: a game declares its settings menu (names, field of view, ambient and Comfort rows, left-out stock keys, key table, help text) as data.
+23 The Gamespice stock theme; DotMenuPalette.glow and flame(); DotMenuKit.focus_ring() and flame_strip(); DotMenuThemes.platform_default() and PLATFORM_SETTING (the project setting dot_menu/theme/platform_default, which DotMenuConfig.make_themes puts first).

@@ -137,9 +137,10 @@ func fps_list(keep: int = -1) -> Array[int]:
 	return out
 
 
-## The theme catalogue this config describes: the stock seven, the file's, narrowed to
-## [member themes_allowed], with [member theme] first. What [DotMenu] draws with when it is
-## given no catalogue of its own, and what [method apply_to_schema] offers.
+## The theme catalogue this config describes: the stock eight, the file's, narrowed to
+## [member themes_allowed], with [member theme] first, or the platform's theme
+## ([method DotMenuThemes.platform_default]) when there is one and it is offered. What [DotMenu]
+## draws with when it is given no catalogue of its own, and what [method apply_to_schema] offers.
 func make_themes(base: DotMenuThemes = null) -> DotMenuThemes:
 	var t := base if base != null else DotMenuThemes.stock()
 	var loaded := t.load_json(themes_file)
@@ -147,6 +148,9 @@ func make_themes(base: DotMenuThemes = null) -> DotMenuThemes:
 		DotLog.warn(CHANNEL, "themes file not used", {"why": loaded.error.message})
 	var _kept := t.keep_only(themes_allowed)
 	var _first := t.make_default(theme)
+	var platform := DotMenuThemes.platform_default()
+	if platform != &"":
+		var _platform_first := t.make_default(platform)
 	return t
 
 
