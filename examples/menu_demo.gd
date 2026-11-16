@@ -33,7 +33,7 @@ func _build_menu() -> void:
 	var config := DotMenuConfig.new()
 	config.brand_mark = "dot"
 	config.brand_name = "menu"
-	# The environment and the command line over those: DOT_MENU_THEME=paper, --menu-browser-tips=on.
+	# The environment and the command line over those: GS_MENU_THEME=paper, --menu-browser-tips=on.
 	var _layered := config.load_layered()
 	var schema := DotSettingsSchema.new()
 	DotMenuStock.declare(schema)

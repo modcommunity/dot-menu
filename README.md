@@ -141,7 +141,7 @@ A column is data: `key`, `title`, `kind` (text, number, ping, duration, avatar o
 ```
 
 ```bash
-DOT_MENU_THEME=paper godot --path . -- --menu-browser-tips=on
+GS_MENU_THEME=paper godot --path . -- --menu-browser-tips=on
 ```
 
 `settings` changes the schema (a default, a range, the options), so call `config.apply_to_schema(schema)` before settings load. A changed default reaches players who have never run the game; players with a stored value keep it.

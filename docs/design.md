@@ -22,7 +22,7 @@ dot-ui ships no art and names nothing outside dot-core; its `DotSettingsPanel` g
 
 ## Themes go into the schema before the settings load
 
-`ui_theme` is an ENUM over theme ids, and dot-settings corrects a stored value that is not an option **when it loads**. A theme added after that (from `themes_file`, or in code) is refused, and a player who chose it is reset at every start. So `DotMenuConfig.apply_to_schema(schema, themes)` writes the catalogue's ids and the configured default into the def, and must run before `settings.setup()`. `DotMenu.setup` WARNs when the def cannot hold a theme it offers. Found by probing the README's own `DOT_MENU_THEME=paper` line.
+`ui_theme` is an ENUM over theme ids, and dot-settings corrects a stored value that is not an option **when it loads**. A theme added after that (from `themes_file`, or in code) is refused, and a player who chose it is reset at every start. So `DotMenuConfig.apply_to_schema(schema, themes)` writes the catalogue's ids and the configured default into the def, and must run before `settings.setup()`. `DotMenu.setup` WARNs when the def cannot hold a theme it offers. Found by probing the README's own `GS_MENU_THEME=paper` line.
 
 A theme is a whole palette (`DotMenuPalette`), menus and HUD, never an accent swap. The kit is an instance rebuilt per theme; static vars would mean one palette per process and two menus in one editor session sharing it. A screen is **rebuilt, not recoloured**, on a theme change: every box is set once as an override when built, and walking the tree to find each again is a second copy of the build that drifts.
 
