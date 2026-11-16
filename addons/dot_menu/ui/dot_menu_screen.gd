@@ -240,16 +240,7 @@ func _sidebar() -> Control:
 		col.add_child(DotMenuKit.gap(4))
 
 	if not _narrow and (config.brand_mark != "" or config.brand_name != ""):
-		var brand := HBoxContainer.new()
-		brand.add_theme_constant_override(&"separation", 10)
-		if config.brand_mark != "":
-			var mark := PanelContainer.new()
-			mark.add_theme_stylebox_override(&"panel", kit.box(p.accent, 8, Color(0, 0, 0, 0), 0, Vector4(8, 2, 8, 3)))
-			mark.add_child(kit.label(config.brand_mark, kit.size_small + 1, DotMenuPalette.ink_on(p.accent), true))
-			brand.add_child(mark)
-		if config.brand_name != "":
-			brand.add_child(kit.label(config.brand_name, kit.size_title - 4, p.text, true))
-		col.add_child(brand)
+		col.add_child(_brand_row())
 
 	_subtitle = kit.paragraph(subtitle, kit.size_small, p.dim)
 	_subtitle.visible = subtitle != "" and not _narrow
@@ -282,6 +273,28 @@ func _sidebar() -> Control:
 		action_row = HFlowContainer.new()
 		action_row.add_theme_constant_override(&"h_separation", 6)
 		col.add_child(action_row)
+	_add_action_buttons(action_row)
+	return side
+
+
+## The brand mark and name above the page tabs.
+func _brand_row() -> HBoxContainer:
+	var p := kit.palette
+	var brand := HBoxContainer.new()
+	brand.add_theme_constant_override(&"separation", 10)
+	if config.brand_mark != "":
+		var mark := PanelContainer.new()
+		mark.add_theme_stylebox_override(&"panel", kit.box(p.accent, 8, Color(0, 0, 0, 0), 0, Vector4(8, 2, 8, 3)))
+		mark.add_child(kit.label(config.brand_mark, kit.size_small + 1, DotMenuPalette.ink_on(p.accent), true))
+		brand.add_child(mark)
+	if config.brand_name != "":
+		brand.add_child(kit.label(config.brand_name, kit.size_title - 4, p.text, true))
+	return brand
+
+
+## One nav button per entry of [member actions], under the page tabs.
+func _add_action_buttons(action_row: Container) -> void:
+	var p := kit.palette
 	for a in actions:
 		var id: StringName = a.get("id", &"")
 		var b := kit.nav_button(str(a.get("text", "")), null)
@@ -293,7 +306,6 @@ func _sidebar() -> Control:
 		b.pressed.connect(func() -> void: action_requested.emit(id))
 		_action_buttons[id] = b
 		action_row.add_child(b)
-	return side
 
 
 ## The page tabs, from [member pages] as they are now. Rebuilt on every open, because a page
