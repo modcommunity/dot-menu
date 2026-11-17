@@ -19,7 +19,7 @@ var choose_fn: Callable = Callable()
 var enabled: bool = true
 ## With nothing wired (no server link, no [member offer_fn]) the menu still opens as a free-for-all: Play and Spectate. False keeps the old toast.
 var default_when_unwired: bool = true
-var menu: DotMenu = null
+var menu: CanvasLayer = null  # a DotMenu (untyped: see dot_menu_huds.gd)
 var link: Object = null
 var link_service: StringName = &"dot_client_link"
 var command_prefix: String = "/"
@@ -128,7 +128,7 @@ func _on_notice(notice: Object) -> void:
 ## The server's answer. A `result` that is ok closes the menu; a refusal stays up with its reason.
 func receive(data: Dictionary) -> void:
 	_waiting_since_msec = -1
-	var open_now := menu != null and menu.team_screen != null and menu.team_screen.is_open()
+	var open_now: bool = menu != null and menu.team_screen != null and menu.team_screen.is_open()
 	if data.get("result") is Dictionary:
 		var res := data["result"] as Dictionary
 		_done(bool(res.get("ok", false)), str(res.get("message", "")))

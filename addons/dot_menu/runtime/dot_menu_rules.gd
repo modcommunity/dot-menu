@@ -5,18 +5,18 @@ extends RefCounted
 var rules: Dictionary = {}
 ## reason -> rows hidden for it.
 var hidden_by: Dictionary = {}
-var _menu: DotMenu
+var _menu: CanvasLayer  # a DotMenu (untyped: see dot_menu_huds.gd)
 
 
-func _init(menu: DotMenu) -> void:
+func _init(menu: CanvasLayer) -> void:
 	_menu = menu
 
 
 func apply(new_rules: Dictionary) -> PackedStringArray:
 	rules = new_rules.duplicate(true)
 	var applied := PackedStringArray()
-	var screen := _menu.screen
-	var settings := _menu.settings
+	var screen: DotMenuScreen = _menu.screen
+	var settings: DotSettingsManager = _menu.settings
 
 	if screen != null:
 		screen.extra_hidden_rows = hidden_rows()
@@ -39,7 +39,7 @@ func apply(new_rules: Dictionary) -> PackedStringArray:
 
 func release() -> void:
 	rules.clear()
-	var screen := _menu.screen
+	var screen: DotMenuScreen = _menu.screen
 	if screen != null:
 		screen.extra_hidden_rows = hidden_rows()
 		screen.extra_hidden_pages = PackedStringArray()
@@ -73,18 +73,18 @@ func hidden_rows() -> PackedStringArray:
 ## Narrows the theme row to [param allowed] (empty is every theme) and moves off a theme the
 ## server does not offer, for this connection only; the stored choice is untouched.
 func offer_themes(allowed: PackedStringArray) -> void:
-	var row := _menu.find_row(&"ui_theme")
+	var row: DotMenuRow = _menu.find_row(&"ui_theme")
 	var offered: Array = []
 	for o in _menu.themes.options():
 		if allowed.is_empty() or allowed.has(String(o[0])):
 			offered.append(o)
 	if row != null:
 		row.options = offered
-	var stored := _menu.stored_theme()
+	var stored: StringName = _menu.stored_theme()
 	if not allowed.is_empty() and not allowed.has(String(stored)):
-		var _changed := _menu.use_theme(StringName(allowed[0]))
+		var _changed: bool = _menu.use_theme(StringName(allowed[0]))
 	else:
-		var _changed := _menu.use_theme(stored)
+		var _changed: bool = _menu.use_theme(stored)
 
 
 static func strings(v: Variant) -> PackedStringArray:

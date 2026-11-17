@@ -106,7 +106,7 @@ var _rtt_scale := 100.0
 ## Wall-clock frame timing; runs only while the panel is shown.
 var frames := DotMenuFrameClock.new()
 
-var _painter := DotMenuNetStatPainter.new(self)
+var _painter: RefCounted = load("uid://t8ih5rf7iudm").new(self)  # DotMenuNetStatPainter, loaded (not named) so the two parsers do not hold each other
 
 ## `func() -> Object`: the client's dot-net manager, or null. Unset looks one up in
 ## [DotRegistry]; see the class note.

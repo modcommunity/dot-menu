@@ -44,7 +44,7 @@ var store_fn: Callable = Callable()
 var enabled: bool = true
 
 ## The menu it draws in. Set by [method DotMenu.use_loadout].
-var menu: DotMenu = null
+var menu: CanvasLayer = null  # a DotMenu (untyped: see dot_menu_huds.gd)
 
 ## What is asked when connected: anything with `send_chat(text)` and `notice_received`. Null looks
 ## up [member link_service] in [DotRegistry] when B is pressed.
@@ -100,7 +100,7 @@ func prepare() -> void:
 	if not enabled or menu == null or menu.loadout_screen == null or _connected(_link()) or not offer_fn.is_valid():
 		return
 	var data := _dictionary(await offer_fn.call())
-	var screen := menu.loadout_screen
+	var screen: DotMenuLoadoutScreen = menu.loadout_screen
 	if data.is_empty() or screen == null or screen.is_open():
 		return
 	last_offer = decorate(data)
@@ -115,7 +115,7 @@ func open_offer(data: Dictionary) -> void:
 	if menu == null:
 		return
 	last_offer = decorate(data)
-	var screen := menu.loadout_screen
+	var screen: DotMenuLoadoutScreen = menu.loadout_screen
 	if screen == null:
 		return
 	screen.title_text = title

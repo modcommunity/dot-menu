@@ -2,11 +2,11 @@ class_name DotMenuHuds
 extends RefCounted
 ## The HUD roots a game hands [DotMenu] through `follow_hud`: themed and scaled on every change.
 
-var _menu: DotMenu
+var _menu: CanvasLayer  # a DotMenu, held untyped so this file and dot_menu.gd do not keep each other's parsers alive
 var _entries: Array[Dictionary] = []
 
 
-func _init(menu: DotMenu) -> void:
+func _init(menu: CanvasLayer) -> void:
 	_menu = menu
 
 
@@ -64,7 +64,7 @@ func _scale(entry: Dictionary) -> void:
 	var root := (entry["root"] as WeakRef).get_ref() as Control
 	if root == null or not bool(entry["scaled"]):
 		return
-	var k := _menu.hud_scale()
+	var k: float = _menu.hud_scale()
 	if &"user_scale" in root:
 		root.set(&"user_scale", k)
 		return

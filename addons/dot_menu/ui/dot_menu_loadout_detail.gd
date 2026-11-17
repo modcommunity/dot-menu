@@ -51,16 +51,16 @@ static func icon_box(kit: DotMenuKit, item: Dictionary, min_size: Vector2, frame
 
 ## The highlighted card: a big picture, its name and line, and each statistic as a bar with what
 ## is equipped now drawn behind it, so "better or worse than what I have" is one glance.
-static func draw(screen: DotMenuLoadoutScreen, _detail: HBoxContainer) -> void:
-	var kit := screen.kit
+static func draw(screen: Control, _detail: HBoxContainer) -> void:
+	var kit: DotMenuKit = screen.kit
 	DotMenuKit.clear(_detail)
 	var p := kit.palette
-	var list := screen.choices()
+	var list: Array = screen.choices()
 	if list.is_empty():
 		return
 	var item := list[clampi(screen.card_index, 0, list.size() - 1)] as Dictionary
-	var slot := screen.current_slot()
-	var held := DotMenuLoadoutScreen._choice(slot, str(screen.draft.get(str(slot.get("id", "")), "")))
+	var slot: Dictionary = screen.current_slot()
+	var held: Dictionary = screen._choice(slot, str(screen.draft.get(str(slot.get("id", "")), "")))
 
 	var pic := icon_box(kit, item, Vector2(250, 140), true)
 	_detail.add_child(pic)

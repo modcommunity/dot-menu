@@ -30,7 +30,7 @@ var change_fn: Callable = Callable()
 var enabled: bool = true
 
 ## The menu it draws in. Set by [method DotMenu.use_maps].
-var menu: DotMenu = null
+var menu: CanvasLayer = null  # a DotMenu (untyped: see dot_menu_huds.gd)
 
 ## What is asked when connected: anything with `send_chat(text)` and `notice_received`.
 ## Null looks up [member link_service] in [DotRegistry] when M is pressed.
@@ -115,11 +115,11 @@ func open_rows(rows: Array, allowed: bool, where: String = "", flag: String = ""
 	_tabbed = modes_tab == &"show" or (modes_tab != &"hide" and not _mode_rows.is_empty())
 	tab = TAB_MAPS
 	var items := _map_rows
-	var p := menu.picker
+	var p: DotMenuPicker = menu.picker
 	p.noun = noun
 	p.pick_closes = true
 	p.footer_extra = Callable()
-	var key := menu.bindings.key_for(menu.maps_action) if menu.bindings != null and not menu.bindings.row_for_action(menu.maps_action).is_empty() \
+	var key: String = menu.bindings.key_for(menu.maps_action) if menu.bindings != null and not menu.bindings.row_for_action(menu.maps_action).is_empty() \
 		else DotInputBinding.describe_action(menu.maps_action)
 	var heading := title
 	if allowed:
@@ -179,7 +179,7 @@ func toggle_tab() -> bool:
 
 func show_tab(id: StringName) -> void:
 	tab = id
-	var p := menu.picker
+	var p: DotMenuPicker = menu.picker
 	p.items = _mode_rows if id == TAB_MODES else _map_rows
 	p.page = 0
 	for i in p.items.size():
@@ -192,7 +192,7 @@ func show_tab(id: StringName) -> void:
 
 
 func _draw_tab() -> void:
-	var p := menu.picker
+	var p: DotMenuPicker = menu.picker
 	if not _tabbed:
 		p.tabs = []
 		p.tab = &""
