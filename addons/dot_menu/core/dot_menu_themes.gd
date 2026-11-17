@@ -87,7 +87,7 @@ const STOCK: Array[Dictionary] = [
 		"hud_keycap_edge": [0.85, 0.78, 0.3, 0.5], "hud_team_fill": 0.5,
 	},
 	{
-		# The first arena HUD's bright look, kept for a player who liked it: pale see-through
+		# The first FC HUD's bright look, kept for a player who liked it: pale see-through
 		# plates, white key caps, score plates painted in the side's colour.
 		"id": "arcade", "name": "Arcade",
 		"backdrop": [0.03, 0.04, 0.09, 0.6], "surface": [0.09, 0.11, 0.19, 0.97],

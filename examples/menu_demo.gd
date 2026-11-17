@@ -123,7 +123,7 @@ static func roster() -> Dictionary:
 			"team": 0 if i == 8 else 1 + i % 2, "bot": i == 6,
 		})
 	return {
-		"server": {"name": "TMC Demo #1  |  Deathmatch", "game": "Arena", "map": "dm_yard", "players": 9, "max": 16},
+		"server": {"name": "TMC Demo #1  |  Deathmatch", "game": "FC", "map": "dm_yard", "players": 9, "max": 16},
 		"you": 3,
 		"header": {"Time left": "7:42", "Round": "3 of 5"},
 		"teams": [{"id": 1, "name": "Red", "color": "#e5534b", "score": 4}, {"id": 2, "name": "Blue", "color": "#4c8fe6", "score": 6}],

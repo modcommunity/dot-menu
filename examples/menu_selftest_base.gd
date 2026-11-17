@@ -150,7 +150,7 @@ class FakeHud extends Control:
 
 func _snapshot() -> Dictionary:
 	return {
-		"server": {"name": "Test Server", "game": "Arena", "map": "dm_yard", "players": 4, "max": 16},
+		"server": {"name": "Test Server", "game": "FC", "map": "dm_yard", "players": 4, "max": 16},
 		"you": 3,
 		"header": {"Time left": "4:12"},
 		"teams": [{"id": 1, "name": "Red", "color": "#e05050", "score": 5}, {"id": 2, "name": "Blue", "color": [0.3, 0.5, 1.0], "score": 7}],

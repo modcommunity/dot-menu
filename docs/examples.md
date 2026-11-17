@@ -117,7 +117,7 @@ var loadout := menu.use_loadout(
 	func(picks: Dictionary) -> Variant: return await game.choose(picks),  # solo: save them
 	func(slot_id: String, choice: Dictionary) -> Dictionary:              # art and numbers
 		return {"icon": icons[choice.id], "stats": stats_for(choice.id)})
-loadout.remember_as("arena", account_name)
+loadout.remember_as("fc", account_name)
 loadout.restore()      # after joining: re-sends what this account chose last time
 ```
 
