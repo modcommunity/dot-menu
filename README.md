@@ -128,7 +128,7 @@ A column is data: `key`, `title`, `kind` (text, number, ping, duration, avatar o
 
 ```json
 {
-  "brand_mark": "g2g", "brand_name": "fast",
+  "brand_mark": "air", "brand_name": "drift",
   "theme": "ember", "themes_allowed": ["ember", "paper", "contrast"],
   "rows_hidden": ["render_scale"],
   "settings": {

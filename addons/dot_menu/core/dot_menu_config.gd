@@ -6,7 +6,7 @@ extends DotConfig
 ## [member settings] changes the SCHEMA so it is read before the settings document loads. What a server may change arrives later and is narrower (see [method DotMenu.apply_server_rules]).
 ## A default is a first-run value, not a reset, which is why a server clamps rather than sets.
 
-## The small filled mark at the top of the sidebar ("g2g"). Empty draws none.
+## The small filled mark at the top of the sidebar ("air"). Empty draws none.
 @export var brand_mark: String = ""
 
 ## The words beside it ("fast"). Empty draws none.

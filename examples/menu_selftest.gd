@@ -140,7 +140,7 @@ func _test_config() -> void:
 
 	var cfg := DotMenuConfig.new()
 	var applied := cfg.apply_dictionary({
-		"brand_mark": "g2g", "theme": "ember", "rows_hidden": ["render_scale"],
+		"brand_mark": "air", "theme": "ember", "rows_hidden": ["render_scale"],
 		"settings": {
 			"field_of_view": {"default": 100, "min": 75, "max": 110},
 			"shake_scale": {"default": 0.0},

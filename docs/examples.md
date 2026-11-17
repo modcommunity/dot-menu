@@ -16,7 +16,7 @@ keys.apply_all(settings)                              # onto the InputMap, at bo
 
 ```gdscript
 {
-  "brand_mark": "g2g", "brand_name": "fast",
+  "brand_mark": "air", "brand_name": "drift",
   "theme": "ember", "themes_allowed": ["ember", "paper", "contrast"],
   "themes_file": "res://ui/themes.json",
   "pages_hidden": ["audio"], "rows_hidden": ["render_scale", "raw_input"],
