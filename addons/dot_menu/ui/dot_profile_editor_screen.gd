@@ -186,7 +186,7 @@ func _build_empty() -> Control:
 func _build_sidebar() -> Control:
 	var panel := PanelContainer.new()
 	panel.custom_minimum_size.x = tokens.px(220)
-	panel.add_theme_stylebox_override("panel", tokens._pad(tokens.box(tokens.card, -1, tokens.border, 1, 1), tokens.sp(3), tokens.sp(3)))
+	panel.add_theme_stylebox_override("panel", tokens._pad(tokens.box(tokens.card, -1, tokens.border, 1), tokens.sp(3), tokens.sp(3)))
 	var scroll := ScrollContainer.new()
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	panel.add_child(scroll)
