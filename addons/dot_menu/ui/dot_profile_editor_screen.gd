@@ -35,7 +35,7 @@ var _id_pick: OptionButton = null
 var _reset_btn: Button = null
 var _note: Label = null
 var _target: Label = null
-var _empty: Label = null
+var _empty: Control = null
 var _pane: VBoxContainer = null
 var _built_width := -1.0
 var _list_buttons := {}
@@ -110,7 +110,7 @@ func reset_profile() -> DotResult:
 		_say(loaded.error.message, true)
 		return loaded
 	form.set_values(loaded.value.values)
-	_say("Back to the defaults", false)
+	_say("\u2713  Back to the defaults", false)
 	_refresh_reset()
 	reset_done.emit(_kind, _id)
 	return DotResult.success(null)
@@ -154,15 +154,33 @@ func _build() -> void:
 	_pane = VBoxContainer.new()
 	_pane.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_pane.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_pane.add_theme_constant_override("separation", tokens.sp(2))
+	_pane.add_theme_constant_override("separation", tokens.sp(3))
 	layout.add_child(_pane)
-	_empty = Label.new()
-	_empty.theme_type_variation = &"FormCaption"
-	_empty.text = "Choose a profile to edit." if not _sets.is_empty() else "Nothing to edit."
-	_empty.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_empty.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_empty.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_empty = _build_empty()
 	_pane.add_child(_empty)
+
+
+## The empty state: a centred title and one line of what to do, never a bare caption.
+func _build_empty() -> Control:
+	var box := VBoxContainer.new()
+	box.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	box.alignment = BoxContainer.ALIGNMENT_CENTER
+	box.add_theme_constant_override("separation", tokens.sp(1))
+	var head := Label.new()
+	head.text = "Choose a profile" if not _sets.is_empty() else "Nothing to edit"
+	head.add_theme_font_override("font", tokens.bold())
+	head.add_theme_font_size_override("font_size", tokens.px(tokens.font_section))
+	head.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	box.add_child(head)
+	var hint := Label.new()
+	hint.theme_type_variation = &"FormCaption"
+	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.text = "No profile kinds are registered yet."
+	if not _sets.is_empty():
+		hint.text = "Pick one %s to edit its values." % ("above" if _compact else "in the list")
+	box.add_child(hint)
+	return box
 
 
 func _build_sidebar() -> Control:
@@ -182,13 +200,21 @@ func _build_sidebar() -> Control:
 		head.theme_type_variation = &"FormCaption"
 		head.add_theme_color_override("font_color", tokens.text_faint)
 		head.add_theme_constant_override("line_spacing", 0)
-		_sidebar_box.add_child(head)
+		var head_pad := MarginContainer.new()
+		head_pad.add_theme_constant_override("margin_left", tokens.sp(2))
+		head_pad.add_theme_constant_override("margin_top", tokens.sp(1))
+		head_pad.add_theme_constant_override("margin_bottom", tokens.sp(1))
+		head_pad.add_child(head)
+		_sidebar_box.add_child(head_pad)
 		var list: PackedStringArray = ids(kind)
 		if list.is_empty():
 			var none := Label.new()
 			none.text = "none yet"
 			none.theme_type_variation = &"FormCaption"
-			_sidebar_box.add_child(none)
+			var none_pad := MarginContainer.new()
+			none_pad.add_theme_constant_override("margin_left", tokens.sp(3))
+			none_pad.add_child(none)
+			_sidebar_box.add_child(none_pad)
 		for id in list:
 			var b := Button.new()
 			b.text = id
@@ -279,28 +305,7 @@ func _show_form(set: DotProfileSet, profile: DotProfile) -> void:
 		_pane.remove_child(c)
 		c.queue_free()
 	_empty = null
-	var bar := HBoxContainer.new()
-	bar.add_theme_constant_override("separation", tokens.sp(3))
-	_pane.add_child(bar)
-	var col := VBoxContainer.new()
-	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	col.add_theme_constant_override("separation", 0)
-	bar.add_child(col)
-	_target = Label.new()
-	_target.theme_type_variation = &"FormCaption"
-	_target.text = "Kind: %s    Saves to: %s" % [_labels[_kind], target_label]
-	col.add_child(_target)
-	_note = Label.new()
-	_note.theme_type_variation = &"FormCaption"
-	_note.add_theme_color_override("font_color", tokens.good)
-	_note.visible = false
-	col.add_child(_note)
-	_reset_btn = Button.new()
-	_reset_btn.theme_type_variation = &"FormGhost"
-	_reset_btn.text = "Reset to defaults"
-	_reset_btn.custom_minimum_size.y = tokens.target()
-	_reset_btn.pressed.connect(_on_reset_pressed)
-	bar.add_child(_reset_btn)
+	_pane.add_child(_build_header())
 	form = DotUiForm.new()
 	form.tokens = tokens
 	form.title = _id.capitalize()
@@ -311,7 +316,87 @@ func _show_form(set: DotProfileSet, profile: DotProfile) -> void:
 	if not built.ok:
 		_say(built.error.message, true)
 	form.applied.connect(_on_applied)
+	_polish_form()
+	form.child_entered_tree.connect(_on_form_rebuilt.unbind(1))
 	_refresh_reset()
+
+
+## Kind chip, destination and Reset in one rounded card level with the rail; the status note sits beside the chip.
+func _build_header() -> Control:
+	var card := PanelContainer.new()
+	card.add_theme_stylebox_override("panel", tokens._pad(tokens.box(tokens.card, -1, tokens.border, 1), tokens.sp(3), tokens.sp(2)))
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", tokens.px(2.0))
+	card.add_child(col)
+	var top := HBoxContainer.new()
+	top.add_theme_constant_override("separation", tokens.sp(2))
+	col.add_child(top)
+	var chip := PanelContainer.new()
+	chip.add_theme_stylebox_override("panel", tokens._pad(tokens.box(Color(tokens.accent, 0.18), 999, Color(tokens.accent, 0.5), 1), tokens.sp(2), tokens.px(2.0)))
+	var chip_label := Label.new()
+	chip_label.text = String(_labels[_kind])
+	chip_label.add_theme_color_override("font_color", tokens.accent)
+	chip_label.add_theme_font_size_override("font_size", tokens.px(tokens.font_small + 1))
+	chip.add_child(chip_label)
+	chip.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	top.add_child(chip)
+	_note = Label.new()
+	_note.theme_type_variation = &"FormCaption"
+	_note.add_theme_color_override("font_color", tokens.good)
+	_note.visible = false
+	_note.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_note.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_note.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	top.add_child(_note)
+	var gap := Control.new()
+	gap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	gap.name = "NoteGap"
+	top.add_child(gap)
+	_reset_btn = Button.new()
+	_reset_btn.theme_type_variation = &"FormGhost"
+	_reset_btn.text = "\u21BA  Reset to defaults"
+	_reset_btn.tooltip_text = "Drop your saved edits of this profile"
+	_reset_btn.custom_minimum_size.y = tokens.target()
+	_reset_btn.pressed.connect(_on_reset_pressed)
+	top.add_child(_reset_btn)
+	_target = Label.new()
+	_target.theme_type_variation = &"FormCaption"
+	_target.text = "Saves to  %s" % target_label
+	_target.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	col.add_child(_target)
+	return card
+
+
+## The form rebuilds itself when the width crosses its compact breakpoint; the polish goes on again.
+func _on_form_rebuilt() -> void:
+	_polish_form.call_deferred()
+
+
+## Brings the form's own bar in line with the screen: no side margin of its own, a rounded footer without the hard shadow, icons on the actions. Uses only the form's node order, and leaves it as it is when that changes.
+func _polish_form() -> void:
+	if form == null or form.get_child_count() == 0:
+		return
+	var outer := form.get_child(0) as VBoxContainer
+	if outer == null or outer.get_child_count() < 2:
+		return
+	var margin := outer.get_child(0) as MarginContainer
+	if margin != null:
+		for side in ["left", "right", "top"]:
+			margin.add_theme_constant_override("margin_" + side, 0)
+		margin.add_theme_constant_override("margin_bottom", tokens.sp(3))
+	var footer := outer.get_child(outer.get_child_count() - 1) as PanelContainer
+	if footer != null:
+		footer.add_theme_stylebox_override("panel", tokens._pad(tokens.box(tokens.card, -1, tokens.border, 1), tokens.sp(3), tokens.sp(2)))
+	var apply_btn := form.apply_button()
+	var revert_btn := form.revert_button()
+	if apply_btn != null:
+		apply_btn.text = "\u2713  Apply"
+		apply_btn.custom_minimum_size = Vector2(tokens.px(120), tokens.target())
+		apply_btn.tooltip_text = "Save the unsaved changes"
+	if revert_btn != null:
+		revert_btn.text = "\u21B6  Revert"
+		revert_btn.custom_minimum_size = Vector2(tokens.px(96), tokens.target())
+		revert_btn.tooltip_text = "Drop the unsaved changes"
 
 
 func _on_applied(changes: Dictionary) -> void:
@@ -325,7 +410,7 @@ func _on_applied(changes: Dictionary) -> void:
 			var _r := form.set_value(k, keep[k])
 		return
 	set.clear_cache()
-	_say("Saved", false)
+	_say("\u2713  Saved", false)
 	_refresh_reset()
 	saved.emit(_kind, _id, changes)
 
@@ -347,6 +432,9 @@ func _say(text: String, bad: bool) -> void:
 		return
 	_note.text = text
 	_note.visible = true
+	var gap := _note.get_parent().get_node_or_null("NoteGap")
+	if gap != null:
+		gap.visible = false
 	_note.add_theme_color_override("font_color", tokens.danger if bad else tokens.good)
 
 
