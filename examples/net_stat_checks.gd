@@ -4,7 +4,7 @@ const Selftest := preload("res://examples/menu_selftest.gd")
 
 ## The net_stat overlay, run from menu_selftest.
 
-## What net_stat reads from a dot-net manager, and nothing else.
+## What net_stat reads from a GameSpice Net manager, and nothing else.
 class FakeNetManager extends RefCounted:
 	var is_server := false
 	var counters := {&"snapshots": 0, &"snapshot_usec": 0, &"reconciles": 0, &"reconcile_usec": 0,

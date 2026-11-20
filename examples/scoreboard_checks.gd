@@ -4,7 +4,7 @@ const Selftest := preload("res://examples/menu_selftest.gd")
 
 ## The Tab scoreboard, run from menu_selftest.
 
-## Anything shaped like dot-server's DotClientLink, for the board's feed.
+## Anything shaped like GameSpice Server's DotClientLink, for the board's feed.
 class FakeLink extends RefCounted:
 	signal scoreboard_received(snapshot: Dictionary)
 	var asked: Array = []

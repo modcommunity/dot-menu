@@ -1089,7 +1089,7 @@ func _declared(key: StringName) -> bool:
 	return settings != null and settings.schema != null and settings.schema.has(key)
 
 
-## What a server may change about this client's menu while connected: `rows_hidden`, `pages_hidden`, `themes` (offered), `clamps` (`{setting: bound}` through dot-settings' policy) and `leave_text`.
+## What a server may change about this client's menu while connected: `rows_hidden`, `pages_hidden`, `themes` (offered), `clamps` (`{setting: bound}` through GameSpice Settings' policy) and `leave_text`.
 ## Narrower than the config on purpose: a server may hide and clamp but never set or read a stored value (that would fingerprint a player).
 ## Every rule is dropped by [method release_server_rules] on leaving. Returns the clamps applied.
 func apply_server_rules(rules: Dictionary) -> PackedStringArray:

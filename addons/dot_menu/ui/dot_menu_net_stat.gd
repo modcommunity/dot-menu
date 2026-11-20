@@ -64,7 +64,7 @@ var bucket_sec: float = 0.05
 ## is a [DotMeteredPeer].
 var source: Callable = Callable()
 
-## What each channel is called and drawn in. The family's four (dot-core's
+## What each channel is called and drawn in. The family's four (GameSpice Core's
 ## [enum DotTransport.Channel]): channel 2 also carries the games' voice.
 var channel_names := PackedStringArray(["control", "state", "events · voice", "content"])
 
@@ -108,7 +108,7 @@ var frames := DotMenuFrameClock.new()
 
 var _painter: RefCounted = load("uid://t8ih5rf7iudm").new(self)  # DotMenuNetStatPainter, loaded (not named) so the two parsers do not hold each other
 
-## `func() -> Object`: the client's dot-net manager, or null. Unset looks one up in
+## `func() -> Object`: the client's GameSpice Net manager, or null. Unset looks one up in
 ## [DotRegistry]; see the class note.
 var net_source: Callable = Callable()
 
@@ -231,7 +231,7 @@ func restyle(p_kit: DotMenuKit) -> void:
 	queue_redraw()
 
 
-## The client's dot-net manager, or null: [member net_source], else the one published in
+## The client's GameSpice Net manager, or null: [member net_source], else the one published in
 ## [DotRegistry] under [code]dot_net_manager[/code] (any scope) that is not a server's.
 func net_manager() -> Object:
 	if net_source.is_valid():

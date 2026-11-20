@@ -3,7 +3,7 @@ extends Node
 
 ## Pushes every setting at whatever it controls, once after load and on every change after. Example: docs/examples.md.
 ## Everything is pushed at [method setup] and when something new is bound: a value read from disk has not CHANGED, so applying only from `changed` would ignore every saved setting.
-## Duck-typed so dot-menu depends on none of what it drives; `chat_window` is left to [method on], and `ui_theme`, `hud_scale`, `show_fps`, `net_stat*` to [DotMenu].
+## Duck-typed so GameSpice Menu depends on none of what it drives; `chat_window` is left to [method on], and `ui_theme`, `hud_scale`, `show_fps`, `net_stat*` to [DotMenu].
 
 const CHANNEL := "menu.apply"
 
@@ -11,7 +11,7 @@ const CHANNEL := "menu.apply"
 ## The family's constant, so one sensitivity number means one turning speed in every game.
 const DEGREES_PER_COUNT := 0.022
 
-## A settings key, the dot-audio mixer field it sets, and the [AudioServer] bus it falls back to.
+## A settings key, the GameSpice Audio mixer field it sets, and the [AudioServer] bus it falls back to.
 const VOLUMES := {
 	&"master_volume": [&"master", &"Master"],
 	&"sfx_volume": [&"sfx", &"SFX"],
@@ -38,7 +38,7 @@ const APPLIED_BY_MENU: Array[StringName] = [
 ]
 
 ## Stock keys only the game can apply, through [method on]. See the class note.
-## The render quality keys are applied by dot-fx's DotFxRenderQuality, and the Advanced video keys by its
+## The render quality keys are applied by GameSpice FX's DotFxRenderQuality, and the Advanced video keys by its
 ## DotFxGraphics (DotGameClient wires both through `DotFxRenderQuality.follow(settings)`).
 const LEFT_TO_THE_GAME: Array[StringName] = [
 	&"chat_window", &"slide_volume", &"aniso", &"aa", &"mip_bias", &"sharpness",
@@ -51,8 +51,8 @@ const LEFT_TO_THE_GAME: Array[StringName] = [
 ## when they are added (zee-dot-weapons' `ZeeViewModel` joins it itself).
 const VIEW_MODEL_GROUP := &"dot_view_model"
 
-## The registry name a client publishes its own player's voice under (dot-voice's
-## `DotVoiceManager.CLIENT_SERVICE`, as text: dot-menu does not depend on dot-voice).
+## The registry name a client publishes its own player's voice under (GameSpice Voice's
+## `DotVoiceManager.CLIENT_SERVICE`, as text: GameSpice Menu does not depend on GameSpice Voice).
 const VOICE_SERVICE := &"dot_voice_client"
 
 ## A bound voice said whether its server allows voice (`sv_voice_enable`). [DotMenuSettings]
@@ -360,7 +360,7 @@ func _apply_fx() -> void:
 			cfg.set(&"shake_scale", settings.get_float(&"shake_scale", 1.0))
 		if _has(&"allow_flashes") and "allow_flashes" in cfg:
 			cfg.set(&"allow_flashes", settings.get_bool(&"allow_flashes", true))
-		# Duck-typed: dot-fx's config says reduce_motion, dot-ui's DotWinnerReveal reduced_motion.
+		# Duck-typed: GameSpice FX's config says reduce_motion, GameSpice UI's DotWinnerReveal reduced_motion.
 		if _has(&"reduce_motion"):
 			var still := settings.get_bool(&"reduce_motion", false)
 			if "reduce_motion" in cfg:

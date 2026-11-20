@@ -186,7 +186,7 @@ func _line(text: String) -> void:
 	print(text)
 
 
-## Anything shaped like dot-voice's DotVoiceManager, as far as the applier and the menu care.
+## Anything shaped like GameSpice Voice's DotVoiceManager, as far as the applier and the menu care.
 class FakeVoice extends Node:
 	signal server_enabled_changed(enabled: bool)
 	var server_enabled := true

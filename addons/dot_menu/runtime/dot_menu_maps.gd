@@ -3,7 +3,7 @@ extends RefCounted
 
 ## The map menu: M opens a picker of the game's maps (or courses, layouts, modes) and choosing one changes to it. Solo directly; on a server the SERVER decides. Example: docs/examples.md.
 ## Connected, this sends `/mapmenu` through the client link's chat and reads the `map_menu` notice (list, whether this player may change directly via `sv_map_menu_flag`, whether a vote can start); choosing sends `/mapmenu <id>`.
-## Nothing here names dot-server or dot-vote; a row is `{id, name, mode, detail, thumbnail, current, tags}`.
+## Nothing here names GameSpice Server or GameSpice Vote; a row is `{id, name, mode, detail, thumbnail, current, tags}`.
 
 const CHANNEL := "menu.maps"
 
@@ -37,7 +37,7 @@ var menu: CanvasLayer = null  # a DotMenu (untyped: see dot_menu_huds.gd)
 var link: Object = null
 var link_service: StringName = &"dot_client_link"
 
-## The command prefix sent to the server. `/` is a command on every dot-server by default
+## The command prefix sent to the server. `/` is a command on every GameSpice Server by default
 ## (`chat_command_prefixes`), and a command line is never broadcast.
 var command_prefix: String = "/"
 

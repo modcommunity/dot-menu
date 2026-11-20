@@ -3,7 +3,7 @@ extends RefCounted
 
 ## The loadout menu: B opens [DotMenuLoadoutScreen] on what the player may carry, and closing it with changes saves them. Solo the game is asked directly; on a server the SERVER decides. Example: docs/examples.md.
 ## Connected, B sends `/loadout` through the client link's chat and opens on the `loadout_menu` notice; closing sends `/loadout slot=item ...` and the answer is a toast.
-## Remembered per account on the client ([method remember_as], [method restore]) because a server forgets loadouts on restart. Nothing here names dot-loadout or dot-server.
+## Remembered per account on the client ([method remember_as], [method restore]) because a server forgets loadouts on restart. Nothing here names GameSpice Loadout or GameSpice Server.
 
 const CHANNEL := "menu.loadout"
 

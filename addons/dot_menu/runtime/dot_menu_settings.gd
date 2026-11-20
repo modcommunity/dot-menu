@@ -6,13 +6,13 @@ extends Node
 ## `setup` applies before it returns ([DotMenuApplier]'s reason), and anything bound after is applied as it is bound.
 
 const CHANNEL := "menu.settings"
-## Present only where dot-workbench is linked, which is when the Controls page offers its key.
+## Present only where GameSpice Workbench is linked, which is when the Controls page offers its key.
 const WORKBENCH_SCRIPT := "res://addons/dot_workbench/dot_workbench_api.gd"
 
 ## A menu opened or the last one closed. What a client suspends its input sampler on.
 signal menu_state_changed(any_open: bool)
 
-## Where this game's own document lives. The shared account document is dot-settings'.
+## Where this game's own document lives. The shared account document is GameSpice Settings'.
 var directory: String = "user://settings"
 var app_namespace: StringName = &"game"
 ## ACCOUNT settings are shared under this name; the family's is `tmc_account`.
@@ -186,7 +186,7 @@ func bind_audio(audio: Object) -> void:
 		applier.bind_audio(audio)
 
 
-## A player's own voice (dot-voice's `DotVoiceManager`). Rarely needed: the applier binds
+## A player's own voice (GameSpice Voice's `DotVoiceManager`). Rarely needed: the applier binds
 ## whatever is published as `dot_voice_client` by itself.
 func bind_voice(voice: Object) -> void:
 	if applier != null:

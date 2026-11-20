@@ -13,7 +13,7 @@ const NAMES: Array[StringName] = [&"low", &"medium", &"high", &"ultra", &"custom
 ## Reason a preset write carries, so the applier does not take it for a hand edit.
 const REASON := &"preset"
 
-## Value per preset, per key. Applied by dot-fx's DotFxGraphics and DotFxRenderQuality (render_scale, aniso, aa) and
+## Value per preset, per key. Applied by GameSpice FX's DotFxGraphics and DotFxRenderQuality (render_scale, aniso, aa) and
 ## the menu's own fx configs (fx_quality).
 const TABLE := {
 	&"low": {

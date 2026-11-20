@@ -31,7 +31,7 @@ const TEAMS_SETTING := &"bind_teams"
 const TEAMS_KEY := "Period"
 
 ## The avatar emote, pose and gesture keys (API 16): `,` `.` `/` in every game that plays avatar
-## actions. The actions are the ones dot-user-avatar's `DotAvatarActionInput` listens on.
+## actions. The actions are the ones GameSpice User Avatar's `DotAvatarActionInput` listens on.
 const AVATAR_EMOTE_ACTION := &"dot_avatar_emote"
 const AVATAR_POSE_ACTION := &"dot_avatar_pose"
 const AVATAR_GESTURE_ACTION := &"dot_avatar_gesture"
@@ -39,7 +39,7 @@ const AVATAR_EMOTE_SETTING := &"bind_avatar_emote"
 const AVATAR_POSE_SETTING := &"bind_avatar_pose"
 const AVATAR_GESTURE_SETTING := &"bind_avatar_gesture"
 
-## The workbench toggle (`;`), registered by [DotMenuSettings] only where dot-workbench is linked. dot-game's DotGameWorkbench listens on the action.
+## The workbench toggle (`;`), registered by [DotMenuSettings] only where GameSpice Workbench is linked. GameSpice Game's DotGameWorkbench listens on the action.
 const WORKBENCH_ACTION := &"dot_workbench_toggle"
 const WORKBENCH_SETTING := &"bind_workbench"
 const WORKBENCH_KEY := "Semicolon"
@@ -71,7 +71,7 @@ var rows: Array[Dictionary] = []
 var renamed_defaults: Dictionary = {}
 
 # What each extra row put on its action: {setting: InputEvent}. A primary row's apply erases
-# every event on the action (dot-ui's apply replaces, on purpose), so it puts these back, and
+# every event on the action (GameSpice UI's apply replaces, on purpose), so it puts these back, and
 # an extra's own re-apply takes off exactly the one it added.
 var _extra_events: Dictionary = {}
 
@@ -154,7 +154,7 @@ func renamed(setting: StringName, old_keys: Array) -> DotMenuBindings:
 	return self
 
 
-## dot-player-controller's movement actions, by their own names. `DotFpsSampler` polls
+## GameSpice Player Controller's movement actions, by their own names. `DotFpsSampler` polls
 ## `dot_fps_*` and only creates actions that are missing, so a binding applied here first is
 ## the one it reads. Duck is Ctrl; a game that wants Shift passes it.
 func add_movement(group: String = "Movement", crouch_key: String = "Ctrl", crouch_label: String = "Duck") -> DotMenuBindings:
@@ -196,8 +196,8 @@ func add_wheel_weapons(
 	return self
 
 
-## The push-to-talk key: dot-voice's `dot_voice_talk` action (`DotVoiceManager.TALK_ACTION`,
-## named here as text because dot-menu does not depend on dot-voice), stored as
+## The push-to-talk key: GameSpice Voice's `dot_voice_talk` action (`DotVoiceManager.TALK_ACTION`,
+## named here as text because GameSpice Menu does not depend on GameSpice Voice), stored as
 ## `bind_voice_talk`, on V. [DotMenuSettings] adds it when the schema has the voice group.
 func add_voice(group: String = "Communication", key: String = "V") -> DotMenuBindings:
 	return add(&"dot_voice_talk", &"bind_voice_talk", "Push to talk", key, group)
@@ -358,7 +358,7 @@ func apply_row(row: Dictionary, text: String) -> String:
 		})
 		bound = DotInputBinding.apply(row["action"], str(row["default"]))
 
-	# dot-ui's apply replaced every event on the action, the extra keys' with them.
+	# GameSpice UI's apply replaced every event on the action, the extra keys' with them.
 	for other in rows:
 		if is_extra(other) and other["action"] == row["action"] and _extra_events.has(other["setting"]):
 			var ev: InputEvent = _extra_events[other["setting"]]
@@ -511,7 +511,7 @@ func apply_setting(key: StringName, value: Variant) -> bool:
 
 
 ## The binding a row is on: the stored one, or the default where the stored one names nothing. An extra row set to nothing is [constant NONE].
-## The effective binding, not the stored text (a document cleared by hand stores "" for a default key), in dot-ui's current spelling
+## The effective binding, not the stored text (a document cleared by hand stores "" for a default key), in GameSpice UI's current spelling
 ## ("Mouse 4" in an old document must read as the wheel).
 func stored(row: Dictionary, settings: DotSettingsManager) -> String:
 	var text := settings.get_string(row["setting"], str(row["default"])) if settings != null else str(row["default"])
@@ -601,7 +601,7 @@ func reset_all(settings: DotSettingsManager) -> void:
 
 ## Physical key and modifiers, or the same mouse button. A binding is where the key is, not
 ## what it says — mixing physical and logical makes a French player's A conflict with an
-## English player's Q (dot-ui's reason).
+## English player's Q (GameSpice UI's reason).
 static func same_input(a: InputEvent, b: InputEvent) -> bool:
 	if a is InputEventKey and b is InputEventKey:
 		var ka := a as InputEventKey

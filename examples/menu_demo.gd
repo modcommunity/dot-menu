@@ -1,6 +1,6 @@
 extends Node3D
 
-## dot-menu with a world behind it: the stock pages, a game's own page, a picker, and a HUD a player can arrange. Escape opens the menu, H help, P the next theme, M the picker.
+## GameSpice Menu with a world behind it: the stock pages, a game's own page, a picker, and a HUD a player can arrange. Escape opens the menu, H help, P the next theme, M the picker.
 ## Everything a game writes to use the addon is in [method _build_menu], and it is short on purpose: that length is the claim this addon makes.
 
 var settings: DotSettingsManager = null
@@ -146,7 +146,7 @@ static func maps() -> Array:
 	return out
 
 
-## A loadout offer as dot-loadout's `offer_for` sends one, decorated as a game would: a made-up
+## A loadout offer as GameSpice Loadout's `offer_for` sends one, decorated as a game would: a made-up
 ## silhouette per weapon (a game's are rendered from its models) and the statistics.
 static func loadout_offer() -> Dictionary:
 	var specs := {

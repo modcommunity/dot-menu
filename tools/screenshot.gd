@@ -301,7 +301,7 @@ func _frames(n: int) -> void:
 		await process_frame
 
 
-## A dot-net manager's running totals, advanced a frame at a time like a client at 60 Hz
+## A GameSpice Net manager's running totals, advanced a frame at a time like a client at 60 Hz
 ## with a four-tick lead.
 class ShotNet extends RefCounted:
 	var is_server := false

@@ -137,7 +137,7 @@ const STOCK: Array[Dictionary] = [
 		"hud_keycap_edge": [1, 1, 1, 0.9], "hud_team_fill": 0.3,
 	},
 	{
-		# The Gamespice site's tokens (dot-ui DotUiGamespice): bg #140d0b, accent #f2542d, flame #ffc83d > #f2542d > #b8193c.
+		# The Gamespice site's tokens (GameSpice UI DotUiGamespice): bg #140d0b, accent #f2542d, flame #ffc83d > #f2542d > #b8193c.
 		"id": "gamespice", "name": "Gamespice",
 		"backdrop": [0.078, 0.05, 0.042, 0.66], "surface": [0.124, 0.087, 0.076, 0.97],
 		"sidebar": [0.098, 0.066, 0.057, 1.0], "card": [1, 0.92, 0.88, 0.04],

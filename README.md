@@ -1,17 +1,17 @@
 [![Menu - GameSpice addon](docs/banner.png)](https://moddingcommunity.com/a/89-gs-menu)
 
-In-game menus for Godot 4 games, built from data. Press Escape and get a settings menu (General, Video, Audio, Controls, Advanced and any pages your game adds), a help screen, rebindable keys, a Tab scoreboard, a numbered picker, a HUD layout editor, themes, and a connection overlay. Every switch and slider is a view of a [dot-settings](https://github.com/gamespice-platform/settings) value, so there is no Apply button: a change is saved and applied at once. Part of TMC's open source [**GameSpice**](https://gamespice.net) collection (MIT licence).
+In-game menus for Godot 4 games, built from data. Press Escape and get a settings menu (General, Video, Audio, Controls, Advanced and any pages your game adds), a help screen, rebindable keys, a Tab scoreboard, a numbered picker, a HUD layout editor, themes, and a connection overlay. Every switch and slider is a view of a [GameSpice Settings](https://github.com/gamespice-platform/settings) value, so there is no Apply button: a change is saved and applied at once. Part of TMC's open source [**GameSpice**](https://gamespice.net) collection (MIT licence).
 
 > Built with Claude Code. Every addon has a headless test suite and the suites pass, but little of this has met real players yet. Please report rough edges.
 
 ## Install
 
-You need Godot 4.7. [dot-bootstrap](https://github.com/gamespice-platform/bootstrap) clones every project and links the addons for you. To add it by hand, copy these into your project and enable dot-menu under **Project > Project Settings > Plugins**:
+You need Godot 4.7. [GameSpice Bootstrap](https://github.com/gamespice-platform/bootstrap) clones every project and links the addons for you. To add it by hand, copy these into your project and enable dot-menu under **Project > Project Settings > Plugins**:
 
 - `addons/dot_menu/` (this repo)
-- `addons/dot_core/` from [dot-core](https://github.com/gamespice-platform/core)
-- `addons/dot_ui/` from [dot-ui](https://github.com/gamespice-platform/ui)
-- `addons/dot_settings/` from [dot-settings](https://github.com/gamespice-platform/settings)
+- `addons/dot_core/` from [GameSpice Core](https://github.com/gamespice-platform/core)
+- `addons/dot_ui/` from [GameSpice UI](https://github.com/gamespice-platform/ui)
+- `addons/dot_settings/` from [GameSpice Settings](https://github.com/gamespice-platform/settings)
 
 Run `godot --path .` to open the demo. Escape, H, P and M all work.
 
@@ -19,8 +19,8 @@ Run `godot --path .` to open the demo. Escape, H, P and M all work.
 
 | Feature | What it does |
 | --- | --- |
-| Stock settings | Volumes, window mode, V-Sync, frame-rate cap, render scale, field of view, effects quality, mouse sensitivity, invert mouse, camera shake, screen flashes, theme, HUD size, frame-rate counter, chat box, voice. Declared once, so moving a game onto dot-menu keeps each player's choices. |
-| `DotMenuApplier` | Applies each setting to what it controls (engine, audio buses or a dot-audio mixer, a dot-fx config, a mouse sampler, a camera) at load and on every change. |
+| Stock settings | Volumes, window mode, V-Sync, frame-rate cap, render scale, field of view, effects quality, mouse sensitivity, invert mouse, camera shake, screen flashes, theme, HUD size, frame-rate counter, chat box, voice. Declared once, so moving a game onto GameSpice Menu keeps each player's choices. |
+| `DotMenuApplier` | Applies each setting to what it controls (engine, audio buses or a GameSpice Audio mixer, a GameSpice FX config, a mouse sampler, a camera) at load and on every change. |
 | `DotMenuBindings` | One table of key actions. Declares a setting per key, adds them to the InputMap, draws the Controls page and lists them in Help. Binding a used key swaps the two. Escape cannot be bound. |
 | Help screen | Opens on H unless you turn it off: your game's goal and modes, every key as currently bound, the server's chat commands, your own cards, and what a browser does with Ctrl+W and friends. |
 | Picker | A numbered list, seven to a page: 1 to 7 pick, 8 and 9 turn the page, 0 closes. Used for maps, teams and classes. |
@@ -120,7 +120,7 @@ menu.scoreboard.feed_from(link)                           # online: the server's
 menu.scoreboard.add_column({"key": &"kills", "title": "K", "kind": DotMenuScoreboard.KIND_NUMBER}, &"score")
 ```
 
-Online, [dot-server](https://github.com/gamespice-platform/server) sends the roster only while a player holds the board. Add columns and teams on the server with `server.scoreboard_fields` (per player) and `server.scoreboard_extra` (teams and header). Offline, set `menu.scoreboard.source` to a function that returns the same dictionary.
+Online, [GameSpice Server](https://github.com/gamespice-platform/server) sends the roster only while a player holds the board. Add columns and teams on the server with `server.scoreboard_fields` (per player) and `server.scoreboard_extra` (teams and header). Offline, set `menu.scoreboard.source` to a function that returns the same dictionary.
 
 A column is data: `key`, `title`, `kind` (text, number, ping, duration, avatar or custom), `width`, `format`, `build`, `required`, `hidden`. `group_by` and `sort_by` choose teams and order. A `required` column cannot be hidden; a `hidden` one starts hidden and the player's choice wins. The choice is stored in `scoreboard_hidden`, by column key.
 

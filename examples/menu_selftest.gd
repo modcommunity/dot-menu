@@ -288,7 +288,7 @@ func _test_bindings() -> void:
 	k.reset_all(st)
 	_check(st.get_string(&"bind_jump") == "Space" and k.key_for(&"dot_fps_jump") == "Space", "a reset puts every key back")
 
-	# A document from before dot-ui named the wheel stores "Mouse 4"; the Controls page
+	# A document from before GameSpice UI named the wheel stores "Mouse 4"; the Controls page
 	# draws stored(), so it must come out as the wheel's name, and still be the wheel.
 	var old_wheel := st.set_value(&"bind_flashlight", "Mouse 4")
 	var drawn := k.stored(k.row_for_action(&"test_flashlight"), st)

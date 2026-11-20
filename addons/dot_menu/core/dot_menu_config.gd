@@ -66,7 +66,7 @@ extends DotConfig
 @export var window_margin: int = 24
 @export var sidebar_width: int = 236
 
-## The CanvasLayer the menu draws on. Over the HUD and over a chat box (dot-ui's is 100):
+## The CanvasLayer the menu draws on. Over the HUD and over a chat box (GameSpice UI's is 100):
 ## a menu drawn under the chat is a menu with somebody's line across it.
 @export var layer: int = 110
 
@@ -155,7 +155,7 @@ func make_themes(base: DotMenuThemes = null) -> DotMenuThemes:
 
 
 ## Applies [member settings] to [param schema], and the theme catalogue to its `ui_theme`. Returns what it could not (unknown key, unknown field, a value the kind cannot hold).
-## The themes go into the schema before the document loads: dot-settings resets a stored value that is not an option, so a late theme would be lost at every start.
+## The themes go into the schema before the document loads: GameSpice Settings resets a stored value that is not an option, so a late theme would be lost at every start.
 ## Reported, not fatal, for [DotConfig]'s reason. Pass [param themes] when a game adds themes in code.
 func apply_to_schema(schema: DotSettingsSchema, themes: DotMenuThemes = null) -> PackedStringArray:
 	var problems := PackedStringArray()

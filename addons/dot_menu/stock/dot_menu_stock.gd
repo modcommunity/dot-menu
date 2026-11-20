@@ -5,7 +5,7 @@ extends RefCounted
 ## The keys are the family's and a contract: another key or scope would reset every player's choice, and `sensitivity` under the account namespace is one number in every game on purpose.
 ## A game declares only what it applies: [method declare] skips keys the schema has, and a row whose setting is not declared is not drawn. Defaults that differ per genre go in [DotMenuConfig].
 
-## The DotRegistry name dot-profiler publishes itself under.
+## The DotRegistry name GameSpice Profiler publishes itself under.
 const PROFILER_SERVICE := &"dot_profiler"
 const GROUP_AUDIO := &"audio"
 const GROUP_VIDEO := &"video"
@@ -100,7 +100,7 @@ static func _declare(schema: DotSettingsSchema, groups: Array[StringName], theme
 		_add(schema, DotSettingsDef.number(&"voice_volume", 1.0, 0.0, 1.0, &"audio"))
 		# Wind, birdsong, room tone. The mixer also multiplies in Effects, so both sliders reach it.
 		_add(schema, DotSettingsDef.number(&"ambience_volume", 0.35, 0.0, 1.0, &"audio"))
-		# dot-game's DotGameSlideSounds applies it (same default there); a game without it leaves it out with `except`.
+		# GameSpice Game's DotGameSlideSounds applies it (same default there); a game without it leaves it out with `except`.
 		_add(schema, DotSettingsDef.number(&"slide_volume", 1.0, 0.0, 1.0, &"audio").with_description("How loud sliding scrapes the ground."))
 
 	if groups.has(GROUP_MUSIC):
@@ -168,7 +168,7 @@ static func _declare(schema: DotSettingsSchema, groups: Array[StringName], theme
 	return schema
 
 
-## The Video group: window, frame rate and the renderer's own knobs (dot-fx's DotFxRenderConfig).
+## The Video group: window, frame rate and the renderer's own knobs (GameSpice FX's DotFxRenderConfig).
 static func _declare_video(schema: DotSettingsSchema) -> void:
 	# DEVICE, all of these: a laptop and a desktop want different answers.
 	_add(schema, DotSettingsDef.choice(
@@ -182,12 +182,12 @@ static func _declare_video(schema: DotSettingsSchema) -> void:
 		.with_description("Most frames a second. 0 is unlimited."))
 	_add(schema, DotSettingsDef.number(&"render_scale", 1.0, 0.5, 1.0, &"video")
 		.with_description("Resolution of the 3D world, as a fraction of the window's."))
-	# SERVER_CLAMPED: a wide view is an advantage a server may cap — and dot-settings
+	# SERVER_CLAMPED: a wide view is an advantage a server may cap — and GameSpice Settings
 	# gives a server no way to READ it.
 	_add(schema, DotSettingsDef.integer(&"field_of_view", 90, 70, 120, &"video")
 		.with_scope(DotSettingsDef.Scope.SERVER_CLAMPED))
 	_add(schema, DotSettingsDef.integer(&"fx_quality", 3, 0, 3, &"video"))
-	# Defaults are dot-fx's DotFxRenderConfig (-1 and 0 mean "the platform picks").
+	# Defaults are GameSpice FX's DotFxRenderConfig (-1 and 0 mean "the platform picks").
 	_add(schema, DotSettingsDef.integer(&"aniso", -1, -1, 16, &"video"))
 	_add(schema, DotSettingsDef.integer(&"aa", 0, 0, 7, &"video"))
 	_add(schema, DotSettingsDef.number(&"mip_bias", 0.0, -2.0, 2.0, &"video"))
@@ -197,7 +197,7 @@ static func _declare_video(schema: DotSettingsSchema) -> void:
 
 ## The Quality preset and the scene-wide keys it sets.
 static func _declare_graphics(schema: DotSettingsSchema) -> void:
-	# The Quality preset and what it sets (DotMenuGraphicsPresets); dot-fx's DotFxGraphics applies the rest.
+	# The Quality preset and what it sets (DotMenuGraphicsPresets); GameSpice FX's DotFxGraphics applies the rest.
 	# Every default is the High preset's, which is how the game looked before these existed.
 	_add(schema, DotSettingsDef.choice(&"graphics_preset", DotMenuGraphicsPresets.DEFAULT, DotMenuGraphicsPresets.NAMES, &"video"))
 	_add(schema, DotSettingsDef.integer(&"shadow_quality", 3, 0, 4, &"video"))
@@ -293,7 +293,7 @@ static func advanced_page() -> DotMenuPage:
 	return p
 
 
-## The Performance card, built by the placed [code]dot_profiler[/code] service (dot-profiler, duck-typed);
+## The Performance card, built by the placed [code]dot_profiler[/code] service (GameSpice Profiler, duck-typed);
 ## nothing without one. Its panel is not a row: it records, which no setting does.
 static func performance_section(kit: DotMenuKit, body: Control) -> void:
 	var prof := DotRegistry.get_service(PROFILER_SERVICE)
@@ -463,7 +463,7 @@ static func resolution_options() -> Array:
 	return out
 
 
-## Adds the "Blood splatters" row (`gore`, a game-declared setting dot-fx's decals read) to a
+## Adds the "Blood splatters" row (`gore`, a game-declared setting GameSpice FX's decals read) to a
 ## video page's Image section. Not stock: only games with blood declare the key.
 static func add_gore_row(video: DotMenuPage) -> void:
 	if video == null:

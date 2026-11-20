@@ -1,7 +1,7 @@
 @tool
 extends EditorPlugin
 
-## Editor entry point for dot-menu. Registers inspector types only.
+## Editor entry point for GameSpice Menu. Registers inspector types only.
 ##
 ## No autoloads: a server and a client in one editor session are two menus.
 

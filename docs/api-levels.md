@@ -14,9 +14,9 @@ What each `DotMenuApi.LEVEL` added; the rule for bumping is on `DotAddonApi`.
 
 6: the loadout menu: DotMenuLoadout, DotMenuLoadoutScreen; DotMenu.use_loadout(), open_loadout(), open_loadout_screen(), loadout, loadout_screen, loadout_action; DotMenuBindings LOADOUT_ACTION/LOADOUT_SETTING/LOADOUT_KEY and add_loadout(); DotMenuSettings.loadout_menu and use_loadout().
 
-7: the HUD follows the theme: DotMenu.follow_hud(), unfollow_hud(), followed_huds(), hud_scale(); DotMenuPalette.hud_theme(), NUMBERS and the hud_edge, hud_ink, hud_highlight, hud_keycap, hud_keycap_text, hud_keycap_edge and hud_team_fill fields; the hud_scale stock setting and its row; the Arcade stock theme. Needs dot-ui 6.
+7: the HUD follows the theme: DotMenu.follow_hud(), unfollow_hud(), followed_huds(), hud_scale(); DotMenuPalette.hud_theme(), NUMBERS and the hud_edge, hud_ink, hud_highlight, hud_keycap, hud_keycap_text, hud_keycap_edge and hud_team_fill fields; the hud_scale stock setting and its row; the Arcade stock theme. Needs GameSpice UI 6.
 
-8: moved defaults: DotMenuBindings.renamed(), renamed_defaults and settle(); apply_all() and DotMenuApplier.apply_all() settle two rows stored on one key. Needs the dot-settings that has DotSettingsDef.previous_defaults.
+8: moved defaults: DotMenuBindings.renamed(), renamed_defaults and settle(); apply_all() and DotMenuApplier.apply_all() settle two rows stored on one key. Needs the GameSpice Settings that has DotSettingsDef.previous_defaults.
 
 9: DotMenuFrameClock (wall-clock frame times by part); DotMenuNetStat.frames, net_source, net_manager() and the level-3 frame, renderer and prediction rows.
 
@@ -24,9 +24,9 @@ What each `DotMenuApi.LEVEL` added; the rule for bumping is on `DotAddonApi`.
 
 11: DotProfileEditorScreen (list profile kinds and ids, edit one in DotUiForm; save and reset are callables).
 
-12: DotMenuCfg.load_admin_menu reads cfg/addons/dot_menu/admin_menu.yml and the operator's cfg/server/addons/dot_menu/, with the flat cfg/admin_menu.yml as a shim until 2026-12-31. Needs dot-core API level 17.
+12: DotMenuCfg.load_admin_menu reads cfg/addons/dot_menu/admin_menu.yml and the operator's cfg/server/addons/dot_menu/, with the flat cfg/admin_menu.yml as a shim until 2026-12-31. Needs GameSpice Core API level 17.
 
-13: DotAddonConfigEditorScreen (edit the player's user-tier override of addon cfg files in DotUiForm; needs dot-core API 18).
+13: DotAddonConfigEditorScreen (edit the player's user-tier override of addon cfg files in DotUiForm; needs GameSpice Core API 18).
 
 14: DotAddonConfigEditorScreen undo()/is_open()/close(); DotMenu.use_mods adds a Mods action to Escape.
 
@@ -38,7 +38,7 @@ What each `DotMenuApi.LEVEL` added; the rule for bumping is on `DotAddonApi`.
 
 18 DotMenuStock.performance_section and PROFILER_SERVICE: the Advanced page draws a Performance card from a placed `dot_profiler` service's `make_menu_panel(kit)`, duck-typed.
 19 DotMenuTeams.default_when_unwired and default_offer(): the period key opens a free-for-all Play/Spectate menu when no server link and no offer is wired, instead of a toast.
-20 DotMenuBindings.add_workbench, WORKBENCH_ACTION/SETTING/KEY (the workbench toggle on the semicolon, added by DotMenuSettings where dot-workbench is linked; the avatar Pose default moves to the apostrophe).
+20 DotMenuBindings.add_workbench, WORKBENCH_ACTION/SETTING/KEY (the workbench toggle on the semicolon, added by DotMenuSettings where GameSpice Workbench is linked; the avatar Pose default moves to the apostrophe).
 
 21 The Maps / Game modes tabs: DotMenuMaps.modes_fn/mode_group/modes_tab/apply_mode_now/mode/toggle_tab()/has_tabs(); DotMenu.modes_action; DotMenuBindings.add_modes and MODES_*; DotMenuSettings.map_modes; DotMenuPicker.tabs/tab/pick_closes/tab_clicked.
 22 DotMenuGameSpec and DotMenuGameSettings: a game declares its settings menu (names, field of view, ambient and Comfort rows, left-out stock keys, key table, help text) as data.

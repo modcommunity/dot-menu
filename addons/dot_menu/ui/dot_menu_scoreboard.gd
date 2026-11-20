@@ -2,7 +2,7 @@ class_name DotMenuScoreboard
 extends Control
 
 ## The scoreboard a player holds Tab for: the server, the teams, and a row per player (name, score, time, ping) plus the game's columns. Example: docs/examples.md.
-## A snapshot in, a picture out: one dictionary (dot-server's `scoreboard_snapshot` shape) feeds server, game and offline numbers through the same code. [member columns], [member decorate], [member group_by], [member sort_by] and the `build_*` callables customise it; `scoreboard_hidden` lets a player hide columns.
+## A snapshot in, a picture out: one dictionary (GameSpice Server's `scoreboard_snapshot` shape) feeds server, game and offline numbers through the same code. [member columns], [member decorate], [member group_by], [member sort_by] and the `build_*` callables customise it; `scoreboard_hidden` lets a player hide columns.
 ## Held, not opened: it never takes the mouse or keyboard, so it is not one of [DotMenu]'s overlays. [method feed_from] takes anything with `want_scoreboard(open)` and a `scoreboard_received` signal.
 
 const CHANNEL := "menu.scoreboard"
@@ -342,7 +342,7 @@ func hidden_keys() -> PackedStringArray:
 
 
 ## Draws the server's roster: [param link] is told when the board opens and closes and its
-## `scoreboard_received` is drawn. dot-server's `DotClientLink`, or anything shaped like it.
+## `scoreboard_received` is drawn. GameSpice Server's `DotClientLink`, or anything shaped like it.
 func feed_from(link: Object) -> void:
 	if _feed != null and _feed.has_signal(&"scoreboard_received") \
 			and _feed.is_connected(&"scoreboard_received", show_snapshot):

@@ -23,7 +23,7 @@ var reduce_motion_text: String = ""
 ## Also puts a "Reduce motion" toggle with this description on the General page's Comfort section. Empty: no extra row.
 var comfort_row_text: String = ""
 
-## A `gore` toggle (dot-fx's decals read it) with this description, and its "Blood splatters" row on the Video page. Empty: the game has no blood.
+## A `gore` toggle (GameSpice FX's decals read it) with this description, and its "Blood splatters" row on the Video page. Empty: the game has no blood.
 var gore_text: String = ""
 
 ## The ambient sound toggle's description; it comes with an `ambient_volume`. Empty: the game has no ambient settings.

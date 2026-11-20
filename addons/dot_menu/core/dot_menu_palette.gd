@@ -101,7 +101,7 @@ func flame() -> PackedColorArray:
 	return stops
 
 
-## The [Theme] a HUD drawn in this palette sets on its root, so dot-ui's glance pieces and plain Labels take their colours from it.
+## The [Theme] a HUD drawn in this palette sets on its root, so GameSpice UI's glance pieces and plain Labels take their colours from it.
 ## [param accent] is the game's own [Theme] whose [DotHudPiece] colours (usually `highlight`, `plate_edge`) are laid over the palette's; leave plate, text and ink alone
 ## or light themes cannot change them. A fresh [Theme] every call, for [DotUiTheme]'s reason.
 func hud_theme(accent: Theme = null) -> Theme:

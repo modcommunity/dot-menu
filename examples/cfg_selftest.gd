@@ -1,6 +1,6 @@
 extends Node
 
-## The yml layout of dot-menu's admin_menu.yml: new path, flat shim, operator layer.
+## The yml layout of GameSpice Menu's admin_menu.yml: new path, flat shim, operator layer.
 
 const FOLDER := "dot_menu"
 const LEGACY := "user://dot_menu_cfg_selftest_legacy"
