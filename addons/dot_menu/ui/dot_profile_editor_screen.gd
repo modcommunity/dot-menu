@@ -316,6 +316,7 @@ func _show_form(set: DotProfileSet, profile: DotProfile) -> void:
 	if not built.ok:
 		_say(built.error.message, true)
 	form.applied.connect(_on_applied)
+	form.value_changed.connect(_on_edit_started.unbind(2))
 	_polish_form()
 	form.child_entered_tree.connect(_on_form_rebuilt.unbind(1))
 	_refresh_reset()
@@ -436,6 +437,15 @@ func _say(text: String, bad: bool) -> void:
 	if gap != null:
 		gap.visible = false
 	_note.add_theme_color_override("font_color", tokens.danger if bad else tokens.good)
+
+
+func _on_edit_started() -> void:
+	# A stale "Saved" next to "1 unsaved change" reads as a contradiction.
+	if _note != null and _note.visible and _note.text.begins_with("\u2713"):
+		_note.visible = false
+		var gap := _note.get_parent().get_node_or_null("NoteGap")
+		if gap != null:
+			gap.visible = true
 
 
 func _on_resized() -> void:
