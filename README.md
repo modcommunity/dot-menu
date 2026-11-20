@@ -1,6 +1,6 @@
 [![dot-menu - GameSpice addon](docs/banner.png)](https://moddingcommunity.com/a/265-dot-menu)
 
-In-game menus for Godot 4 games, built from data. Press Escape and get a settings menu (General, Video, Audio, Controls, Advanced and any pages your game adds), a help screen, rebindable keys, a Tab scoreboard, a numbered picker, a HUD layout editor, themes, and a connection overlay. Every switch and slider is a view of a [dot-settings](https://github.com/gamespice-platform/settings) value, so there is no Apply button: a change is saved and applied at once. Part of TMC's open source **Gamespice** collection (MIT licence).
+In-game menus for Godot 4 games, built from data. Press Escape and get a settings menu (General, Video, Audio, Controls, Advanced and any pages your game adds), a help screen, rebindable keys, a Tab scoreboard, a numbered picker, a HUD layout editor, themes, and a connection overlay. Every switch and slider is a view of a [dot-settings](https://github.com/gamespice-platform/settings) value, so there is no Apply button: a change is saved and applied at once. Part of TMC's open source [**GameSpice**](https://gamespice.net) collection (MIT licence).
 
 > Built with Claude Code. Every addon has a headless test suite and the suites pass, but little of this has met real players yet. Please report rough edges.
 
@@ -26,7 +26,7 @@ Run `godot --path .` to open the demo. Escape, H, P and M all work.
 | Picker | A numbered list, seven to a page: 1 to 7 pick, 8 and 9 turn the page, 0 closes. Used for maps, teams and classes. |
 | Map, team and loadout menus | M opens a map picker, the period key a team screen, B a loadout screen. On a server the server decides; solo, the game does. See [docs/examples.md](docs/examples.md). |
 | HUD layout editor | Drag HUD pieces anywhere, right-click to reset one. Positions are saved as fractions of the screen. |
-| Themes | Eight ship: Midnight, Ember, Violet, Classic, Arcade, Paper, High contrast and Gamespice. A theme colours the menus and the HUD. Games, JSON files and servers can add more, and a host can set `dot_menu/theme/platform_default` so every game it runs opens in its theme. |
+| Themes | Eight ship: Midnight, Ember, Violet, Classic, Arcade, Paper, High contrast and GameSpice. A theme colours the menus and the HUD. Games, JSON files and servers can add more, and a host can set `dot_menu/theme/platform_default` so every game it runs opens in its theme. |
 | Scoreboard | Hold Tab: server name, map and slots, teams in their colours, and a row per player with score, time connected and ping, plus your own columns. Players choose which columns to show under Settings > General > Scoreboard. |
 | Connection overlay | `net_stat` shows frame rate, ping, jitter, loss and bytes in and out, with a graph. See [docs/net-stat.md](docs/net-stat.md). |
 | Server rules | While connected, a server can hide rows and pages, narrow the themes, reword Leave and cap a setting such as field of view. It can never read or change a player's stored value. Leaving restores everything. |
@@ -126,7 +126,7 @@ A column is data: `key`, `title`, `kind` (text, number, ping, duration, avatar o
 
 ## Settings
 
-`DotMenuConfig` holds what a developer can change without code. It is layered like every Gamespice config: defaults, then a JSON file, then environment variables, then the command line.
+`DotMenuConfig` holds what a developer can change without code. It is layered like every GameSpice config: defaults, then a JSON file, then environment variables, then the command line.
 
 ```json
 {
