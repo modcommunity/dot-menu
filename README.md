@@ -1,4 +1,4 @@
-[![dot-menu - GameSpice addon](docs/banner.png)](https://moddingcommunity.com/a/265-dot-menu)
+[![Menu - GameSpice addon](docs/banner.png)](https://moddingcommunity.com/a/265-dot-menu)
 
 In-game menus for Godot 4 games, built from data. Press Escape and get a settings menu (General, Video, Audio, Controls, Advanced and any pages your game adds), a help screen, rebindable keys, a Tab scoreboard, a numbered picker, a HUD layout editor, themes, and a connection overlay. Every switch and slider is a view of a [dot-settings](https://github.com/gamespice-platform/settings) value, so there is no Apply button: a change is saved and applied at once. Part of TMC's open source [**GameSpice**](https://gamespice.net) collection (MIT licence).
 
