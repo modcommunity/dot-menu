@@ -107,52 +107,7 @@ static func _declare(schema: DotSettingsSchema, groups: Array[StringName], theme
 		_add(schema, DotSettingsDef.number(&"music_volume", 0.6, 0.0, 1.0, &"audio"))
 
 	if groups.has(GROUP_VIDEO):
-		# DEVICE, all of these: a laptop and a desktop want different answers.
-		_add(schema, DotSettingsDef.choice(
-			&"window_mode", &"windowed",
-			[&"windowed", &"borderless", &"fullscreen"] as Array[StringName], &"video"
-		))
-		# [b]Off, with the frame rate unlimited[/b]: a capped frame rate is a later input,
-		# and a browser always syncs whatever this says.
-		_add(schema, DotSettingsDef.boolean(&"vsync", false, &"video"))
-		_add(schema, DotSettingsDef.integer(&"fps_max", 0, 0, 1000, &"video")
-			.with_description("Most frames a second. 0 is unlimited."))
-		_add(schema, DotSettingsDef.number(&"render_scale", 1.0, 0.5, 1.0, &"video")
-			.with_description("Resolution of the 3D world, as a fraction of the window's."))
-		# SERVER_CLAMPED: a wide view is an advantage a server may cap — and dot-settings
-		# gives a server no way to READ it.
-		_add(schema, DotSettingsDef.integer(&"field_of_view", 90, 70, 120, &"video")
-			.with_scope(DotSettingsDef.Scope.SERVER_CLAMPED))
-		_add(schema, DotSettingsDef.integer(&"fx_quality", 3, 0, 3, &"video"))
-		# Defaults are dot-fx's DotFxRenderConfig (-1 and 0 mean "the platform picks").
-		_add(schema, DotSettingsDef.integer(&"aniso", -1, -1, 16, &"video"))
-		_add(schema, DotSettingsDef.integer(&"aa", 0, 0, 7, &"video"))
-		_add(schema, DotSettingsDef.number(&"mip_bias", 0.0, -2.0, 2.0, &"video"))
-		_add(schema, DotSettingsDef.number(&"sharpness", 0.2, 0.0, 2.0, &"video"))
-		# The Quality preset and what it sets (DotMenuGraphicsPresets); dot-fx's DotFxGraphics applies the rest.
-		# Every default is the High preset's, which is how the game looked before these existed.
-		_add(schema, DotSettingsDef.choice(&"graphics_preset", DotMenuGraphicsPresets.DEFAULT, DotMenuGraphicsPresets.NAMES, &"video"))
-		_add(schema, DotSettingsDef.integer(&"shadow_quality", 3, 0, 4, &"video"))
-		_add(schema, DotSettingsDef.number(&"shadow_distance", 0.0, 0.0, 500.0, &"video")
-			.with_description("Farthest sun shadow, in metres. 0 is the map's own."))
-		_add(schema, DotSettingsDef.number(&"view_distance", 0.0, 0.0, 2000.0, &"video")
-			.with_description("Farthest anything is drawn, in metres. 0 is the map's own."))
-		_add(schema, DotSettingsDef.number(&"prop_distance", 0.0, 0.0, 1000.0, &"video")
-			.with_description("Farthest a small object is drawn, in metres. 0 is unlimited."))
-		_add(schema, DotSettingsDef.number(&"lod_bias", 1.0, 0.25, 2.0, &"video"))
-		_add(schema, DotSettingsDef.integer(&"particle_quality", 3, 0, 3, &"video"))
-		_add(schema, DotSettingsDef.number(&"detail_density", 1.0, 0.0, 1.0, &"video"))
-		_add(schema, DotSettingsDef.integer(&"ambient_occlusion", 1, 0, 2, &"video"))
-		_add(schema, DotSettingsDef.boolean(&"glow", true, &"video"))
-		_add(schema, DotSettingsDef.integer(&"reflection_quality", 2, 0, 3, &"video"))
-		_add(schema, DotSettingsDef.number(&"brightness", 1.0, 0.5, 1.5, &"video"))
-		_add(schema, DotSettingsDef.boolean(&"dynamic_resolution", false, &"video"))
-		_add(schema, DotSettingsDef.integer(&"target_fps", 60, 30, 240, &"video"))
-		_add(schema, DotSettingsDef.integer(&"texture_quality", 2, 0, 3, &"video"))
-		# Off: the game fills the window whatever its shape. On: the design's 16:9 with bars.
-		_add(schema, DotSettingsDef.boolean(&"keep_aspect", false, &"video"))
-		# "1600x900", the windowed size; "" is the project's. The applier also remembers a resize.
-		_add(schema, DotSettingsDef.text(&"window_size", "", &"video"))
+		_declare_video(schema)
 
 	if groups.has(GROUP_VIEWMODEL):
 		_add(schema, DotSettingsDef.integer(&"viewmodel_fov", VIEWMODEL_FOV, 50, 100, &"video")
@@ -211,6 +166,61 @@ static func _declare(schema: DotSettingsSchema, groups: Array[StringName], theme
 		))
 
 	return schema
+
+
+## The Video group: window, frame rate and the renderer's own knobs (dot-fx's DotFxRenderConfig).
+static func _declare_video(schema: DotSettingsSchema) -> void:
+	# DEVICE, all of these: a laptop and a desktop want different answers.
+	_add(schema, DotSettingsDef.choice(
+		&"window_mode", &"windowed",
+		[&"windowed", &"borderless", &"fullscreen"] as Array[StringName], &"video"
+	))
+	# [b]Off, with the frame rate unlimited[/b]: a capped frame rate is a later input,
+	# and a browser always syncs whatever this says.
+	_add(schema, DotSettingsDef.boolean(&"vsync", false, &"video"))
+	_add(schema, DotSettingsDef.integer(&"fps_max", 0, 0, 1000, &"video")
+		.with_description("Most frames a second. 0 is unlimited."))
+	_add(schema, DotSettingsDef.number(&"render_scale", 1.0, 0.5, 1.0, &"video")
+		.with_description("Resolution of the 3D world, as a fraction of the window's."))
+	# SERVER_CLAMPED: a wide view is an advantage a server may cap — and dot-settings
+	# gives a server no way to READ it.
+	_add(schema, DotSettingsDef.integer(&"field_of_view", 90, 70, 120, &"video")
+		.with_scope(DotSettingsDef.Scope.SERVER_CLAMPED))
+	_add(schema, DotSettingsDef.integer(&"fx_quality", 3, 0, 3, &"video"))
+	# Defaults are dot-fx's DotFxRenderConfig (-1 and 0 mean "the platform picks").
+	_add(schema, DotSettingsDef.integer(&"aniso", -1, -1, 16, &"video"))
+	_add(schema, DotSettingsDef.integer(&"aa", 0, 0, 7, &"video"))
+	_add(schema, DotSettingsDef.number(&"mip_bias", 0.0, -2.0, 2.0, &"video"))
+	_add(schema, DotSettingsDef.number(&"sharpness", 0.2, 0.0, 2.0, &"video"))
+	_declare_graphics(schema)
+
+
+## The Quality preset and the scene-wide keys it sets.
+static func _declare_graphics(schema: DotSettingsSchema) -> void:
+	# The Quality preset and what it sets (DotMenuGraphicsPresets); dot-fx's DotFxGraphics applies the rest.
+	# Every default is the High preset's, which is how the game looked before these existed.
+	_add(schema, DotSettingsDef.choice(&"graphics_preset", DotMenuGraphicsPresets.DEFAULT, DotMenuGraphicsPresets.NAMES, &"video"))
+	_add(schema, DotSettingsDef.integer(&"shadow_quality", 3, 0, 4, &"video"))
+	_add(schema, DotSettingsDef.number(&"shadow_distance", 0.0, 0.0, 500.0, &"video")
+		.with_description("Farthest sun shadow, in metres. 0 is the map's own."))
+	_add(schema, DotSettingsDef.number(&"view_distance", 0.0, 0.0, 2000.0, &"video")
+		.with_description("Farthest anything is drawn, in metres. 0 is the map's own."))
+	_add(schema, DotSettingsDef.number(&"prop_distance", 0.0, 0.0, 1000.0, &"video")
+		.with_description("Farthest a small object is drawn, in metres. 0 is unlimited."))
+	_add(schema, DotSettingsDef.number(&"lod_bias", 1.0, 0.25, 2.0, &"video"))
+	_add(schema, DotSettingsDef.integer(&"particle_quality", 3, 0, 3, &"video"))
+	_add(schema, DotSettingsDef.number(&"detail_density", 1.0, 0.0, 1.0, &"video"))
+	_add(schema, DotSettingsDef.integer(&"ambient_occlusion", 1, 0, 2, &"video"))
+	_add(schema, DotSettingsDef.boolean(&"glow", true, &"video"))
+	_add(schema, DotSettingsDef.integer(&"reflection_quality", 2, 0, 3, &"video"))
+	_add(schema, DotSettingsDef.number(&"brightness", 1.0, 0.5, 1.5, &"video"))
+	_add(schema, DotSettingsDef.boolean(&"dynamic_resolution", false, &"video"))
+	_add(schema, DotSettingsDef.integer(&"target_fps", 60, 30, 240, &"video"))
+	_add(schema, DotSettingsDef.integer(&"texture_quality", 2, 0, 3, &"video"))
+	# Off: the game fills the window whatever its shape. On: the design's 16:9 with bars.
+	_add(schema, DotSettingsDef.boolean(&"keep_aspect", false, &"video"))
+	# "1600x900", the windowed size; "" is the project's. The applier also remembers a resize.
+	_add(schema, DotSettingsDef.text(&"window_size", "", &"video"))
 
 
 ## `net_stat`, `net_stat_height` and `net_stat_position` alone, for a game with its own settings and no [DotMenu]
