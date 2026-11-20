@@ -30,6 +30,7 @@ const APPLIES: Array[StringName] = [
 	&"fps_max", &"vsync", &"window_mode", &"render_scale",
 	&"shake_scale", &"allow_flashes", &"reduce_motion", &"fx_quality",
 	&"sensitivity", &"invert_mouse", &"field_of_view", &"viewmodel_fov",
+	&"graphics_preset", &"keep_aspect", &"window_size",
 ]
 const APPLIED_BY_MENU: Array[StringName] = [
 	&"ui_theme", &"hud_scale", &"show_fps", &"net_stat", &"net_stat_height", &"net_stat_position", &"net_stat_style",
@@ -37,9 +38,13 @@ const APPLIED_BY_MENU: Array[StringName] = [
 ]
 
 ## Stock keys only the game can apply, through [method on]. See the class note.
-## The render quality keys are applied by dot-fx's DotFxRenderQuality (DotGameClient wires it).
+## The render quality keys are applied by dot-fx's DotFxRenderQuality, and the Advanced video keys by its
+## DotFxGraphics (DotGameClient wires both through `DotFxRenderQuality.follow(settings)`).
 const LEFT_TO_THE_GAME: Array[StringName] = [
 	&"chat_window", &"slide_volume", &"aniso", &"aa", &"mip_bias", &"sharpness",
+	&"shadow_quality", &"shadow_distance", &"view_distance", &"prop_distance", &"lod_bias", &"particle_quality",
+	&"detail_density", &"ambient_occlusion", &"glow", &"reflection_quality", &"brightness", &"dynamic_resolution",
+	&"target_fps", &"texture_quality",
 ]
 
 ## Nodes in this group with `set_hands_fov_at_4_3(horizontal)` get `viewmodel_fov`, now and
@@ -72,6 +77,11 @@ var sensitivity_to_degrees: Callable = Callable()
 ## `func(field_of_view: float) -> float`, what the camera property is set to. Unset is the
 ## setting itself. For a game whose setting is in another measure (horizontal at 4:3).
 var fov_transform: Callable = Callable()
+
+## Seconds a window must stay one size before `window_size` remembers it.
+var remember_window_after: float = 1.0
+
+var _resize_timer: Timer
 
 
 ## The vertical field of view (what [Camera3D] takes) that is [param horizontal] degrees across a
@@ -109,6 +119,7 @@ func setup() -> DotResult:
 	var found := DotRegistry.get_service(VOICE_SERVICE)
 	if found != null:
 		bind_voice(found)
+	_follow_window()
 	apply_all()
 	return DotResult.success(self)
 
@@ -126,6 +137,8 @@ func _exit_tree() -> void:
 		bus.service_registered.disconnect(_on_service_registered)
 	if is_inside_tree() and get_tree().node_added.is_connected(_on_node_added):
 		get_tree().node_added.disconnect(_on_node_added)
+	if is_inside_tree() and get_tree().root.size_changed.is_connected(_on_window_resized):
+		get_tree().root.size_changed.disconnect(_on_window_resized)
 	_connected = false
 
 
@@ -225,6 +238,10 @@ func _on_changed(key: StringName, value: Variant, why: StringName) -> void:
 
 
 func _apply(key: StringName, value: Variant, why: StringName) -> void:
+	if key == DotMenuGraphicsPresets.KEY:
+		_apply_preset(StringName(str(value)), why)
+	elif (DotMenuGraphicsPresets.TABLE[DotMenuGraphicsPresets.DEFAULT] as Dictionary).has(key):
+		_preset_key_changed(key, value, why)
 	if VOLUMES.has(key):
 		_apply_volumes()
 		if key == &"voice_volume":
@@ -253,6 +270,12 @@ func _apply(key: StringName, value: Variant, why: StringName) -> void:
 				_apply_fov()
 			&"viewmodel_fov":
 				_apply_view_models()
+			&"keep_aspect":
+				if manage_window:
+					_apply_aspect(bool(value))
+			&"window_size":
+				if manage_window:
+					_apply_window_size(str(value), why)
 			_:
 				if bindings != null:
 					var _bound := bindings.apply_setting(key, value)
@@ -430,6 +453,101 @@ func _apply_window_mode(mode: StringName, why: StringName) -> void:
 			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
 		_:
 			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
+			DisplayServer.window_set_flag(DisplayServer.WINDOW_FLAG_RESIZE_DISABLED, false)
+			if _has(&"window_size"):
+				_apply_window_size(settings.get_string(&"window_size"), &"window_mode")
+
+
+## A preset chosen by the player writes its values. At boot nothing is written: the stored values already
+## are what the player last had, preset or not.
+func _apply_preset(preset: StringName, why: StringName) -> void:
+	if why == &"applied" or why == DotMenuGraphicsPresets.REASON:
+		return
+	var values := DotMenuGraphicsPresets.values_of(preset)
+	for k in values:
+		if _has(k):
+			var _r := settings.set_value(k, values[k], DotMenuGraphicsPresets.REASON)
+
+
+## A hand edit of a key the preset sets makes the preset Custom, unless it is the preset's own value.
+func _preset_key_changed(key: StringName, value: Variant, why: StringName) -> void:
+	if why == &"applied" or why == DotMenuGraphicsPresets.REASON or not _has(DotMenuGraphicsPresets.KEY):
+		return
+	var preset := StringName(settings.get_string(DotMenuGraphicsPresets.KEY))
+	var values := DotMenuGraphicsPresets.values_of(preset)
+	if values.is_empty() or DotMenuGraphicsPresets.same(value, values.get(key)):
+		return
+	var _r := settings.set_value(DotMenuGraphicsPresets.KEY, DotMenuGraphicsPresets.CUSTOM, DotMenuGraphicsPresets.REASON)
+
+
+## The stretch aspect: off (the default) fills the window whatever its shape, on keeps the project's shape with
+## bars. A window with no stretch (content_scale_mode disabled) fills it anyway and is left alone.
+func _apply_aspect(keep: bool) -> void:
+	if not is_inside_tree():
+		return
+	var root := get_tree().root
+	if root.content_scale_mode == Window.CONTENT_SCALE_MODE_DISABLED:
+		return
+	var want := Window.CONTENT_SCALE_ASPECT_KEEP if keep else Window.CONTENT_SCALE_ASPECT_EXPAND
+	if root.content_scale_aspect != want:
+		root.content_scale_aspect = want
+
+
+## "1600x900" as a size; anything else is zero (the project's own size).
+static func parse_size(text: String) -> Vector2i:
+	var parts := text.to_lower().split("x")
+	if parts.size() != 2 or not parts[0].strip_edges().is_valid_int() or not parts[1].strip_edges().is_valid_int():
+		return Vector2i.ZERO
+	var sz := Vector2i(parts[0].strip_edges().to_int(), parts[1].strip_edges().to_int())
+	return sz if sz.x >= 320 and sz.y >= 240 else Vector2i.ZERO
+
+
+## Sizes a windowed native window and centres it on its screen; "" leaves it. A size the window itself
+## reported (why `window`) is already the window's.
+func _apply_window_size(text: String, why: StringName) -> void:
+	if why == &"window" or DisplayServer.get_name() == "headless" or DotPlatform.is_web():
+		return
+	if DisplayServer.window_get_mode() != DisplayServer.WINDOW_MODE_WINDOWED:
+		return
+	var sz := parse_size(text)
+	if sz == Vector2i.ZERO:
+		return
+	var screen := DisplayServer.screen_get_usable_rect(DisplayServer.window_get_current_screen())
+	if screen.size.x > 0 and screen.size.y > 0:
+		sz = sz.min(screen.size)
+	if DisplayServer.window_get_size() != sz:
+		DisplayServer.window_set_size(sz)
+		DisplayServer.window_set_position(screen.position + (screen.size - sz) / 2)
+
+
+## Keeps the aspect through a resize (a shell menu restores the one it saved when it closes) and, on a native
+## window, remembers its windowed size once it has settled.
+func _follow_window() -> void:
+	if not manage_window or not is_inside_tree():
+		return
+	var root := get_tree().root
+	if not root.size_changed.is_connected(_on_window_resized):
+		root.size_changed.connect(_on_window_resized)
+	if _resize_timer == null:
+		_resize_timer = Timer.new()
+		_resize_timer.one_shot = true
+		_resize_timer.timeout.connect(_remember_window_size)
+		add_child(_resize_timer, false, Node.INTERNAL_MODE_BACK)
+
+
+func _on_window_resized() -> void:
+	if _has(&"keep_aspect"):
+		_apply_aspect(settings.get_bool(&"keep_aspect"))
+	if _resize_timer != null and _resize_timer.is_inside_tree() and _has(&"window_size") \
+			and DisplayServer.get_name() != "headless" and not DotPlatform.is_web():
+		_resize_timer.start(maxf(remember_window_after, 0.05))
+
+
+func _remember_window_size() -> void:
+	if DisplayServer.window_get_mode() != DisplayServer.WINDOW_MODE_WINDOWED:
+		return
+	var sz := DisplayServer.window_get_size()
+	var _r := settings.set_value(&"window_size", "%dx%d" % [sz.x, sz.y], &"window")
 
 
 func describe() -> Dictionary:
@@ -437,4 +555,5 @@ func describe() -> Dictionary:
 		"audio": _audio.size(), "fx": _fx.size(), "look": _look.size(),
 		"cameras": _cameras.size(), "handlers": _handlers.size(),
 		"manage_window": manage_window,
+		"aspect": get_tree().root.content_scale_aspect if is_inside_tree() else -1,
 	}

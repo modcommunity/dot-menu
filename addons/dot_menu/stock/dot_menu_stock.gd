@@ -52,7 +52,12 @@ const VOICE_ROWS: PackedStringArray = ["voice_mode", "voice_input_device", "voic
 const KEYS := {
 	GROUP_AUDIO: [&"master_volume", &"sfx_volume", &"ui_volume", &"voice_volume", &"ambience_volume", &"slide_volume"],
 	GROUP_MUSIC: [&"music_volume"],
-	GROUP_VIDEO: [&"window_mode", &"vsync", &"fps_max", &"render_scale", &"field_of_view", &"fx_quality", &"aniso", &"aa", &"mip_bias", &"sharpness"],
+	GROUP_VIDEO: [
+		&"window_mode", &"vsync", &"fps_max", &"render_scale", &"field_of_view", &"fx_quality", &"aniso", &"aa", &"mip_bias", &"sharpness",
+		&"graphics_preset", &"shadow_quality", &"shadow_distance", &"view_distance", &"prop_distance", &"lod_bias",
+		&"particle_quality", &"detail_density", &"ambient_occlusion", &"glow", &"reflection_quality", &"brightness",
+		&"dynamic_resolution", &"target_fps", &"texture_quality", &"keep_aspect", &"window_size",
+	],
 	GROUP_CONTROLS: [&"sensitivity", &"invert_mouse"],
 	GROUP_COMFORT: [&"shake_scale", &"allow_flashes", &"reduce_motion"],
 	GROUP_INTERFACE: [&"ui_theme", &"hud_scale", &"show_fps", &"net_stat", &"net_stat_height", &"net_stat_position", &"net_stat_style", &"scoreboard_hidden"],
@@ -124,6 +129,30 @@ static func _declare(schema: DotSettingsSchema, groups: Array[StringName], theme
 		_add(schema, DotSettingsDef.integer(&"aa", 0, 0, 7, &"video"))
 		_add(schema, DotSettingsDef.number(&"mip_bias", 0.0, -2.0, 2.0, &"video"))
 		_add(schema, DotSettingsDef.number(&"sharpness", 0.2, 0.0, 2.0, &"video"))
+		# The Quality preset and what it sets (DotMenuGraphicsPresets); dot-fx's DotFxGraphics applies the rest.
+		# Every default is the High preset's, which is how the game looked before these existed.
+		_add(schema, DotSettingsDef.choice(&"graphics_preset", DotMenuGraphicsPresets.DEFAULT, DotMenuGraphicsPresets.NAMES, &"video"))
+		_add(schema, DotSettingsDef.integer(&"shadow_quality", 3, 0, 4, &"video"))
+		_add(schema, DotSettingsDef.number(&"shadow_distance", 0.0, 0.0, 500.0, &"video")
+			.with_description("Farthest sun shadow, in metres. 0 is the map's own."))
+		_add(schema, DotSettingsDef.number(&"view_distance", 0.0, 0.0, 2000.0, &"video")
+			.with_description("Farthest anything is drawn, in metres. 0 is the map's own."))
+		_add(schema, DotSettingsDef.number(&"prop_distance", 0.0, 0.0, 1000.0, &"video")
+			.with_description("Farthest a small object is drawn, in metres. 0 is unlimited."))
+		_add(schema, DotSettingsDef.number(&"lod_bias", 1.0, 0.25, 2.0, &"video"))
+		_add(schema, DotSettingsDef.integer(&"particle_quality", 3, 0, 3, &"video"))
+		_add(schema, DotSettingsDef.number(&"detail_density", 1.0, 0.0, 1.0, &"video"))
+		_add(schema, DotSettingsDef.integer(&"ambient_occlusion", 1, 0, 2, &"video"))
+		_add(schema, DotSettingsDef.boolean(&"glow", true, &"video"))
+		_add(schema, DotSettingsDef.integer(&"reflection_quality", 2, 0, 3, &"video"))
+		_add(schema, DotSettingsDef.number(&"brightness", 1.0, 0.5, 1.5, &"video"))
+		_add(schema, DotSettingsDef.boolean(&"dynamic_resolution", false, &"video"))
+		_add(schema, DotSettingsDef.integer(&"target_fps", 60, 30, 240, &"video"))
+		_add(schema, DotSettingsDef.integer(&"texture_quality", 2, 0, 3, &"video"))
+		# Off: the game fills the window whatever its shape. On: the design's 16:9 with bars.
+		_add(schema, DotSettingsDef.boolean(&"keep_aspect", false, &"video"))
+		# "1600x900", the windowed size; "" is the project's. The applier also remembers a resize.
+		_add(schema, DotSettingsDef.text(&"window_size", "", &"video"))
 
 	if groups.has(GROUP_VIEWMODEL):
 		_add(schema, DotSettingsDef.integer(&"viewmodel_fov", VIEWMODEL_FOV, 50, 100, &"video")
@@ -299,6 +328,10 @@ static func general_page() -> DotMenuPage:
 
 static func video_page(config: DotMenuConfig = null) -> DotMenuPage:
 	var p := DotMenuPage.make(&"video", "Video", "Window, frame rate and image quality. Saved on this device.")
+	p.section("Quality") \
+		.add(DotMenuRow.select(DotMenuGraphicsPresets.KEY, "Quality preset",
+			"Sets shadows, distances, effects, textures and smoothing at once. Changing any of them makes it Custom.",
+			[[&"low", "Low"], [&"medium", "Medium"], [&"high", "High"], [&"ultra", "Ultra"], [&"custom", "Custom"]]))
 	var display := p.section("Display")
 	display.add(DotMenuRow.select(&"window_mode", "Window", "",
 		[[&"windowed", "Windowed"], [&"borderless", "Borderless fullscreen"], [&"fullscreen", "Fullscreen"]]).only_native())
@@ -307,26 +340,117 @@ static func video_page(config: DotMenuConfig = null) -> DotMenuPage:
 	display.add(DotMenuRow.select(&"window_mode", "Window",
 		"Fullscreen also keeps browser shortcuts like Ctrl+W away from the game, in browsers that allow it.",
 		[[&"windowed", "In the page"], [&"fullscreen", "Fullscreen"]]).only_on_web().named(&"window_mode_web"))
+	display.add(DotMenuRow.select(&"window_size", "Window size",
+		"The size of the window when windowed. Dragging its edge also changes it, and it is remembered.",
+		resolution_options()).only_native())
 	display.add(DotMenuRow.toggle(&"vsync", "V-Sync", "Locks the frame rate to the screen. A browser always syncs."))
 	display.add(fps_row(config))
 
 	p.section("Image") \
 		.add(DotMenuRow.slider(&"field_of_view", "Field of view", "").formatted(DotMenuRow.FORMAT_DEGREES)) \
 		.add(DotMenuRow.slider(&"viewmodel_fov", "Weapon field of view", "How wide the lens that draws your hands and gun is. Lower is a larger gun.").formatted(DotMenuRow.FORMAT_DEGREES)) \
+		.add(DotMenuRow.slider(&"brightness", "Brightness", "Of the 3D world; the HUD keeps its own.")
+			.with_range(0.5, 1.5, 0.05).formatted(DotMenuRow.FORMAT_PERCENT)) \
 		.add(DotMenuRow.slider(&"render_scale", "Render scale", "Draw the 3D world at a lower resolution and scale it up.")
 			.with_range(0.5, 1.0, 0.05).formatted(DotMenuRow.FORMAT_PERCENT)) \
 		.add(DotMenuRow.select(&"fx_quality", "Effects", "Particles and other effects that change nothing about the game.",
 			[[0, "Off"], [1, "Low"], [2, "Medium"], [3, "High"]]))
 	p.section("Texture quality") \
+		.add(DotMenuRow.select(&"texture_quality", "Texture quality", "Lower is blurrier textures and less video memory.",
+			[[0, "Low"], [1, "Medium"], [2, "High"], [3, "Ultra"]]).shown_when(has_mip_bias)) \
 		.add(DotMenuRow.select(&"aniso", "Anisotropic filtering", "Keeps floors and walls sharp at a slant.",
-			[[-1, "Automatic"], [0, "Off"], [2, "2x"], [4, "4x"], [8, "8x"], [16, "16x"]])) \
+			[[-1, "Automatic"], [0, "Off"], [2, "2x"], [4, "4x"], [8, "8x"], [16, "16x"]]).shown_when(has_aniso)) \
 		.add(DotMenuRow.select(&"aa", "Anti-aliasing", "Smooths jagged edges. Automatic is MSAA 4x on a desktop, FXAA elsewhere.",
-			[[0, "Automatic"], [1, "Off"], [2, "FXAA"], [3, "MSAA 2x"], [4, "MSAA 4x"], [5, "MSAA 8x"], [6, "TAA"], [7, "TAA + FXAA"]])) \
+			aa_options())) \
 		.add(DotMenuRow.slider(&"mip_bias", "Texture detail", "Negative is sharper (and shimmers), positive is blurrier.")
-			.with_range(-2.0, 2.0, 0.25)) \
+			.with_range(-2.0, 2.0, 0.25).shown_when(has_mip_bias)) \
 		.add(DotMenuRow.slider(&"sharpness", "Upscale sharpening", "Only acts when render scale is under 100%. Lower is sharper.")
-			.with_range(0.0, 2.0, 0.1))
+			.with_range(0.0, 2.0, 0.1).shown_when(has_fsr))
+	var metres := func(v: Variant) -> String: return "Unlimited" if float(v) <= 0.0 else "%d m" % roundi(float(v))
+	var map_own := func(v: Variant) -> String: return "Map's own" if float(v) <= 0.0 else "%d m" % roundi(float(v))
+	var adv := p.section("Advanced")
+	adv.add(DotMenuRow.select(&"shadow_quality", "Shadows", "Shadow sharpness and resolution. Off removes every shadow.",
+		[[0, "Off"], [1, "Low"], [2, "Medium"], [3, "High"], [4, "Ultra"]]))
+	adv.add(DotMenuRow.slider(&"shadow_distance", "Shadow distance", "How far away the sun still casts shadows.")
+		.with_range(0.0, 500.0, 10.0).formatted(map_own))
+	adv.add(DotMenuRow.slider(&"view_distance", "View distance", "Nothing farther than this is drawn.")
+		.with_range(0.0, 2000.0, 50.0).formatted(map_own))
+	adv.add(DotMenuRow.slider(&"prop_distance", "Object draw distance",
+		"Small objects farther than this are not drawn. Dynamic resolution shortens it further when the frame rate drops.")
+		.with_range(0.0, 1000.0, 10.0).formatted(metres))
+	adv.add(DotMenuRow.slider(&"lod_bias", "Level of detail", "Higher keeps detailed models farther away.")
+		.with_range(0.25, 2.0, 0.25).formatted(DotMenuRow.FORMAT_PERCENT))
+	adv.add(DotMenuRow.select(&"particle_quality", "Particles", "How many particles smoke, sparks and debris use.",
+		[[0, "Low"], [1, "Medium"], [2, "High"], [3, "Ultra"]]))
+	adv.add(DotMenuRow.slider(&"detail_density", "Foliage and detail", "How much grass and small clutter is drawn.")
+		.with_range(0.0, 1.0, 0.05).formatted(DotMenuRow.FORMAT_PERCENT))
+	adv.add(DotMenuRow.select(&"ambient_occlusion", "Ambient occlusion", "Soft shadows in corners and under objects.",
+		[[0, "Off"], [1, "Map's own"], [2, "On"]]).shown_when(has_ssao))
+	adv.add(DotMenuRow.toggle(&"glow", "Glow", "Bright lights bleed softly. Off removes it from every map."))
+	adv.add(DotMenuRow.select(&"reflection_quality", "Reflections", "Reflection probes and, on Ultra, screen-space reflections.",
+		reflection_options()))
+	adv.add(DotMenuRow.toggle(&"dynamic_resolution", "Dynamic resolution",
+		"Lowers the 3D resolution, then the object draw distance, while the frame rate is under the target."))
+	adv.add(DotMenuRow.slider(&"target_fps", "Target frame rate", "What dynamic resolution aims for. Never above the frame-rate cap.")
+		.with_range(30.0, 240.0, 10.0).formatted(DotMenuRow.FORMAT_INT))
+	adv.add(DotMenuRow.toggle(&"keep_aspect", "Keep aspect ratio (letterbox)",
+		"Off fills the window whatever its shape. On keeps the game's own shape with black bars.").only_native())
 	return p
+
+
+## The renderer's mip bias: Compatibility ignores it.
+static func has_mip_bias() -> bool:
+	return RenderingServer.get_current_rendering_method() != "gl_compatibility"
+
+
+## Compatibility takes its anisotropy from the project setting at start, so a viewport's level (the row) does
+## nothing there; measured on staging02 (video_probe: 0.02% of pixels, Forward+ 23%).
+static func has_aniso() -> bool:
+	return RenderingServer.get_current_rendering_method() != "gl_compatibility"
+
+
+## FSR upscaling (and so its sharpening) is Forward+ only.
+static func has_fsr() -> bool:
+	return RenderingServer.get_current_rendering_method() == "forward_plus"
+
+
+## SSAO runs in Forward+ and Compatibility, not Mobile.
+static func has_ssao() -> bool:
+	return RenderingServer.get_current_rendering_method() != "mobile"
+
+
+## Anti-aliasing choices this renderer has: Compatibility has MSAA only, no FXAA or TAA.
+static func aa_options() -> Array:
+	var out: Array = [[0, "Automatic"], [1, "Off"]]
+	var screen_space := RenderingServer.get_current_rendering_method() != "gl_compatibility"
+	if screen_space:
+		out.append([2, "FXAA"])
+	out.append_array([[3, "MSAA 2x"], [4, "MSAA 4x"], [5, "MSAA 8x"]])
+	if screen_space:
+		out.append_array([[6, "TAA"], [7, "TAA + FXAA"]])
+	return out
+
+
+## Ultra adds screen-space reflections only where the renderer has them.
+static func reflection_options() -> Array:
+	var out: Array = [[0, "Off"], [1, "Low"], [2, "High"]]
+	if has_fsr():
+		out.append([3, "Ultra"])
+	return out
+
+
+## Window sizes for the Window size row: Default, then the common sizes that fit this screen.
+static func resolution_options() -> Array:
+	var out: Array = [["", "Default"]]
+	var screen := Vector2i(7680, 4320)
+	if DisplayServer.get_name() != "headless":
+		screen = DisplayServer.screen_get_size()
+	for sz in [Vector2i(1024, 768), Vector2i(1280, 720), Vector2i(1280, 800), Vector2i(1366, 768), Vector2i(1440, 900),
+			Vector2i(1600, 900), Vector2i(1680, 1050), Vector2i(1920, 1080), Vector2i(1920, 1200), Vector2i(2560, 1080),
+			Vector2i(2560, 1440), Vector2i(3440, 1440), Vector2i(3840, 2160)]:
+		if sz.x <= screen.x and sz.y <= screen.y:
+			out.append(["%dx%d" % [sz.x, sz.y], "%d × %d" % [sz.x, sz.y]])
+	return out
 
 
 ## Adds the "Blood splatters" row (`gore`, a game-declared setting dot-fx's decals read) to a
