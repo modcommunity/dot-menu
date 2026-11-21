@@ -11,6 +11,7 @@ You need Godot 4.7. [GameSpice Bootstrap](https://github.com/gamespice-platform/
 - `addons/dot_menu/` (this repo)
 - `addons/dot_core/` from [GameSpice Core](https://github.com/gamespice-platform/core)
 - `addons/dot_ui/` from [GameSpice UI](https://github.com/gamespice-platform/ui)
+- `addons/dot_input/` from [GameSpice Input](https://github.com/gamespice-platform/input) (GameSpice UI requires it)
 - `addons/dot_settings/` from [GameSpice Settings](https://github.com/gamespice-platform/settings)
 
 Run `godot --path .` to open the demo. Escape, H, P and M all work.
